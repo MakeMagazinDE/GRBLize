@@ -1,5 +1,5 @@
 unit grbl_player_main;
-
+// CNC-Steuerung für GRBL-JOG-Platine mit GRBL 0.8c/jog.2 Firmware
 
 interface
 

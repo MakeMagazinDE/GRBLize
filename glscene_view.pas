@@ -1,4 +1,6 @@
 unit glscene_view;
+// 3D-Visualisierung der Fräswege und Bohrlöcher für GRBLize CNC-Steuerung
+// Verwendet GLscene-Komponente als OpenGL-Interface
 
 interface
 

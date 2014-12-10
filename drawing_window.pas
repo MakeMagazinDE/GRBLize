@@ -1,4 +1,6 @@
 unit drawing_window;
+// 2D-Visualisierung der Fräswege und Bohrlöcher für GRBLize CNC-Steuerung
+
 
 interface
 
