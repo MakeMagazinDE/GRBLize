@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2014.05.27 08:51:54.559.pas,E:\Dropbox\ProjDelphi\GRBLSEND\Demo01_MainForm.pas=E:\Dropbox\ProjDelphi\GRBLSEND\main.pas</Transaction>
+    <Transaction>2014.05.27 08:51:54.560.dfm,E:\Dropbox\ProjDelphi\GRBLSEND\Demo01_MainForm.dfm=E:\Dropbox\ProjDelphi\GRBLSEND\main.dfm</Transaction>
+    <Transaction>2014.05.27 08:59:39.270.pas,E:\Dropbox\ProjDelphi\GRBLSEND\main.pas=E:\Dropbox\ProjDelphi\GRBLSEND\grbl_player_main.pas</Transaction>
+    <Transaction>2014.05.27 08:59:39.270.dfm,E:\Dropbox\ProjDelphi\GRBLSEND\main.dfm=E:\Dropbox\ProjDelphi\GRBLSEND\grbl_player_main.dfm</Transaction>
+    <Transaction>2014.05.27 10:42:52.355.pas,E:\Dropbox\ProjDelphi\HX3 Remote\hx3_com.pas=E:\Dropbox\ProjDelphi\HX3 Remote\grbl_com.pas</Transaction>
+    <Transaction>2014.05.27 10:43:40.327.pas,E:\Dropbox\ProjDelphi\HX3 Remote\grbl_com.pas=E:\Dropbox\ProjDelphi\HX3 Remote\hx3_com.pas</Transaction>
+    <Transaction>2014.05.27 10:43:51.930.pas,E:\Dropbox\ProjDelphi\HX3 Remote\hx3_com.pas=</Transaction>
+    <Transaction>2014.05.27 10:44:32.935.pas,E:\Dropbox\ProjDelphi\GRBLSEND\hx3_com.pas=E:\Dropbox\ProjDelphi\GRBLSEND\grbl_com.pas</Transaction>
+    <Transaction>2014.05.28 07:15:39.593.pas,E:\Dropbox\ProjDelphi\GRBLSEND\Unit1.pas=E:\Dropbox\ProjDelphi\GRBLSEND\import_files.pas</Transaction>
+    <Transaction>2014.05.29 22:24:09.734.pas,E:\Dropbox\ProjDelphi\GRBLSEND\ColorButton.pas=</Transaction>
+    <Transaction>2014.09.29 17:38:56.847.pas,E:\Dropbox\ProjDelphi\GRBLSEND\VFrames.pas=</Transaction>
+    <Transaction>2014.09.29 17:39:00.804.pas,E:\Dropbox\ProjDelphi\GRBLSEND\VSample.pas=</Transaction>
+    <Transaction>2014.10.08 15:16:07.866.pas,E:\Dropbox\GRBL_644\GRBLSEND\Unit1.pas=E:\Dropbox\GRBL_644\GRBLSEND\path_calc.pas</Transaction>
+    <Transaction>2014.10.08 15:22:03.106.pas,E:\Dropbox\GRBL_644\GRBLSEND\path_calc.pas=</Transaction>
+    <Transaction>2014.10.10 08:28:50.227.pas,E:\Dropbox\GRBL_644\GRBLSEND\hpgl_import.pas=E:\Dropbox\GRBL_644\GRBLSEND\hpgl_import.pas</Transaction>
+    <Transaction>2014.10.10 08:30:01.131.inc,E:\Dropbox\GRBL_644\GRBLSEND\hpgl_import.inc=</Transaction>
+    <Transaction>2014.10.12 12:29:54.151.pas,E:\Dropbox\GRBL_644\GRBLSEND\Unit2.pas=E:\Dropbox\GRBL_644\GRBLSEND\drawing.pas</Transaction>
+    <Transaction>2014.10.12 12:29:54.151.dfm,E:\Dropbox\GRBL_644\GRBLSEND\Unit2.dfm=E:\Dropbox\GRBL_644\GRBLSEND\drawing.dfm</Transaction>
+    <Transaction>2014.10.12 12:44:38.041.pas,E:\Dropbox\GRBL_644\GRBLSEND\drawing.pas=E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.pas</Transaction>
+    <Transaction>2014.10.12 12:44:38.041.dfm,E:\Dropbox\GRBL_644\GRBLSEND\drawing.dfm=E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.dfm</Transaction>
+    <Transaction>2014.10.12 12:52:01.798.pas,E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.pas=</Transaction>
+    <Transaction>2014.10.12 12:52:01.798.dfm,E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.dfm=</Transaction>
+    <Transaction>2014.10.12 12:52:46.621.pas,E:\Dropbox\GRBL_644\GRBLSEND\Unit2.pas=E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.pas</Transaction>
+    <Transaction>2014.10.12 12:52:46.621.dfm,E:\Dropbox\GRBL_644\GRBLSEND\Unit2.dfm=E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.dfm</Transaction>
+    <Transaction>2014.10.15 09:20:16.078.inc,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\drawing.inc=</Transaction>
+    <Transaction>2014.10.15 09:20:16.093.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\drawing.dfm=</Transaction>
+    <Transaction>2014.10.22 07:32:31.500.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\Unit3.pas=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\cam_view.pas</Transaction>
+    <Transaction>2014.10.22 07:32:31.515.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\Unit3.dfm=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\cam_view.dfm</Transaction>
+    <Transaction>2014.10.22 11:03:31.165.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\dsruler\dsRuler.pas=</Transaction>
+    <Transaction>2014.10.22 11:04:26.790.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\DirectX\Direct3D9.pas=</Transaction>
+    <Transaction>2014.10.28 16:15:47.109.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\Unit4.pas=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene.pas</Transaction>
+    <Transaction>2014.10.28 16:15:47.109.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\Unit4.dfm=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene.dfm</Transaction>
+    <Transaction>2014.10.28 16:21:29.515.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene.pas=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene_view.pas</Transaction>
+    <Transaction>2014.10.28 16:21:29.515.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene.dfm=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene_view.dfm</Transaction>
+    <Transaction>2014.10.28 16:24:17.796.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene_view.pas=</Transaction>
+    <Transaction>2014.10.28 16:24:17.796.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene_view.dfm=</Transaction>
+    <Transaction>2014.10.28 16:26:32.609.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\Unit4.pas=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene_view.pas</Transaction>
+    <Transaction>2014.10.28 16:26:32.609.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\Unit4.dfm=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\glscene_view.dfm</Transaction>
+    <Transaction>2014.11.19 11:26:57.889.inc,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\hpgl_import.inc=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\drl_import.inc</Transaction>
+    <Transaction>2014.11.19 11:59:05.516.inc,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\drl_import.inc=E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\drill_import.inc</Transaction>
+    <Transaction>2014.11.21 18:27:41.656.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\grbl_player_main.pas=</Transaction>
+    <Transaction>2014.11.21 18:27:41.656.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\grbl_player_main.dfm=</Transaction>
+    <Transaction>2014.11.21 19:47:31.656.pas,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\grbl_player_main.pas=</Transaction>
+    <Transaction>2014.11.21 19:47:31.656.dfm,E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\grbl_player_main.dfm=</Transaction>
+  </Transactions>
+</BorlandProject>
