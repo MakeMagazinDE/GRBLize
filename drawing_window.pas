@@ -622,7 +622,7 @@ begin
 // -----------------------------------------------------------------------------
 
     if Form2.CheckBoxDimensions.Checked and my_final_entry.enable then begin
-      Canvas.Pen.Color:= my_fill_color1 or $003f3f3f;  // Linienfarbe
+      Canvas.Pen.Color:= my_fill_color1 or $00404040;  // Linienfarbe
       Canvas.Brush.Color:= Canvas.Pen.Color;
       Canvas.Font.Color:= clwhite;  // Zeichenfarbe
       pmin:= offset_bm_point(my_final_entry.bounds.min, my_offset);
