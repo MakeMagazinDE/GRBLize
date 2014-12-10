@@ -1049,6 +1049,7 @@ procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
 begin
   ToolCursor.X:= 0;
   ToolCursor.Y:= 0;
+  grbl_resync;
   grbl_offsXY(0, 0);
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
@@ -1061,6 +1062,7 @@ begin
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_offsXY(x, y);
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
@@ -1073,6 +1075,7 @@ begin
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_offsXY(x, y);
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
@@ -1083,6 +1086,7 @@ end;
 
 procedure TForm2.pu_camIsAtPartZeroClick(Sender: TObject);
 begin
+  grbl_resync;
   grbl_offsXY(-job.cam_x, -job.cam_y);
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
@@ -1097,6 +1101,7 @@ begin
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
@@ -1111,6 +1116,7 @@ begin
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
@@ -1125,6 +1131,7 @@ procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
 begin
   ToolCursor.X:= 0;
   ToolCursor.Y:= 0;
+  grbl_resync;
   grbl_moveZ(job.z_penlift, false);
   grbl_moveXY(0,0, false);
   NeedsRedraw:= true;
@@ -1137,6 +1144,7 @@ begin
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_moveZ(job.z_penlift,false);
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
@@ -1150,6 +1158,7 @@ begin
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_moveZ(job.z_penlift,false);
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
@@ -1161,6 +1170,8 @@ end;
 
 procedure TForm2.pu_moveCamToPartZeroClick(Sender: TObject);
 begin
+  grbl_available:= false;
+  grbl_resync;
   grbl_moveZ(job.z_penlift, false);
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   NeedsRedraw:= true;
@@ -1172,6 +1183,7 @@ begin
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_moveZ(job.z_penlift,false);
   grbl_moveXY(x-job.cam_x, y-job.cam_y, false);
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
@@ -1185,6 +1197,7 @@ begin
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
+  grbl_resync;
   grbl_moveZ(job.z_penlift,false);
   grbl_moveXY(x-job.cam_x, y-job.cam_y, false);
   grbl_offsXY(x-job.cam_x, y-job.cam_y);

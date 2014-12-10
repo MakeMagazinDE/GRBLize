@@ -218,18 +218,24 @@ begin
 end;
 
 function grbl_resync: boolean;
-// Resync, sende #13 und warte 1000 ms auf OK
+// Resync, sende #13 und warte 500 ms auf OK
 var my_str: String;
   i: Integer;
 begin
   grbl_resync:= false;
   my_str:= '';
   if ftdi_isopen then begin
-    grbl_rx_clear;
-    my_str:= #13;
-    ftdi.write(@my_str[1], 1, i);
-    my_str:= grbl_receiveStr(1000, true);
+    grbl_available:= false;
+    grbl_wait_timer_finished;
+    repeat
+      mdelay(50);
+      grbl_rx_clear;
+      my_str:= #13;
+      ftdi.write(@my_str[1], 1, i);
+      my_str:= grbl_receiveStr(500, true);
+    until (my_str = 'ok') or CancelProc;
     grbl_resync:= (my_str = 'ok');
+    grbl_available:= true;
   end;
 end;
 

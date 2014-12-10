@@ -176,7 +176,7 @@ end;
 
 procedure TForm3.BtnCamIsAtZeroClick(Sender: TObject);
 begin
-  grbl_offsXY(-job.cam_x, -job.cam_y);
+  if grbl_resync then grbl_offsXY(-job.cam_x, -job.cam_y);
   NeedsRedraw:= true;
 end;
 
@@ -190,9 +190,9 @@ begin
     hilite_to_toolcursor
   else
     hilite_center_to_toolcursor;
-  x:= ToolCursor.X / 40;
-  y:= ToolCursor.Y / 40;
-  grbl_offsXY(x-job.cam_x, y-job.cam_y);
+  x:= ToolCursor.X / c_hpgl_scale;
+  y:= ToolCursor.Y / c_hpgl_scale;
+  if grbl_resync then grbl_offsXY(x-job.cam_x, y-job.cam_y);
   NeedsRedraw:= true;
 end;
 
