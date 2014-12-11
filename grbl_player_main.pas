@@ -111,7 +111,7 @@ type
     MemoComment: TMemo;
     Label3: TLabel;
     Timer2: TTimer;
-    BitBtn1: TBitBtn;
+    BtnEmergStop: TBitBtn;
     procedure ResetGRBLClick(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure StringGridPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -190,7 +190,7 @@ type
     end;
 
 
-  procedure EnableButtons;
+  procedure EnableTestButtons;
 
 
 
@@ -704,6 +704,10 @@ end;
 procedure DisableButtons;
 begin
   with Form1 do begin
+    BtnRun.Enabled:= false;
+    BtnRun.Caption:= 'Run';
+    BtnStop.Enabled:= false;
+    BtnEmergStop.Enabled:= false;
     BtnPause.Enabled:= false;
     BtnContinue.Enabled:= false;
     BtnZeroX.Enabled:= false;
@@ -718,20 +722,55 @@ begin
   end;
 end;
 
-procedure EnableButtons;
+procedure EnableRunButtons;
 begin
   with Form1 do begin
+    BtnRun.Enabled:= true;
+    BtnRun.Caption:= 'Run';
+    BtnStop.Enabled:= true;
+    BtnEmergStop.Enabled:= true;
     BtnPause.Enabled:= true;
     BtnContinue.Enabled:= true;
     BtnZeroX.Enabled:= true;
     BtnZeroY.Enabled:= true;
     BtnZeroZ.Enabled:= true;
-    BtnHomeCycle.Enabled:= true;
-    BtnRefreshGrblSettings.Enabled:= true;
-    BtnSendGrblSettings.Enabled:= true;
     BtnMoveWorkZero.Enabled:= true;
     BtnMoveToolChange.Enabled:= true;
     BtnMovePark.Enabled:= true;
+    BtnHomeCycle.Enabled:= true;
+    BtnRefreshGrblSettings.Enabled:= true;
+    BtnSendGrblSettings.Enabled:= true;
+  end;
+end;
+
+procedure DisableRunButtons;
+begin
+  with Form1 do begin
+    BtnRun.Enabled:= false;
+    BtnEmergStop.Enabled:= false;
+    BtnRun.Caption:= 'Run';
+    BtnStop.Enabled:= false;
+    BtnPause.Enabled:= false;
+    BtnContinue.Enabled:= false;
+    BtnZeroX.Enabled:= false;
+    BtnZeroY.Enabled:= false;
+    BtnZeroZ.Enabled:= false;
+    BtnMoveWorkZero.Enabled:= false;
+    BtnMoveToolChange.Enabled:= false;
+    BtnMovePark.Enabled:= false;
+    BtnHomeCycle.Enabled:= true;
+    BtnRefreshGrblSettings.Enabled:= true;
+    BtnSendGrblSettings.Enabled:= true;
+  end;
+end;
+
+procedure EnableTestButtons;
+begin
+  DisableButtons;
+  with Form1 do begin
+    BtnRun.Caption:= 'Test Run';
+    BtnRun.Enabled:= true;
+    BtnStop.Enabled:= true;
   end;
 end;
 
@@ -740,7 +779,7 @@ procedure TForm1.BtnRescanClick(Sender: TObject);
 var i : Integer; LV : TListItem;
 begin
 // Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
-  DisableButtons;
+  EnableTestButtons;
   deviceselectbox.ListView1.Items.clear;
   SetUpFTDI;
   if ftdi_device_count > 0 then
@@ -762,7 +801,7 @@ begin
       BtnClose.Visible:= true;
       DeviceView.Text:= ftdi_sernum_arr[ftdi_selected_device]
       + ' - ' + ftdi_desc_arr[ftdi_selected_device];
-      EnableButtons;
+      DisableRunButtons;
       BtnRefreshGrblSettingsClick(Sender);
       BtnZeroXClick(Sender);
       BtnZeroYClick(Sender);
@@ -783,7 +822,7 @@ begin
   BtnRescan.Visible:= true;
   BtnClose.Visible:= false;
   DeviceView.Text:= '(not selected)';
-  DisableButtons;
+  EnableTestButtons;
   HomingPerformed:= false;
 end;
 
@@ -1039,8 +1078,9 @@ begin
     OpenJobFile(JobSettingsPath)
   else
     Form1.FileNew1Execute(sender);
+  EnableTestButtons;
   if ftdi_isopen then begin
-    EnableButtons;
+    DisableRunButtons;
     BtnRefreshGrblSettingsClick(Sender);
     grbl_available:= true;
     BtnZeroXClick(Sender);
@@ -1191,7 +1231,7 @@ begin
     StringGridFiles.Options:= StringGridFiles.Options - [goEditing, goAlwaysShowEditor];
     if ItemIndex >= 0 then
       with StringGridFiles do
-        if (Row > 0) and (Col= 2) then begin
+        if (Row > 0) and (Col= 1) then begin
           Cells[col, row] := IntToStr(ItemIndex-1); //  := Items[ItemIndex];
           job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
           UnHilite;
@@ -1218,7 +1258,7 @@ begin
             org := self.ScreenToClient(self.ClientToScreen(R.TopLeft));
             perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
             with ComboBox1 do begin
-              SetBounds(org.X, org.Y, R.Right-R.Left, Form1.Height);
+              SetBounds(org.X, org.Y-18, R.Right-R.Left, Form1.Height);
               ItemIndex := Items.IndexOf('Pen '+StringGridFiles.Cells[Col, Row]);
               if ItemIndex < 0 then
                 ItemIndex:= 0;
@@ -1847,6 +1887,7 @@ begin
   CancelProc:= true;
   HomingPerformed:= false;
   EmergencyStop:= true;
+  DisableRunButtons;
   showmessage('Emergency Stop. Please run Home Cycle to release ALARM LOCK.');
 end;
 
@@ -1877,26 +1918,33 @@ end;
 procedure TForm1.BtnHomeCycleClick(Sender: TObject);
 begin
   MachineRunning:= true;
+  DisableRunButtons;
+  grbl_wait_timer_finished;
+  Timer2.enabled:= false;  // Wartezeit größer als Timer-Wert!
+  Form1.Memo1.lines.add('CTRL-X; ' + grbl_sendStr(#24, true, true));
+  Timer2.enabled:= true;  // war  abgeschaltet
   if grbl_resync then begin
-    grbl_addStr('M5');
     grbl_addStr('$h');
     grbl_offsXY(0,0);
     grbl_offsZ(0);
     grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
     MachineRunning:= false;
     HomingPerformed:= true;
-    EnableButtons;
+    EnableRunButtons;
   end;
 end;
 
 procedure TForm1.BtnPauseClick(Sender: TObject);
 begin
-  grbl_sendStr('!', true, false);
+  grbl_sendStr('!', false, false);
+  Timer2.enabled:= true;  // war ggf. abgeschaltet
 end;
 
 procedure TForm1.BtnContinueClick(Sender: TObject);
 begin
-  grbl_sendStr('~', true, false);
+  grbl_wait_timer_finished;
+  Timer2.enabled:= false;  // Wartezeit größer als Timer-Wert!
+  grbl_sendStr('~', false, false);
 end;
 
 procedure TForm1.BtnMoveWorkZeroClick(Sender: TObject);

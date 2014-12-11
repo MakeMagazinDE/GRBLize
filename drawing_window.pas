@@ -852,9 +852,7 @@ begin
 
   bm_scroll.x:= 0;
   bm_scroll.y:= ClientHeight - DrawingBox.Height;
-  if ftdi_isopen then
-    EnableButtons;
-  if form_visible then
+//  if form_visible then
 //    show;
 end;
 
