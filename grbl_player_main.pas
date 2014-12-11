@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.94b ';
+  c_VerStr: String = '0.95b ';
 
 type
   TForm1 = class(TForm)
@@ -111,7 +111,7 @@ type
     MemoComment: TMemo;
     Label3: TLabel;
     Timer2: TTimer;
-    ResetGRBL: TSpeedButton;
+    BitBtn1: TBitBtn;
     procedure ResetGRBLClick(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure StringGridPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -269,16 +269,16 @@ begin
         Cells[2,my_row]:= 'ON'
       else
         Cells[2,my_row]:= 'OFF';
-      x1:= my_entry.bounds.min.x / 40;
-      y1:= my_entry.bounds.min.y / 40;
-      x2:= my_entry.bounds.max.x / 40;
-      y2:= my_entry.bounds.max.y / 40;
+      x1:= my_entry.bounds.min.x / c_hpgl_scale;
+      y1:= my_entry.bounds.min.y / c_hpgl_scale;
+      x2:= my_entry.bounds.max.x / c_hpgl_scale;
+      y2:= my_entry.bounds.max.y / c_hpgl_scale;
       Cells[3,my_row]:= FormatFloat('0.0', job.pens[my_entry.pen].diameter);
       Cells[4,my_row]:= ShapeArray[ord(my_entry.shape)];
       Cells[5,my_row]:= FormatFloat('0.00', x1) + '/' + FormatFloat('0.00', y1)
           + ' - ' + FormatFloat('0.00', x2) + '/' + FormatFloat('0.00', y2);
-      x1:= my_entry.bounds.mid.x / 40;
-      y1:= my_entry.bounds.mid.y / 40;
+      x1:= my_entry.bounds.mid.x / c_hpgl_scale;
+      y1:= my_entry.bounds.mid.y / c_hpgl_scale;
       Cells[6,my_row]:= FormatFloat('0.00', x1) + '/' + FormatFloat('0.00', y1);
       Cells[7,my_row]:= IntToStr(length(my_entry.millings[0]));
       Rowcount:= Rowcount + 1;
@@ -823,38 +823,42 @@ procedure TForm1.Timer2Timer(Sender: TObject);
 // alle 20 ms aufgerufen
 var
   my_start_idx: Integer;
-  my_queue_empty: Boolean;
+  my_queue_empty, my_receive_empty: Boolean;
   my_str, my_response: String;
 begin
   TimerFinished:= false;
+  my_queue_empty:= false;
   if CancelProc then begin
-    CancelProc:= false;
     grbl_sendlist.Clear;
+    CancelProc:= false;
+    MachineRunning:= false;
     if ftdi_isopen then begin
       if EmergencyStop then begin
+        LEDbusy.Checked:= true;
         Timer2.enabled:= false;  // Wartezeit größer als Timer-Wert!
         my_response:= grbl_sendStr(#24, false, true); // Ctrl-X Reset
         grbl_receiveStr(1000, false);
-        Timer2.enabled:= true;
+        Form1.Memo1.lines.add('CTRL-X; ' + my_response);
+      end else begin
+        my_response:= grbl_sendStr('M5'+#13, false, false); // Spindle Stop
+        Form1.Memo1.lines.add('M5; ' + my_response);
       end;
-    end else
-      my_response:= '#Device not open';
-    grbl_resync;
-    Form1.Memo1.lines.add('CTRL-X' + '; ' + my_response);
+    end;
+    EmergencyStop:= false;
     TimerFinished:= true;
+    Timer2.enabled:= true;
     exit;
   end;
 
   if ftdi_isopen then begin
+  // Steht etwas in der Sendeliste? Dann abschicken und auf Antwort warten
     if grbl_sendlist.count > 0 then begin
       LEDbusy.Checked:= true;
-      Timer2.enabled:= false;
-      my_queue_empty:= false;
+      Timer2.enabled:= false;   // Könnte länger dauern
       my_str:= grbl_sendlist.Strings[0];
       grbl_sendlist.Delete(0);
       my_response:= grbl_sendStr(my_str + #13, false, true);
       Form1.Memo1.lines.add(my_str + '; ' + my_response);
-      Timer2.enabled:= true;
     end else
       my_queue_empty:= true;
   end else begin
@@ -864,18 +868,22 @@ begin
       grbl_sendlist.Delete(0);
       Form1.Memo1.lines.add(my_str + '; #Device not open');
       TimerFinished:= true;
+      Timer2.enabled:= true;
       exit;
     end;
   end;
 
   if my_queue_empty and grbl_available then begin
   // wenn Sendeliste leer, neue Koordinaten anfordern
-    Timer2.enabled:= false;
-    grbl_sendStr('?', false, false);
-    my_str:= grbl_receiveStr(50, false); // Timer abgeschaltet!
-    Timer2.enabled:= true;
-    if (my_str = '#Timeout') or (length(my_str) < 4) then begin // irgendein Fehler
+    Timer2.enabled:= false;                   // Kann länger als 20 ms dauern
+    my_receive_empty:= grbl_receiveCount = 0; // Empfangspuffer müsste leer sein
+    if my_receive_empty then
+      grbl_sendStr('?', false, false);        // Wenn leer, Koordinaten anfordern
+    my_str:= grbl_receiveStr(50, false);      // Timer abgeschaltet!
+    if (not my_receive_empty) or (my_str = '#Timeout')
+    or (length(my_str) < 4) then begin // irgendein Fehler
       TimerFinished:= true;
+      Timer2.enabled:= true;
       exit;
     end;
     grbl_receveivelist.clear;
@@ -922,6 +930,7 @@ begin
     end;
     grbl_receveivelist.clear;
   end;
+  Timer2.enabled:= true;
   TimerFinished:= true;
 end;
 
@@ -1077,7 +1086,9 @@ begin
   Form2.Close;
   Form3.Close;
   Form4.Close;
+  grbl_receveivelist.Clear;
   grbl_receveivelist.free;
+  grbl_sendlist.Clear;
   grbl_sendlist.free;
   LEDbusy.free;
   freeandnil(ftdi);
@@ -1765,10 +1776,11 @@ begin
     end;
     with Form1.StringgridGrblSettings do begin
       Rowcount:= 2;
-      grbl_rx_clear;
       grbl_resync;   // Resync
-
+      grbl_rx_clear;
+      grbl_available:= false;
       grbl_sendStr('$X'+ #13, true, false);   // Reset Alarm lock
+      grbl_wait_timer_finished;
       mdelay(100);
       my_str:= grbl_receiveStr(100, true);
       grbl_sendStr(#24, true, false);   // Reset CTRL-X
@@ -1841,6 +1853,7 @@ end;
 procedure TForm1.BtnStopClick(Sender: TObject);
 begin
   CancelProc:= true;
+  EmergencyStop:= false;
 end;
 
 procedure TForm1.BtnZeroXClick(Sender: TObject);
@@ -1878,13 +1891,11 @@ end;
 
 procedure TForm1.BtnPauseClick(Sender: TObject);
 begin
-  grbl_wait_timer_finished;
   grbl_sendStr('!', true, false);
 end;
 
 procedure TForm1.BtnContinueClick(Sender: TObject);
 begin
-  grbl_wait_timer_finished;
   grbl_sendStr('~', true, false);
 end;
 
@@ -1892,9 +1903,9 @@ procedure TForm1.BtnMoveWorkZeroClick(Sender: TObject);
 begin
   if grbl_resync then begin
     grbl_addStr('M5');
-    grbl_moveZ(job.toolchange_z, true);
+    grbl_moveZ(job.park_z, true);
     grbl_moveXY(0,0, false);
-    grbl_moveZ(job.z_gauge, false);
+    grbl_moveZ(job.z_penlift, false);
   end;
 end;
 
@@ -1911,8 +1922,9 @@ procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
 begin
   if grbl_resync then begin
     grbl_addStr('M5');
-    grbl_moveZ(job.toolchange_z, true);
+    grbl_moveZ(job.park_z, true);
     grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
+    grbl_moveZ(job.toolchange_z, true);
   end;
 end;
 
@@ -1931,9 +1943,10 @@ begin
   if my_len < 1 then
     exit;
   last_pen:= -1;
-  grbl_addStr('M3');
+  grbl_moveZ(job.park_z, true);
   grbl_moveXY(0,0,false);
-  grbl_millXYF(0,0,399);
+  grbl_millXYF(0,0,399); // neuen Speed-Wert erzwingen
+  grbl_addStr('M3');
   for i:= 0 to my_len-1 do begin
     my_entry:= final_array[i];
     if CancelProc then
@@ -1944,26 +1957,29 @@ begin
       continue;
     if CheckPenChangePause.Checked and (my_entry.pen <> last_pen) then begin
       // move to tool change position
-      BtnMoveToolChangeClick(Sender);
       grbl_addStr('M5');
       grbl_moveZ(job.toolchange_z, true);
       grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
       ShowMessage('Milling paused - Change tool to '
-        + #13+ FloatToStr(job.pens[my_entry.pen].diameter)+' mm when path finished!');
+        + #13+ FloatToStr(job.pens[my_entry.pen].diameter)+' mm when path finished'
+        + #13+ 'and click OK when done. Will keep Z Zero.');
       grbl_addStr('M3');
+      grbl_moveZ(job.park_z, true);
+      grbl_moveXY(0, 0, false); // Zum Werkstück-Nullpunkt zurück, Z ist noch oben
     end;
     grbl_moveZ(job.z_penlift, false);
     last_pen:= my_entry.pen;
     for p:= 0  to length(my_entry.millings)-1 do begin
+      grbl_moveZ(job.z_penup, false);
       if my_entry.shape = drillhole then
         grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
       else
         grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
-      grbl_moveZ(job.z_penlift, false);
       if CancelProc then begin
         break;
       end;
     end;
+    grbl_moveZ(job.z_penlift, false);
 
   end;
   if not CancelProc then

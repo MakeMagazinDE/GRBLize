@@ -276,7 +276,7 @@ procedure grbl_moveXY(x, y: Double; is_abs: Boolean);
 var my_str: String;
 begin
   if is_abs then
-    my_str:= 'G53 X'
+    my_str:= 'G0 G53 X'
   else begin
     my_str:= 'G0 X';
     grbl_checkXY(x,y);
@@ -292,7 +292,7 @@ procedure grbl_moveZ(z: Double; is_abs: Boolean);
 var my_str: String;
 begin
   if is_abs then
-    my_str:= 'G53 Z'
+    my_str:= 'G0 G53 Z'
   else begin
     my_str:= 'G0 Z';
     grbl_checkZ(z);

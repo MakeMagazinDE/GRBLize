@@ -39,28 +39,28 @@ D18,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0"
 D19,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0"
 D20,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0"
 #Defaults
-"Part Size X",220
-"Part Size Y",120
-"Part Size Z","1,5"
-"Z Lift",10
-"Z Up",5
+"Part Size X",221
+"Part Size Y",140
+"Part Size Z",5
+"Z Lift above Part",10
+"Z Up above Part",5
 "Z Gauge",10
 "Optimize Drill Path",ON
 "Use Excellon Drill Diameters",ON
 "Tool Change Pause",OFF
-"Tool Change X",10
-"Tool Change Y",100
-"Tool Change Z",-5
-"Park Position on End",OFF
-"Park X",400
-"Park Y",100
-"Park Z",-5
+"Tool Change X absolute",10
+"Tool Change Y absolute",100
+"Tool Change Z absolute",-5
+"Park Position on End",ON
+"Park X absolute",100
+"Park Y absolute",100
+"Park Z absolute",-5
 "Cam X Offset","-14,35"
 "Cam Y Offset","49,06"
-"Cam Z Height",10
-"Probe X",30
-"Probe Y",30
-"Probe Z",30
+"Cam Z Height above Part",20
+"Probe X absolute",30
+"Probe Y absolute",30
+"Probe Z absolute",30
 "Invert Z in G-Code",OFF
 #Blocks
 1,1,OFF,"0,5",CONTOUR,"56,33/4,53 - 94,22/65,30","75,28/34,90",27
