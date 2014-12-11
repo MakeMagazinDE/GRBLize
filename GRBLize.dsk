@@ -1,34 +1,42 @@
 [Closed Files]
-File_0=TSourceModule,'E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\grbl_player_main.dfm',0,1,1,1,1,0,0,,
-File_1=TSourceModule,'c:\program files (x86)\borland\bds\3.0\lib\GLScene\Source\Platform\GLWin32Context.pas',0,1,123,1,125,0,0,,
-File_2=TSourceModule,'E:\Dropbox\ProjDelphi\GLScene-install\GLScene\Source\DesignTime\GLSceneRegister.pas',0,1,1,15,11,0,0,,
-File_3=TSourceModule,'E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\DirectX\Direct3D9.pas',0,1,70,1,1,0,0,,
-File_4=TSourceModule,'E:\Dropbox\HOAX_31\HX3 Remote\hx3_remote_main.pas',0,1,777,1,818,0,0,,
-File_5=TSourceModule,'E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.pas',0,1,1,20,1,0,0,,
-File_6=TSourceModule,'E:\Dropbox\GRBL_644\GRBLSEND\hpgl_import.inc',0,1,215,83,19,0,0,,
-File_7=TSourceModule,'E:\Dropbox\GRBL_644\GRBLSEND\dsruler\dsRuler.pas',0,1,16,5,588,0,0,,
+File_0=TSourceModule,'E:\Dropbox\GIT\GRBLize\drawing_window.pas',0,1,831,3,855,0,0,,
+File_1=TSourceModule,'E:\Dropbox\GIT\GRBLize\ABOUT.PAS',0,1,1,1,1,0,0,,
+File_2=TSourceModule,'E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\grbl_player_main.dfm',0,1,1,1,1,0,0,,
+File_3=TSourceModule,'c:\program files (x86)\borland\bds\3.0\lib\GLScene\Source\Platform\GLWin32Context.pas',0,1,123,1,125,0,0,,
+File_4=TSourceModule,'E:\Dropbox\ProjDelphi\GLScene-install\GLScene\Source\DesignTime\GLSceneRegister.pas',0,1,1,15,11,0,0,,
+File_5=TSourceModule,'E:\Dropbox\GIT\GRBL-JOG\GRBLSEND\DirectX\Direct3D9.pas',0,1,70,1,1,0,0,,
+File_6=TSourceModule,'E:\Dropbox\HOAX_31\HX3 Remote\hx3_remote_main.pas',0,1,777,1,818,0,0,,
+File_7=TSourceModule,'E:\Dropbox\GRBL_644\GRBLSEND\drawing_window.pas',0,1,1,20,1,0,0,,
+File_8=TSourceModule,'E:\Dropbox\GRBL_644\GRBLSEND\hpgl_import.inc',0,1,215,83,19,0,0,,
+File_9=TSourceModule,'E:\Dropbox\GRBL_644\GRBLSEND\dsruler\dsRuler.pas',0,1,16,5,588,0,0,,
 
 [Modules]
-Module0=E:\Dropbox\GIT\GRBLize\drawing_window.pas
-Module1=E:\Dropbox\GIT\GRBLize\grbl_player_main.pas
-Module2=E:\Dropbox\GIT\GRBLize\deviceselect.pas
-Module3=E:\Dropbox\GIT\GRBLize\glscene_view.pas
-Count=4
+Module0=E:\Dropbox\GIT\GRBLize\grbl_player_main.pas
+Module1=E:\Dropbox\GIT\GRBLize\deviceselect.pas
+Module2=E:\Dropbox\GIT\GRBLize\cam_view.pas
+Module3=E:\Dropbox\GIT\GRBLize\grbl_com.pas
+Module4=E:\Dropbox\GIT\GRBLize\glscene_view.pas
+Count=5
 EditWindowCount=1
-
-[E:\Dropbox\GIT\GRBLize\drawing_window.pas]
-ModuleType=TSourceModule
-FormState=1
-FormOnTop=0
 
 [E:\Dropbox\GIT\GRBLize\grbl_player_main.pas]
 ModuleType=TSourceModule
 FormState=1
-FormOnTop=1
+FormOnTop=0
 
 [E:\Dropbox\GIT\GRBLize\deviceselect.pas]
 ModuleType=TSourceModule
 FormState=1
+FormOnTop=0
+
+[E:\Dropbox\GIT\GRBLize\cam_view.pas]
+ModuleType=TSourceModule
+FormState=1
+FormOnTop=0
+
+[E:\Dropbox\GIT\GRBLize\grbl_com.pas]
+ModuleType=TSourceModule
+FormState=0
 FormOnTop=0
 
 [E:\Dropbox\GIT\GRBLize\glscene_view.pas]
@@ -37,12 +45,13 @@ FormState=1
 FormOnTop=0
 
 [EditWindow0]
-ViewCount=4
-CurrentEditView=E:\Dropbox\GIT\GRBLize\drawing_window.pas
+ViewCount=5
+CurrentEditView=E:\Dropbox\GIT\GRBLize\grbl_player_main.pas
 View0=0
 View1=1
 View2=2
 View3=3
+View4=4
 PercentageSizes=1
 Create=1
 Visible=1
@@ -60,27 +69,17 @@ DockedToMainForm=1
 MessageView=MessageView@EditWindow0
 TopPanelSize=0
 LeftPanelSize=1906
-LeftPanelClients=StructureView,DockSite2
-LeftPanelData=000008000101000000008F160000000000000172070000000000000100000000C50D00001100000053747275637475726556696577466F726D0100000000141E000009000000446F636B5369746532FFFFFFFF
+LeftPanelClients=StructureView,DockSite1
+LeftPanelData=000008000101000000008F160000000000000172070000000000000100000000C50D00001100000053747275637475726556696577466F726D0100000000141E000009000000446F636B5369746531FFFFFFFF
 RightPanelSize=2256
-RightPanelClients=ToolForm,DockSite0
-RightPanelData=000008000101000000008F1600000000000001D00800000000000001000000006211000009000000446F636B53697465300100000000141E000008000000546F6F6C466F726DFFFFFFFF
+RightPanelClients=ToolForm,DockSite2
+RightPanelData=000008000101000000008F1600000000000001D00800000000000001000000006211000009000000446F636B53697465320100000000141E000008000000546F6F6C466F726DFFFFFFFF
 BottomPanelSize=1192
-BottomPanelClients=MessageView@EditWindow0,DockSite1
-BottomPanelData=0000080001020100000009000000446F636B53697465317F3300000000000002A80400000000000001000000007F3300000B0000004D65737361676556696577FFFFFFFF
+BottomPanelClients=MessageView@EditWindow0,DockSite0
+BottomPanelData=0000080001020100000009000000446F636B53697465307F3300000000000002A80400000000000001000000007F3300000B0000004D65737361676556696577FFFFFFFF
 BottomMiddlePanelSize=0
 
 [View0]
-CustomEditViewType=TEditView
-Module=E:\Dropbox\GIT\GRBLize\drawing_window.pas
-CursorX=40
-CursorY=625
-TopLine=600
-LeftCol=1
-Elisions=
-Bookmarks=
-
-[View1]
 CustomEditViewType=TEditView
 Module=E:\Dropbox\GIT\GRBLize\deviceselect.pas
 CursorX=1
@@ -90,12 +89,22 @@ LeftCol=1
 Elisions=
 Bookmarks=
 
-[View2]
+[View1]
 CustomEditViewType=TEditView
 Module=E:\Dropbox\GIT\GRBLize\grbl_player_main.pas
-CursorX=68
-CursorY=2
-TopLine=1
+CursorX=66
+CursorY=901
+TopLine=881
+LeftCol=1
+Elisions=
+Bookmarks={3,881,10}{4,1919,1}
+
+[View2]
+CustomEditViewType=TEditView
+Module=E:\Dropbox\GIT\GRBLize\cam_view.pas
+CursorX=5
+CursorY=180
+TopLine=139
 LeftCol=1
 Elisions=
 Bookmarks=
@@ -110,6 +119,16 @@ LeftCol=1
 Elisions=
 Bookmarks=
 
+[View4]
+CustomEditViewType=TEditView
+Module=E:\Dropbox\GIT\GRBLize\grbl_com.pas
+CursorX=47
+CursorY=148
+TopLine=169
+LeftCol=1
+Elisions=
+Bookmarks=
+
 [Breakpoints]
 Count=0
 
@@ -117,12 +136,14 @@ Count=0
 Count=0
 
 [Watches]
-Count=5
+Count=7
 Watch0='Form1.StringGridBlocks.Rows[my_row]',256,0,18,1,0,'Überwachte Ausdrücke'
 Watch1='HiliteBlock',256,0,18,1,0,'Überwachte Ausdrücke'
 Watch2='StringGridBlocks.Row',256,0,18,1,0,'Überwachte Ausdrücke'
 Watch3='Col',256,0,18,1,0,'Überwachte Ausdrücke'
 Watch4='my_str',256,0,18,1,0,'Überwachte Ausdrücke'
+Watch5='ItemIndex',256,0,18,1,0,'Überwachte Ausdrücke'
+Watch6='Row',256,0,18,1,0,'Überwachte Ausdrücke'
 
 [WatchWindow]
 WatchColumnWidth=120
@@ -135,11 +156,11 @@ State=0
 Left=0
 Top=0
 Width=3775
-Height=4750
+Height=733
 MaxLeft=-1
 MaxTop=-1
 ClientWidth=3775
-ClientHeight=4750
+ClientHeight=733
 TBDockHeight=207
 LRDockWidth=13606
 Dockable=1
@@ -196,7 +217,7 @@ MaxLeft=-1
 MaxTop=-1
 ClientWidth=2256
 ClientHeight=3164
-TBDockHeight=9026
+TBDockHeight=7017
 LRDockWidth=2256
 Dockable=1
 StayOnTop=0
@@ -221,6 +242,11 @@ Dockable=1
 StayOnTop=0
 SplitPos=95
 
+[PropInspDesignerSelection]
+ArrangeBy=Category
+SelectedItem=Verschiedene.Name,Aktion
+ExpandedItems=Aktion=1,"Drag, Drop und Docking=1",Eingabe=1,"Hilfe und Hinweise=1",Länderkennung=1,Layout=1,Legacy=1,Linkage=1,Übersetzungsrelevant=1,Verschiedene=1,Visuell=1,Layout.Anchors=0,Layout.Constraints=0,Übersetzungsrelevant.Constraints=0,Übersetzungsrelevant.Font=1,Visuell.Font=0,Übersetzungsrelevant.Font.Style=0,Verschiedene.Options=1,Visuell.BevelEdges=0
+
 [BreakpointWindow]
 PercentageSizes=1
 Create=1
@@ -230,11 +256,11 @@ State=0
 Left=0
 Top=0
 Width=3775
-Height=4750
+Height=733
 MaxLeft=-1
 MaxTop=-1
 ClientWidth=3775
-ClientHeight=4750
+ClientHeight=733
 TBDockHeight=1552
 LRDockWidth=8738
 Dockable=1
@@ -255,11 +281,11 @@ State=0
 Left=0
 Top=0
 Width=3775
-Height=4750
+Height=733
 MaxLeft=-1
 MaxTop=-1
 ClientWidth=3775
-ClientHeight=4750
+ClientHeight=733
 TBDockHeight=2069
 LRDockWidth=3488
 Dockable=1
@@ -310,6 +336,52 @@ DockHostCount=3
 DockSiteType=1
 PercentageSizes=1
 Create=1
+Visible=0
+Docked=1
+State=0
+Left=-10
+Top=-1009
+Width=3825
+Height=1034
+MaxLeft=-1
+MaxTop=-1
+ClientWidth=3825
+ClientHeight=1034
+TBDockHeight=1034
+LRDockWidth=3825
+Dockable=1
+StayOnTop=0
+TabPosition=1
+ActiveTabID=WatchWindow
+TabDockClients=BreakpointWindow,CallStackWindow,WatchWindow
+
+[DockSite1]
+DockSiteType=1
+PercentageSizes=1
+Create=1
+Visible=1
+Docked=1
+State=0
+Left=0
+Top=446
+Width=1906
+Height=4121
+MaxLeft=-1
+MaxTop=-1
+ClientWidth=1906
+ClientHeight=4121
+TBDockHeight=1724
+LRDockWidth=1906
+Dockable=1
+StayOnTop=0
+TabPosition=1
+ActiveTabID=PropertyInspector
+TabDockClients=PropertyInspector
+
+[DockSite2]
+DockSiteType=1
+PercentageSizes=1
+Create=1
 Visible=1
 Docked=1
 State=0
@@ -328,50 +400,4 @@ StayOnTop=0
 TabPosition=1
 ActiveTabID=ProjectManager
 TabDockClients=ProjectManager
-
-[DockSite1]
-DockSiteType=1
-PercentageSizes=1
-Create=1
-Visible=0
-Docked=1
-State=0
-Left=-111
-Top=3
-Width=3825
-Height=5052
-MaxLeft=-1
-MaxTop=-1
-ClientWidth=3825
-ClientHeight=5052
-TBDockHeight=5052
-LRDockWidth=3825
-Dockable=1
-StayOnTop=0
-TabPosition=1
-ActiveTabID=WatchWindow
-TabDockClients=BreakpointWindow,CallStackWindow,WatchWindow
-
-[DockSite2]
-DockSiteType=1
-PercentageSizes=1
-Create=1
-Visible=1
-Docked=1
-State=0
-Left=0
-Top=446
-Width=1906
-Height=4121
-MaxLeft=-1
-MaxTop=-1
-ClientWidth=1906
-ClientHeight=4121
-TBDockHeight=1784
-LRDockWidth=1906
-Dockable=1
-StayOnTop=0
-TabPosition=1
-ActiveTabID=PropertyInspector
-TabDockClients=PropertyInspector
 

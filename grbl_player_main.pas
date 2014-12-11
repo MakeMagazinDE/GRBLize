@@ -76,8 +76,6 @@ type
     BtnSendGrblSettings: TBitBtn;
     ColorDialog1: TColorDialog;
     Bevel4: TBevel;
-    BtnPause: TSpeedButton;
-    BtnContinue: TSpeedButton;
     BtnRun: TSpeedButton;
     BtnStop: TSpeedButton;
     BtnMoveWorkZero: TSpeedButton;
@@ -708,8 +706,6 @@ begin
     BtnRun.Caption:= 'Run';
     BtnStop.Enabled:= false;
     BtnEmergStop.Enabled:= false;
-    BtnPause.Enabled:= false;
-    BtnContinue.Enabled:= false;
     BtnZeroX.Enabled:= false;
     BtnZeroY.Enabled:= false;
     BtnZeroZ.Enabled:= false;
@@ -729,8 +725,6 @@ begin
     BtnRun.Caption:= 'Run';
     BtnStop.Enabled:= true;
     BtnEmergStop.Enabled:= true;
-    BtnPause.Enabled:= true;
-    BtnContinue.Enabled:= true;
     BtnZeroX.Enabled:= true;
     BtnZeroY.Enabled:= true;
     BtnZeroZ.Enabled:= true;
@@ -750,8 +744,6 @@ begin
     BtnEmergStop.Enabled:= false;
     BtnRun.Caption:= 'Run';
     BtnStop.Enabled:= false;
-    BtnPause.Enabled:= false;
-    BtnContinue.Enabled:= false;
     BtnZeroX.Enabled:= false;
     BtnZeroY.Enabled:= false;
     BtnZeroZ.Enabled:= false;
@@ -1937,13 +1929,10 @@ end;
 procedure TForm1.BtnPauseClick(Sender: TObject);
 begin
   grbl_sendStr('!', false, false);
-  Timer2.enabled:= true;  // war ggf. abgeschaltet
 end;
 
 procedure TForm1.BtnContinueClick(Sender: TObject);
 begin
-  grbl_wait_timer_finished;
-  Timer2.enabled:= false;  // Wartezeit größer als Timer-Wert!
   grbl_sendStr('~', false, false);
 end;
 
