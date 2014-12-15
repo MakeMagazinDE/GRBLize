@@ -1907,7 +1907,7 @@ var
   my_response: String;
 begin
   my_response:= grbl_sendStr('M5' + #13, false, true); // Spindle Off sofort senden
-  Form1.Memo1.lines.add('M5; #Process cancelled by user');
+  Form1.Memo1.lines.add('M5 // #Process cancelled by user');
   grbl_sendlist.clear; // alles abgearbeitet
   MachineRunning:= false;
 end;
@@ -1952,7 +1952,7 @@ begin
         end;
         my_str:= grbl_sendlist.Strings[i];
         my_response:= grbl_sendStr(my_str + #13, true, true);
-        Form1.Memo1.lines.add(my_str + '; ' + my_response);
+        Form1.Memo1.lines.add(my_str + ' // ' + my_response);
       end;
       if wait_for_idle then
         repeat
@@ -1971,9 +1971,9 @@ begin
       MachineRunning:= false;
       my_response:= grbl_sendStr(#24, false, true); // Ctrl-X Reset sofort senden
       grbl_receiveStr(1000, true);
-      Form1.Memo1.lines.add(';CTRL-X: ' + my_response);
+      Form1.Memo1.lines.add('// CTRL-X: ' + my_response);
       grbl_receiveStr(100, true);
-      Form1.Memo1.lines.add('; ' + my_response);
+      Form1.Memo1.lines.add(' // ' + my_response);
       showmessage('Emergency Stop. Please run Home Cycle to release ALARM LOCK.');
       DisableRunButtons;
       HomingPerformed:= false;
@@ -1983,11 +1983,11 @@ begin
       LEDbusy.Checked:= true;
       for i:= 0 to my_count-1 do begin
         if CancelProc then begin
-          Form1.Memo1.lines.add('M5; #Process cancelled by user');
+          Form1.Memo1.lines.add('M5 // #Process cancelled by user');
           break;
         end;
         my_str:= grbl_sendlist.Strings[i];
-        Form1.Memo1.lines.add(my_str + '; #Device not open');
+        Form1.Memo1.lines.add(my_str + ' // #Device not open');
         mdelay(50);
       end;
     end;
@@ -2012,6 +2012,7 @@ begin
   CancelProc:= true;
   CancelWait:= true;
   EmergencyStop:= true;
+  Form1.Memo1.lines.add('// EMERGENCY STOP');
   if not MachineRunning then begin
     grbl_sendlist.clear; // alles löschen
     SendlistExecute;     // E-Stop ausführen
@@ -2021,6 +2022,7 @@ end;
 
 procedure TForm1.BtnStopClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// CANCEL PROCESS');
   CancelProc:= true;
   CancelWait:= true;
   EmergencyStop:= false;
@@ -2028,24 +2030,28 @@ end;
 
 procedure TForm1.BtnZeroXClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// SET Y ZERO');
   grbl_addStr('G92 X0');
   SendlistExecute;
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// SET Y ZERO');
   grbl_addStr('G92 Y0');
   SendlistExecute;
 end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// SET Z ZERO');
   grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
   SendlistExecute;
 end;
 
 procedure TForm1.BtnHomeCycleClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// HOME CYCLE');
   DisableRunButtons;
   grbl_addStr('$h');
   grbl_offsXY(0,0);
@@ -2059,6 +2065,7 @@ end;
 
 procedure TForm1.BtnMoveWorkZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
   grbl_addStr('M5');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(0,0, false);
@@ -2068,6 +2075,7 @@ end;
 
 procedure TForm1.BtnMoveParkClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// MOVE TO PARK POSITION');
   grbl_addStr('M5');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(job.park_x, job.park_y, true);
@@ -2076,6 +2084,7 @@ end;
 
 procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('// MOVE TO TOOL CHANGE POSITION');
   grbl_addStr('M5');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
@@ -2091,7 +2100,7 @@ var i, my_len, p, last_pen: Integer;
 
 begin
   Memo1.lines.Clear;
-  Memo1.lines.add('; GRBL G-CODE DEBUG OUPUT');
+  Memo1.lines.add('// GRBL G-CODE DEBUG OUPUT');
   my_len:= length(final_array);
   if my_len < 1 then
     exit;
@@ -2148,6 +2157,7 @@ begin
       grbl_moveXY(0,0, false);
       SendList(true);
     end;
+  Form1.Memo1.lines.add('// FINISHED');
   CancelProc:= false;
 end;
 
