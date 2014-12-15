@@ -16,11 +16,11 @@ type
   function InitFTDI(my_device:Integer): String;
   function CheckCom(my_ComNumber: Integer): Integer;  // check if a COM port is available
 
+  // fordert Maschinenstatus mit "?" an
+  function grbl_statusStr: string;
+
   // Resync, sende #13 und warte 1000 ms auf OK
   function grbl_resync: boolean;
-
-  // Warte, bis Timer1-Routine beendet
-  procedure grbl_wait_timer_finished;
 
   // GCode-String oder Char an GRBL senden, auf OK warten wenn my_getok = TRUE
   function grbl_sendStr(my_str: String; ProcMsg, my_getok: boolean): String;
@@ -84,7 +84,6 @@ var
 //FTDI-Device
   ftdi: Tftdichip;
   ftdi_isopen : Boolean;
-  grbl_available: Boolean;
   ftdi_selected_device: Integer;  // FTDI-Frosch-Device-Nummer
   ftdi_device_count: dword;
   ftdi_device_list: pftdiDeviceList;
@@ -92,6 +91,7 @@ var
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
   grbl_sendlist, grbl_receveivelist: TSTringList;
+  grbl_checksema: boolean;
 
 implementation
 
@@ -140,14 +140,6 @@ end;
 // #############################################################################
 // #############################################################################
 
-procedure grbl_wait_timer_finished;
-// Warte, bis Timer1-Routine beendet
-begin
-  TimerFinished:= false;
-  repeat
-    Application.ProcessMessages;
-  until TimerFinished;
-end;
 
 function grbl_receiveCount: Integer;
 // gibt Anzahl der Zeichen im Empfangspuffer zurück
@@ -176,6 +168,7 @@ var
   targettime: cardinal;
   has_timeout: Boolean;
 begin
+  CancelWait:= false;
   if ftdi_isopen then begin
     my_str:= '';
     has_timeout:= timeout > 0;
@@ -189,17 +182,16 @@ begin
         if my_char >= #32 then
           my_str:= my_str + my_char;
       end;
-    until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelProc;
+    until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
     if has_timeout then
       if (GetTickCount > targettime) then
         my_str:= '#Timeout';
-    if CancelProc then
+    if CancelWait then
       my_str:= '#Cancelled';
   end else
     my_str:= '#Device not open';
   grbl_receiveStr:= my_str;
 end;
-
 
 function grbl_sendStr(my_str: String; ProcMsg, my_getok: boolean): String;
 // liefert TRUE wenn my_getok TRUE war und GRBL mit "ok" geantwortet hat
@@ -208,6 +200,7 @@ function grbl_sendStr(my_str: String; ProcMsg, my_getok: boolean): String;
 var
   i: longint;
 begin
+  CancelWait:= false;
   grbl_sendStr:= '';
   if ftdi_isopen then begin
     ftdi.write(@my_str[1], length(my_str), i);
@@ -217,26 +210,37 @@ begin
   end;
 end;
 
+function grbl_statusStr: string;
+// fordert Maschinenstatus mit "?" an
+begin
+  CancelWait:= false;
+  grbl_sendStr('?', false, false); // Status anfordern
+  grbl_statusStr:= grbl_receiveStr(100, true);
+end;
+
+
 function grbl_resync: boolean;
 // Resync, sende #13 und warte 500 ms auf OK
 var my_str: String;
-  i: Integer;
+  i, n: Integer;
 begin
+  CancelWait:= false;
   grbl_resync:= false;
   my_str:= '';
   if ftdi_isopen then begin
-    grbl_available:= false;
-    grbl_wait_timer_finished;
-    repeat
-      mdelay(50);
+    mdelay(100);
+    for i:= 0 to 7 do begin
       grbl_rx_clear;
       my_str:= #13;
-      ftdi.write(@my_str[1], 1, i);
-      my_str:= grbl_receiveStr(500, true);
-    until (my_str = 'ok') or CancelProc;
+      ftdi.write(@my_str[1], 1, n);
+      mdelay(100);
+      my_str:= grbl_receiveStr(20, false);
+      if (my_str = 'ok') or CancelWait then
+        break;
+    end;
     grbl_resync:= (my_str = 'ok');
-    grbl_available:= true;
-  end;
+  end else
+    grbl_resync:= true;
 end;
 
 procedure grbl_addStr(my_str: String);

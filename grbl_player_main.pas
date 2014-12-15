@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.95b ';
+  c_VerStr: String = '0.96a ';
 
 type
   TForm1 = class(TForm)
@@ -54,7 +54,6 @@ type
     N7: TMenuItem;
     OpenJobDialog: TOpenDialog;
     SaveJobDialog: TSaveDialog;
-    Label8: TLabel;
     PageControl1: TPageControl;
     TabSheetPens: TTabSheet;
     Label7: TLabel;
@@ -91,7 +90,6 @@ type
     MposY: TLabel;
     MposZ: TLabel;
     BtnHomeCycle: TSpeedButton;
-    PanelLED: TPanel;
     ComboBox1: TComboBox;
     TabSheet1: TTabSheet;
     StringGridFiles: TStringGrid;
@@ -110,6 +108,13 @@ type
     Label3: TLabel;
     Timer2: TTimer;
     BtnEmergStop: TBitBtn;
+    Panel1: TPanel;
+    Panel2: TPanel;
+    Panel3: TPanel;
+    Label6: TLabel;
+    PanelLED: TPanel;
+    Label4: TLabel;
+    Panel4: TPanel;
     procedure ResetGRBLClick(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure StringGridPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -142,8 +147,6 @@ type
     procedure BtnRefreshGrblSettingsClick(Sender: TObject);
     procedure AppDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
-    procedure BtnContinueClick(Sender: TObject);
-    procedure BtnPauseClick(Sender: TObject);
     procedure BtnHomeCycleClick(Sender: TObject);
     procedure BtnZeroZClick(Sender: TObject);
     procedure BtnZeroYClick(Sender: TObject);
@@ -172,7 +175,6 @@ type
     procedure JobOpenExecute(Sender: TObject);
     procedure Timer1Elapsed(Sender: TObject);
 
-
   private
     { Private declarations }
   public
@@ -189,9 +191,11 @@ type
 
 
   procedure EnableTestButtons;
+  procedure SendlistExecute;
+  procedure CheckResponse;
+  procedure WaitTimerFinished;
 
-
-
+  
 type
 
     T3dFloat = record
@@ -206,14 +210,15 @@ var
   TimeOutValue,LEDtimer: Integer;  // Timer-Tick-Zähler
   TimeOut: Boolean;
   TimerCount1:Integer;
-  TimerFinished, MachineRunning, CancelProc: Boolean;
+  StatusTimerFlag, GetStatusEnabled, TimerFinished, MachineRunning,
+  CancelWait, CancelProc: Boolean;
 
   ComPortAvailableList: Array[0..31] of Integer;
   ComPortUsed: Integer;
   NeedsRedraw, NeedsRelist, NeedsRefresh3D: boolean;
   Scale: Double;
   JobSettingsPath: String;
-  HomingPerformed,EmergencyStop: Boolean;
+  EmergencyStop, HomingPerformed: Boolean;
   grbl_mpos, grbl_wpos, old_grbl_wpos: T3dFloat;
 
 
@@ -704,8 +709,8 @@ begin
   with Form1 do begin
     BtnRun.Enabled:= false;
     BtnRun.Caption:= 'Run';
-    BtnStop.Enabled:= false;
-    BtnEmergStop.Enabled:= false;
+    BtnStop.Enabled:= true;
+    // BtnEmergStop.Enabled:= true;
     BtnZeroX.Enabled:= false;
     BtnZeroY.Enabled:= false;
     BtnZeroZ.Enabled:= false;
@@ -724,32 +729,13 @@ begin
     BtnRun.Enabled:= true;
     BtnRun.Caption:= 'Run';
     BtnStop.Enabled:= true;
-    BtnEmergStop.Enabled:= true;
+    // BtnEmergStop.Enabled:= true;
     BtnZeroX.Enabled:= true;
     BtnZeroY.Enabled:= true;
     BtnZeroZ.Enabled:= true;
     BtnMoveWorkZero.Enabled:= true;
     BtnMoveToolChange.Enabled:= true;
     BtnMovePark.Enabled:= true;
-    BtnHomeCycle.Enabled:= true;
-    BtnRefreshGrblSettings.Enabled:= true;
-    BtnSendGrblSettings.Enabled:= true;
-  end;
-end;
-
-procedure DisableRunButtons;
-begin
-  with Form1 do begin
-    BtnRun.Enabled:= false;
-    BtnEmergStop.Enabled:= false;
-    BtnRun.Caption:= 'Run';
-    BtnStop.Enabled:= false;
-    BtnZeroX.Enabled:= false;
-    BtnZeroY.Enabled:= false;
-    BtnZeroZ.Enabled:= false;
-    BtnMoveWorkZero.Enabled:= false;
-    BtnMoveToolChange.Enabled:= false;
-    BtnMovePark.Enabled:= false;
     BtnHomeCycle.Enabled:= true;
     BtnRefreshGrblSettings.Enabled:= true;
     BtnSendGrblSettings.Enabled:= true;
@@ -763,209 +749,34 @@ begin
     BtnRun.Caption:= 'Test Run';
     BtnRun.Enabled:= true;
     BtnStop.Enabled:= true;
+    BtnHomeCycle.Enabled:= false;
   end;
 end;
 
-procedure TForm1.BtnRescanClick(Sender: TObject);
-// Auswahl des Frosches unter FTDI-Devices
-var i : Integer; LV : TListItem;
+procedure DisableRunButtons;
 begin
-// Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
-  EnableTestButtons;
-  deviceselectbox.ListView1.Items.clear;
-  SetUpFTDI;
-  if ftdi_device_count > 0 then
-    for i := 0 to ftdi_device_count - 1 do begin
-      LV := deviceselectbox.ListView1.Items.Add;
-      LV.Caption := 'Device '+IntToStr(I);
-      LV.SubItems.Add(ftdi_sernum_arr[i]);
-      LV.SubItems.Add(ftdi_desc_arr[i]);
-    end
-  else
-    exit;
-  deviceselectbox.ListView1.Items[0].Selected := true;
-  deviceselectbox.ShowModal;
-  if (deviceselectbox.ModalResult=MrOK) and (ftdi_device_count > 0) then begin
-    ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
-    InitFTDI(ftdi_selected_device);
+  with Form1 do begin
     if ftdi_isopen then begin
-      BtnRescan.Visible:= false;
-      BtnClose.Visible:= true;
-      DeviceView.Text:= ftdi_sernum_arr[ftdi_selected_device]
-      + ' - ' + ftdi_desc_arr[ftdi_selected_device];
-      DisableRunButtons;
-      BtnRefreshGrblSettingsClick(Sender);
-      BtnZeroXClick(Sender);
-      BtnZeroYClick(Sender);
-      BtnZeroZClick(Sender);
+      BtnRun.Enabled:= false;
+    // BtnEmergStop.Enabled:= true;
+      BtnRun.Caption:= 'Run';
+    end else begin
+      BtnRun.Caption:= 'Test Run';
+      BtnRun.Enabled:= true;
+      BtnStop.Enabled:= true;
     end;
-    if not grbl_resync then begin
-      showmessage('GRBL not responding or busy!');
-      BtnCloseClick(Sender);
-    end;
+    BtnStop.Enabled:= true;
+    BtnZeroX.Enabled:= false;
+    BtnZeroY.Enabled:= false;
+    BtnZeroZ.Enabled:= false;
+    BtnMoveWorkZero.Enabled:= false;
+    BtnMoveToolChange.Enabled:= false;
+    BtnMovePark.Enabled:= false;
+    BtnHomeCycle.Enabled:= true;
+    BtnRefreshGrblSettings.Enabled:= true;
+    BtnSendGrblSettings.Enabled:= true;
   end;
 end;
-
-procedure TForm1.BtnCloseClick(Sender: TObject);
-begin
-  if ftdi_isopen then
-    ftdi.closeDevice;
-  ftdi_isopen:= false;
-  BtnRescan.Visible:= true;
-  BtnClose.Visible:= false;
-  DeviceView.Text:= '(not selected)';
-  EnableTestButtons;
-  HomingPerformed:= false;
-end;
-
-// #############################################################################
-// ############################## T I M E R ####################################
-// #############################################################################
-
-procedure TForm1.Timer1Elapsed(Sender: TObject);
-begin
-  inc(TimerCount1);
-  if (TimerCount1 = 10) and (not HomingPerformed) and ftdi_isopen then
-    Form1.BtnHomeCycle.Font.Color:= clPurple;
-  if (TimerCount1 = 20) and (not HomingPerformed) and ftdi_isopen then
-    Form1.BtnHomeCycle.Font.Color:= clfuchsia;
-  if (TimerCount1 >= 20) then begin
-    TimerCount1:= 0;
-    if not MachineRunning then
-      LEDbusy.Checked:= false;
-  end;
-  if NeedsRedraw and Form1.WindowMenu1.Items[0].Checked then begin
-    draw_cnc_all;
-    NeedsRedraw:= false;
-  end;
-  if NeedsRelist and (Form1.PageControl1.TabIndex = 2) then begin
-    list_blocks;
-    NeedsRelist:= false;
-  end;
-  if NeedsRefresh3D and Form1.WindowMenu1.Items[2].Checked then begin
-    Form4.FormRefresh(nil);
-    NeedsRefresh3D:= false;
-  end;
-
-end;
-
-
-procedure TForm1.Timer2Timer(Sender: TObject);
-// alle 20 ms aufgerufen
-var
-  my_start_idx: Integer;
-  my_queue_empty, my_receive_empty: Boolean;
-  my_str, my_response: String;
-begin
-  TimerFinished:= false;
-  my_queue_empty:= false;
-  if CancelProc then begin
-    grbl_sendlist.Clear;
-    CancelProc:= false;
-    MachineRunning:= false;
-    if ftdi_isopen then begin
-      if EmergencyStop then begin
-        LEDbusy.Checked:= true;
-        Timer2.enabled:= false;  // Wartezeit größer als Timer-Wert!
-        my_response:= grbl_sendStr(#24, false, true); // Ctrl-X Reset
-        grbl_receiveStr(1000, false);
-        Form1.Memo1.lines.add('CTRL-X; ' + my_response);
-      end else begin
-        my_response:= grbl_sendStr('M5'+#13, false, false); // Spindle Stop
-        Form1.Memo1.lines.add('M5; ' + my_response);
-      end;
-    end;
-    EmergencyStop:= false;
-    TimerFinished:= true;
-    Timer2.enabled:= true;
-    exit;
-  end;
-
-  if ftdi_isopen then begin
-  // Steht etwas in der Sendeliste? Dann abschicken und auf Antwort warten
-    if grbl_sendlist.count > 0 then begin
-      LEDbusy.Checked:= true;
-      Timer2.enabled:= false;   // Könnte länger dauern
-      my_str:= grbl_sendlist.Strings[0];
-      grbl_sendlist.Delete(0);
-      my_response:= grbl_sendStr(my_str + #13, false, true);
-      Form1.Memo1.lines.add(my_str + '; ' + my_response);
-    end else
-      my_queue_empty:= true;
-  end else begin
-    if grbl_sendlist.count > 0 then begin
-      LEDbusy.Checked:= true;
-      my_str:= grbl_sendlist.Strings[0];
-      grbl_sendlist.Delete(0);
-      Form1.Memo1.lines.add(my_str + '; #Device not open');
-      TimerFinished:= true;
-      Timer2.enabled:= true;
-      exit;
-    end;
-  end;
-
-  if my_queue_empty and grbl_available then begin
-  // wenn Sendeliste leer, neue Koordinaten anfordern
-    Timer2.enabled:= false;                   // Kann länger als 20 ms dauern
-    my_receive_empty:= grbl_receiveCount = 0; // Empfangspuffer müsste leer sein
-    if my_receive_empty then
-      grbl_sendStr('?', false, false);        // Wenn leer, Koordinaten anfordern
-    my_str:= grbl_receiveStr(50, false);      // Timer abgeschaltet!
-    if (not my_receive_empty) or (my_str = '#Timeout')
-    or (length(my_str) < 4) then begin // irgendein Fehler
-      TimerFinished:= true;
-      Timer2.enabled:= true;
-      exit;
-    end;
-    grbl_receveivelist.clear;
-    grbl_receveivelist.CommaText:= my_str;
-    // Idle,MPos,100.00,0.00,0.00,WPos,100.00,0.00,0.00
-    my_start_idx:= grbl_receveivelist.IndexOf('MPos');
-    if my_start_idx >= 0 then begin
-      grbl_mpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      MPosX.Caption:= grbl_receveivelist[my_start_idx+1];
-      grbl_mpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
-      MPosY.Caption:= grbl_receveivelist[my_start_idx+2];
-      grbl_mpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-      MPosZ.Caption:= grbl_receveivelist[my_start_idx+3];
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('WPos');
-    if my_start_idx >= 0 then begin
-       grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
-      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('JogX');
-    if my_start_idx >= 0 then begin
-      grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('JogY');
-    if my_start_idx >= 0 then begin
-      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('JogZ');
-    if my_start_idx >= 0 then begin
-      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-    end;
-    if (old_grbl_wpos.X <> grbl_wpos.X) or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
-      ToolCursor.X:= round(grbl_wpos.X * 40);
-      ToolCursor.Y:= round(grbl_wpos.Y * 40);
-      NeedsRedraw:= true;
-      old_grbl_wpos:= grbl_wpos;
-    end;
-    grbl_receveivelist.clear;
-  end;
-  Timer2.enabled:= true;
-  TimerFinished:= true;
-end;
-
-
 
 // #############################################################################
 // ############################ M A I N  F O R M ###############################
@@ -988,11 +799,10 @@ procedure TForm1.FormCreate(Sender: TObject);
 var
   grbl_ini: TRegistryIniFile;
 begin
-  TimerFinished:= true;
+  TimerFinished:= false;
   MachineRunning:= false;
-  grbl_available:= false;
   EmergencyStop:= false;
-
+  GetStatusEnabled:= false;
   grbl_receveivelist:= TStringList.create;
   grbl_receveivelist.clear;
   grbl_sendlist:= TStringList.create;
@@ -1058,8 +868,6 @@ begin
   deviceselectbox.hide;
 
   Form1.BringToFront;
-  TimerFinished:= false;
-  Timer1.Enabled:= true;
 
   HomingPerformed:= false;
   Combobox1.Parent := StringgridFiles;
@@ -1070,15 +878,9 @@ begin
     OpenJobFile(JobSettingsPath)
   else
     Form1.FileNew1Execute(sender);
-  EnableTestButtons;
-  if ftdi_isopen then begin
-    DisableRunButtons;
-    BtnRefreshGrblSettingsClick(Sender);
-    grbl_available:= true;
-    BtnZeroXClick(Sender);
-    BtnZeroYClick(Sender);
-    BtnZeroZClick(Sender);
-  end;
+  Timer1.Enabled:= true;
+  Timer2.Enabled:= true;
+  CheckResponse;
 end;
 
 
@@ -1091,8 +893,9 @@ procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 var
   grbl_ini:TRegistryIniFile;
 begin
-  grbl_available:= false;
-  grbl_wait_timer_finished;
+  CancelProc:= true;
+  CancelWait:= true;
+  WaitTimerFinished;
   Timer1.Enabled:= false;
   Timer2.Enabled:= false;
 
@@ -1783,7 +1586,240 @@ begin
   NeedsRefresh3D:= true;
 end;
 
+// #############################################################################
+// ############################## T I M E R ####################################
+// #############################################################################
 
+
+procedure TForm1.Timer1Elapsed(Sender: TObject);
+begin
+  inc(TimerCount1);
+  if (TimerCount1 = 10) and (not HomingPerformed) and ftdi_isopen then
+    Form1.BtnHomeCycle.Font.Color:= clPurple;
+  if (TimerCount1 = 20) and (not HomingPerformed) and ftdi_isopen then
+    Form1.BtnHomeCycle.Font.Color:= clfuchsia;
+  if (TimerCount1 >= 20) then begin
+    TimerCount1:= 0;
+    if not MachineRunning then
+      LEDbusy.Checked:= false;
+  end;
+  if NeedsRedraw and Form1.WindowMenu1.Items[0].Checked then begin
+    draw_cnc_all;
+    NeedsRedraw:= false;
+  end;
+  if NeedsRelist and (Form1.PageControl1.TabIndex = 2) then begin
+    list_blocks;
+    NeedsRelist:= false;
+  end;
+  if NeedsRefresh3D and Form1.WindowMenu1.Items[2].Checked then begin
+    Form4.FormRefresh(nil);
+    NeedsRefresh3D:= false;
+  end;
+
+end;
+
+procedure DecodeResponse(the_response: String);
+var
+  my_start_idx: Integer;
+  is_valid: Boolean;
+  my_str: String;
+begin
+  // Idle,MPos,100.00,0.00,0.00,WPos,100.00,0.00,0.00
+  is_valid:= false;
+  with Form1 do begin
+    StatusBar1.Hint:= the_response;
+    grbl_receveivelist.clear;
+    grbl_receveivelist.CommaText:= the_response;
+
+    if grbl_receveivelist.Count < 2 then
+      exit;
+
+    my_Str:= grbl_receveivelist[0];
+
+    if my_Str = 'Idle' then begin
+      Panel1.Color:= clLime;
+      is_valid:= true;
+    end else
+      Panel1.Color:= $00004000;
+
+    if (my_Str = 'Queue') or (my_Str =  'Hold') then begin
+      is_valid:= true;
+      Panel2.Color:= clAqua;
+    end else
+      Panel2.Color:= $00400000;
+
+    if (my_Str = 'Run') or AnsiContainsStr(my_Str,'Jog') then begin
+      is_valid:= true;
+      Panel3.Color:= clFuchsia;
+    end else
+      Panel3.Color:= $00400040;
+
+    if my_Str = 'Alarm' then begin
+      is_valid:= true;
+      Panel4.Color:= clRed;
+    end else
+      Panel4.Color:= $00000040;
+
+    // keine gültige Statusmeldung?
+    if not is_valid then
+      exit;
+
+    my_start_idx:= grbl_receveivelist.IndexOf('MPos');
+    if my_start_idx >= 0 then begin
+      grbl_mpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      MPosX.Caption:= grbl_receveivelist[my_start_idx+1];
+      grbl_mpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
+      MPosY.Caption:= grbl_receveivelist[my_start_idx+2];
+      grbl_mpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
+      MPosZ.Caption:= grbl_receveivelist[my_start_idx+3];
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('WPos');
+    if my_start_idx >= 0 then begin
+       grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
+      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
+      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('JogX');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('JogY');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('JogZ');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+    end;
+  end;
+  if (old_grbl_wpos.X <> grbl_wpos.X) or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
+    ToolCursor.X:= round(grbl_wpos.X * 40);
+    ToolCursor.Y:= round(grbl_wpos.Y * 40);
+    NeedsRedraw:= true;
+    old_grbl_wpos:= grbl_wpos;
+  end;
+end;
+
+procedure WaitTimerFinished;
+// Warte, bis Timer2-Routine mit GetStatus beendet
+begin
+  if not Form1.Timer2.enabled then
+    exit;
+  TimerFinished:= false;
+  repeat
+    Application.ProcessMessages;
+  until TimerFinished;
+  if grbl_receiveCount <> 0 then
+    DecodeResponse(grbl_receiveStr(80, true)); // noch im Buffer
+end;
+
+function WaitTimerFinishedResync: Boolean;
+// Warte, bis Timer2-Routine mit GetStatus beendet
+begin
+  WaitTimerFinished;
+  GetStatusEnabled:= false; // nicht stören
+  WaitTimerFinishedResync:= grbl_resync;
+end;
+
+procedure CheckResponse;
+var
+  my_str: String;
+  i: Integer;
+begin
+  CancelProc:= false;
+  EmergencyStop:= false;
+  grbl_sendlist.Clear;
+  if ftdi_isopen then begin
+    if WaitTimerFinishedResync then begin
+      GetStatusEnabled:= true;
+      DisableRunButtons;
+      Form1.BtnRefreshGrblSettingsClick(nil);
+      Form1.BtnZeroXClick(nil);
+      Form1.BtnZeroYClick(nil);
+      Form1.BtnZeroZClick(nil);
+    end else begin
+      EnableTestButtons;
+      showmessage('GRBL not responding or busy!');
+      Form1.BtnCloseClick(nil);
+    end;
+  end else
+    EnableTestButtons;
+end;
+
+procedure TForm1.Timer2Timer(Sender: TObject);
+// alle 100 ms aufgerufen. Zeit reicht zum Empfang der Statusmeldung
+var
+  my_str: String;
+begin
+  if ftdi_isopen and GetStatusEnabled and (not CancelProc) then begin
+  // wenn Sendeliste leer, neue Koordinaten anfordern
+    while (grbl_receiveCount <> 0) do begin
+      my_str:= grbl_receiveStr(80, true); // noch im Buffer
+      DecodeResponse(my_str);
+    end;
+    grbl_sendStr('?', false, false);     // neuen Status anfordern
+  end;
+  TimerFinished:= true;
+  StatusTimerFlag:= true;
+end;
+
+// #############################################################################
+// ######################## GRBL OPEN/CLOSE BUTTONS ############################
+// #############################################################################
+
+
+procedure TForm1.BtnRescanClick(Sender: TObject);
+// Auswahl des Frosches unter FTDI-Devices
+var i : Integer; LV : TListItem;
+begin
+// Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
+  deviceselectbox.ListView1.Items.clear;
+  SetUpFTDI;
+  if ftdi_device_count > 0 then
+    for i := 0 to ftdi_device_count - 1 do begin
+      LV := deviceselectbox.ListView1.Items.Add;
+      LV.Caption := 'Device '+IntToStr(I);
+      LV.SubItems.Add(ftdi_sernum_arr[i]);
+      LV.SubItems.Add(ftdi_desc_arr[i]);
+    end
+  else
+    exit;
+  deviceselectbox.ListView1.Items[0].Selected := true;
+  deviceselectbox.ShowModal;
+  if (deviceselectbox.ModalResult=MrOK) and (ftdi_device_count > 0) then begin
+    ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
+    InitFTDI(ftdi_selected_device);
+    if ftdi_isopen then begin
+      BtnRescan.Visible:= false;
+      BtnClose.Visible:= true;
+      DeviceView.Text:= ftdi_sernum_arr[ftdi_selected_device]
+      + ' - ' + ftdi_desc_arr[ftdi_selected_device];
+    end;
+  end;
+  CheckResponse;
+end;
+
+procedure TForm1.BtnCloseClick(Sender: TObject);
+begin
+  WaitTimerFinished;
+  if ftdi_isopen then
+    ftdi.closeDevice;
+  ftdi_isopen:= false;
+  BtnRescan.Visible:= true;
+  BtnClose.Visible:= false;
+  DeviceView.Text:= '(not selected)';
+  EnableTestButtons;
+  HomingPerformed:= false;
+end;
+
+// #############################################################################
+// ########################## GRBL DEFAULT BUTTONS #############################
 // #############################################################################
 
 procedure TForm1.StringgridGrblSettingsDrawCell(Sender: TObject; ACol,
@@ -1799,44 +1835,36 @@ procedure TForm1.BtnRefreshGrblSettingsClick(Sender: TObject);
 var
   my_str: String;
 begin
+  CancelProc:= false;
   if ftdi_isopen then
-    grbl_available:= false;
-    grbl_wait_timer_finished;
-    if not grbl_resync then begin
-      showmessage('GRBL not responding or busy!');
-      exit;
-    end;
     with Form1.StringgridGrblSettings do begin
+      grbl_sendlist.clear;
+      WaitTimerFinishedResync;
+      if not grbl_resync then
+        showmessage('GRBL Resync failed on Retreive Settings!');
       Rowcount:= 2;
-      grbl_resync;   // Resync
-      grbl_rx_clear;
-      grbl_available:= false;
-      grbl_sendStr('$X'+ #13, true, false);   // Reset Alarm lock
-      grbl_wait_timer_finished;
-      mdelay(100);
-      my_str:= grbl_receiveStr(100, true);
       grbl_sendStr(#24, true, false);   // Reset CTRL-X
       my_str:= grbl_receiveStr(500, true);
       my_str:= grbl_receiveStr(100, true);
       Rows[0].text:= my_str;
-      grbl_sendStr('$$'+#13, false, false);
-      repeat
-        my_str:= grbl_receiveStr(100, false);
+
+      grbl_sendStr('$$' + #13, false, false);
+      while not CancelProc do begin
+        my_str:= grbl_receiveStr(100, true);
         if my_str='ok' then
           break;
         Cells[0,RowCount-1]:= my_str;
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
         Rowcount:= RowCount+1;
-      until false;
+      end;
 
       if Cells[0,Rowcount-1] = '' then
         Rowcount:= RowCount-1;
       Cells[1,0]:= 'Value';
       FixedCols:= 1;
       FixedRows:= 1;
-      grbl_wait_timer_finished;
-      grbl_rx_clear;
-      grbl_available:= true;
+      WaitTimerFinishedResync;
+      GetStatusEnabled:= true;
     end;
 end;
 
@@ -1845,124 +1873,214 @@ var i : Integer;
   my_str: String;
 
 begin
+  CancelProc:= false;
   if ftdi_isopen then
     with Form1.StringgridGrblSettings do begin
       if RowCount < 3 then
         exit;
-      grbl_available:= false;
-      grbl_wait_timer_finished;
-      grbl_rx_clear;
-      if grbl_resync then begin
-        for i:= 1 to Rowcount-1 do begin
-          if Cells[0,i] = '' then
-            continue;
-          my_str:= Cells[1,i];
-          if my_str <> setting_val_extr(Cells[0,i]) then begin
-            grbl_sendStr('$'+IntToStr(i-1)+'='+my_str+#13, false, true);
-          end;
+      grbl_sendlist.clear;
+      WaitTimerFinishedResync;
+      if not grbl_resync then
+        showmessage('GRBL Resync failed on Send Settings!')
+      else for i:= 1 to Rowcount-1 do begin
+        if CancelProc then
+          break;
+        if Cells[0,i] = '' then
+          continue;
+        my_str:= Cells[1,i];
+        if my_str <> setting_val_extr(Cells[0,i]) then begin
+          grbl_sendStr('$'+IntToStr(i-1)+'='+my_str+#13, false, true);
         end;
-        grbl_available:= true;
-        BtnRefreshGrblSettingsClick(Sender);
-      end else begin
-        showmessage('GRBL not responding or busy!');
-        exit;
       end;
-    end;
+    BtnRefreshGrblSettingsClick(Sender);
+    WaitTimerFinishedResync;
+    GetStatusEnabled:= true;
+  end;
 end;
 
 // #############################################################################
 // ############################ R U N  TAB BUTTONS #############################
 // #############################################################################
 
+procedure SendListExitProc;
+var
+  my_response: String;
+begin
+  my_response:= grbl_sendStr('M5' + #13, false, true); // Spindle Off sofort senden
+  Form1.Memo1.lines.add('M5; #Process cancelled by user');
+  grbl_sendlist.clear; // alles abgearbeitet
+  MachineRunning:= false;
+end;
+
+procedure SendList(wait_for_idle: Boolean);
+var
+  i, my_count: Integer;
+  my_str, my_response: String;
+  my_finished: Boolean;
+begin
+  MachineRunning:= true;
+  my_count:= grbl_sendlist.count;
+  if ftdi_isopen then begin
+  // Steht etwas in der Sendeliste? Dann abschicken und auf Antwort warten
+    if my_count > 0 then begin
+      WaitTimerFinished; // bitte nicht unterbrechen
+      GetStatusEnabled:= false;
+      my_finished:= false;
+      if not grbl_resync then begin
+        showmessage('GRBL Resync failed on Execute!');
+        GetStatusEnabled:= true;
+        grbl_sendlist.clear; // alles abgearbeitet
+        MachineRunning:= false;
+        exit;
+      end;
+      LEDbusy.Checked:= true;
+      for i:= 0 to my_count-1 do begin
+        if CancelProc then begin
+          SendListExitProc;
+          break;
+        end;
+        if StatusTimerFlag then begin
+          grbl_sendStr('?', false, false);     // selbst Status anfordern
+          my_str:= grbl_receiveStr(100, false);
+          DecodeResponse(my_str);
+          Application.ProcessMessages;
+          StatusTimerFlag:= false;
+        end;
+        if CancelProc then begin
+          SendListExitProc;
+          break;
+        end;
+        my_str:= grbl_sendlist.Strings[i];
+        my_response:= grbl_sendStr(my_str + #13, true, true);
+        Form1.Memo1.lines.add(my_str + '; ' + my_response);
+      end;
+      if wait_for_idle then
+        repeat
+          if StatusTimerFlag then begin
+            grbl_sendStr('?', false, false);     // Status anfordern
+            my_str:= grbl_receiveStr(80, false);
+            my_finished:= not AnsiContainsStr(my_str,'Run');
+            if not my_finished then
+              DecodeResponse(my_str);
+            StatusTimerFlag:= false;
+          end;
+          Application.ProcessMessages;
+        until my_finished or CancelProc;
+    end;
+    if EmergencyStop then begin
+      MachineRunning:= false;
+      my_response:= grbl_sendStr(#24, false, true); // Ctrl-X Reset sofort senden
+      grbl_receiveStr(1000, true);
+      Form1.Memo1.lines.add(';CTRL-X: ' + my_response);
+      grbl_receiveStr(100, true);
+      Form1.Memo1.lines.add('; ' + my_response);
+      showmessage('Emergency Stop. Please run Home Cycle to release ALARM LOCK.');
+      DisableRunButtons;
+      HomingPerformed:= false;
+    end;
+  end else begin
+    if my_count > 0 then begin
+      LEDbusy.Checked:= true;
+      for i:= 0 to my_count-1 do begin
+        if CancelProc then begin
+          Form1.Memo1.lines.add('M5; #Process cancelled by user');
+          break;
+        end;
+        my_str:= grbl_sendlist.Strings[i];
+        Form1.Memo1.lines.add(my_str + '; #Device not open');
+        mdelay(50);
+      end;
+    end;
+  end;
+  grbl_sendlist.clear; // alles abgearbeitet
+  GetStatusEnabled:= true;
+  MachineRunning:= false;
+end;
+
+procedure SendlistExecute;
+begin
+  CancelProc:= false;
+  EmergencyStop:= false;
+  SendList(true);  // wait for Idle TRUE
+  CancelProc:= false;
+end;
+
 procedure TForm1.ResetGRBLClick(Sender: TObject);
+var
+  my_response: String;
 begin
   CancelProc:= true;
-  HomingPerformed:= false;
+  CancelWait:= true;
   EmergencyStop:= true;
-  DisableRunButtons;
-  showmessage('Emergency Stop. Please run Home Cycle to release ALARM LOCK.');
+  if not MachineRunning then begin
+    grbl_sendlist.clear; // alles löschen
+    SendlistExecute;     // E-Stop ausführen
+    EmergencyStop:= false;
+  end;
 end;
 
 procedure TForm1.BtnStopClick(Sender: TObject);
 begin
   CancelProc:= true;
+  CancelWait:= true;
   EmergencyStop:= false;
 end;
 
 procedure TForm1.BtnZeroXClick(Sender: TObject);
 begin
-  if grbl_resync then
-    grbl_addStr('G92 X0');
+  grbl_addStr('G92 X0');
+  SendlistExecute;
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
-  if grbl_resync then
-    grbl_addStr('G92 Y0');
+  grbl_addStr('G92 Y0');
+  SendlistExecute;
 end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
 begin
-  if grbl_resync then
-    grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
+  grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
+  SendlistExecute;
 end;
 
 procedure TForm1.BtnHomeCycleClick(Sender: TObject);
 begin
-  MachineRunning:= true;
   DisableRunButtons;
-  grbl_wait_timer_finished;
-  Timer2.enabled:= false;  // Wartezeit größer als Timer-Wert!
-  Form1.Memo1.lines.add('CTRL-X; ' + grbl_sendStr(#24, true, true));
-  Timer2.enabled:= true;  // war  abgeschaltet
-  if grbl_resync then begin
-    grbl_addStr('$h');
-    grbl_offsXY(0,0);
-    grbl_offsZ(0);
-    grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
-    MachineRunning:= false;
-    HomingPerformed:= true;
-    EnableRunButtons;
-  end;
+  grbl_addStr('$h');
+  grbl_offsXY(0,0);
+  grbl_offsZ(0);
+  grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
+  SendlistExecute;
+  HomingPerformed:= true;
+  EnableRunButtons;
 end;
 
-procedure TForm1.BtnPauseClick(Sender: TObject);
-begin
-  grbl_sendStr('!', false, false);
-end;
-
-procedure TForm1.BtnContinueClick(Sender: TObject);
-begin
-  grbl_sendStr('~', false, false);
-end;
 
 procedure TForm1.BtnMoveWorkZeroClick(Sender: TObject);
 begin
-  if grbl_resync then begin
-    grbl_addStr('M5');
-    grbl_moveZ(job.park_z, true);
-    grbl_moveXY(0,0, false);
-    grbl_moveZ(job.z_penlift, false);
-  end;
+  grbl_addStr('M5');
+  grbl_moveZ(job.park_z, true);
+  grbl_moveXY(0,0, false);
+  grbl_moveZ(job.z_penlift, false);
+  SendlistExecute;
 end;
 
 procedure TForm1.BtnMoveParkClick(Sender: TObject);
 begin
-  if grbl_resync then begin
-    grbl_addStr('M5');
-    grbl_moveZ(job.park_z, true);
-    grbl_moveXY(job.park_x, job.park_y, true);
-  end;
+  grbl_addStr('M5');
+  grbl_moveZ(job.park_z, true);
+  grbl_moveXY(job.park_x, job.park_y, true);
+  SendlistExecute;
 end;
 
 procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
 begin
-  if grbl_resync then begin
-    grbl_addStr('M5');
-    grbl_moveZ(job.park_z, true);
-    grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
-    grbl_moveZ(job.toolchange_z, true);
-  end;
+  grbl_addStr('M5');
+  grbl_moveZ(job.park_z, true);
+  grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
+  grbl_moveZ(job.toolchange_z, true);
+  SendlistExecute;
 end;
 
 
@@ -1972,8 +2090,6 @@ var i, my_len, p, last_pen: Integer;
   my_entry: Tfinal;
 
 begin
-  MachineRunning:= true;
-  grbl_resync;
   Memo1.lines.Clear;
   Memo1.lines.add('; GRBL G-CODE DEBUG OUPUT');
   my_len:= length(final_array);
@@ -1982,42 +2098,46 @@ begin
   last_pen:= -1;
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(0,0,false);
-  grbl_millXYF(0,0,399); // neuen Speed-Wert erzwingen
+  grbl_millXYF(0,0,777); // neuen Speed-Wert erzwingen
   grbl_addStr('M3');
+  SendlistExecute;
+  mdelay(100);
   for i:= 0 to my_len-1 do begin
-    my_entry:= final_array[i];
     if CancelProc then
       break;
+    my_entry:= final_array[i];
     if not my_entry.enable then
       continue;
     if length(my_entry.millings) = 0 then
       continue;
     if CheckPenChangePause.Checked and (my_entry.pen <> last_pen) then begin
       // move to tool change position
+      // TO DO: Neuen Z-Wert ermöglichen
       grbl_addStr('M5');
       grbl_moveZ(job.toolchange_z, true);
       grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
+      SendList(true);
       ShowMessage('Milling paused - Change tool to '
         + #13+ FloatToStr(job.pens[my_entry.pen].diameter)+' mm when path finished'
-        + #13+ 'and click OK when done. Will keep Z Zero.');
+        + #13+ 'and click OK when done. Will keep Z Zero Value.');
       grbl_addStr('M3');
       grbl_moveZ(job.park_z, true);
       grbl_moveXY(0, 0, false); // Zum Werkstück-Nullpunkt zurück, Z ist noch oben
     end;
     grbl_moveZ(job.z_penlift, false);
+    SendList(true);  // warte auf Idle wenn beendet
     last_pen:= my_entry.pen;
     for p:= 0  to length(my_entry.millings)-1 do begin
+      if CancelProc then
+        break;
       grbl_moveZ(job.z_penup, false);
       if my_entry.shape = drillhole then
         grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
       else
         grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
-      if CancelProc then begin
-        break;
-      end;
     end;
     grbl_moveZ(job.z_penlift, false);
-
+    SendList(false);
   end;
   if not CancelProc then
     if CheckEndPark.Checked then
@@ -2026,9 +2146,9 @@ begin
       grbl_addStr('M5');
       grbl_moveZ(job.z_penlift, false);
       grbl_moveXY(0,0, false);
+      SendList(true);
     end;
-  grbl_wait_timer_finished;
-  MachineRunning:= false;
+  CancelProc:= false;
 end;
 
 // #############################################################################
