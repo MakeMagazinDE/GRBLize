@@ -11,6 +11,12 @@ Sie finden die ausführbare Datei (.EXE) auch auf **https://github.com/heise/GRBL
 
 Das Projekt befindet sich noch in Entwicklung, bitte auf evt. Updates prüfen. Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[https://github.com/heise/GRBL-JOG](GRBL-JOG)**.
 
+###Version History
+
+- 0.96b: Latest build, bugfix on FTDI class, new Z Feed Scaling parameter for use with woodmill (otherwise Z feed will be too slow)
+- 0.95b: First public beta
+- 0.94a: Internal alpha, some serious bugs
+
 ###CNC Control Software for GRBL Jogger Project
 
 Executable for Windows XP/7/8 in folder **/bin**. No Installation required, but configuration file "default.job" and example plot files 
