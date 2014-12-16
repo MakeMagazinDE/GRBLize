@@ -1045,6 +1045,7 @@ end;
 
 procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO PART ZERO');
   ToolCursor.X:= 0;
   ToolCursor.Y:= 0;
@@ -1058,6 +1059,7 @@ end;
 procedure TForm2.pu_toolisatpointClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO POINT');
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1072,6 +1074,7 @@ end;
 procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO CENTER');
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1087,6 +1090,7 @@ end;
 
 procedure TForm2.pu_camIsAtPartZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendlistExecute;
@@ -1100,6 +1104,7 @@ end;
 procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1116,6 +1121,7 @@ end;
 procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1133,6 +1139,7 @@ end;
 
 procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
   ToolCursor.X:= 0;
   ToolCursor.Y:= 0;
@@ -1147,6 +1154,7 @@ end;
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO POINT');
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1163,6 +1171,7 @@ end;
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO CENTER');
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1180,6 +1189,7 @@ end;
 
 procedure TForm2.pu_moveCamToPartZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
@@ -1191,6 +1201,7 @@ end;
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO POINT');
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
@@ -1207,6 +1218,7 @@ end;
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO CENTER');
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;

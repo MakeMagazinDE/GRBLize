@@ -12,6 +12,7 @@ type
     ListView1: TListView;
     CancelButton: TButton;
     Label1: TLabel;
+    procedure ListView1DblClick(Sender: TObject);
     procedure OKButtonClick(Sender: TObject);
     procedure CancelButtonClick(Sender: TObject);
   private
@@ -40,6 +41,11 @@ begin
     deviceselectbox.ModalResult:=mrOK;
 end;
 
+
+procedure Tdeviceselectbox.ListView1DblClick(Sender: TObject);
+begin
+  OKButtonClick(Sender);
+end;
 
 end.
 

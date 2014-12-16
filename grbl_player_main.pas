@@ -8,7 +8,7 @@ uses
   Controls, StdActns, Classes, ActnList, Menus, GraphUtil,
   SysUtils, StrUtils, Windows, Graphics, Forms, Messages,
   Dialogs, Spin, FileCtrl, Grids, Registry, ShellApi,
-  VFrames, ExtDlgs, grbl_com, deviceselect, XPMan, CheckLst, drawing_window,
+  VFrames, ExtDlgs, grbl_com, FTDItypes, deviceselect, XPMan, CheckLst, drawing_window,
   glscene_view, ValEdit;
 
 const
@@ -300,46 +300,6 @@ end;
 // #############################################################################
 
 
-procedure DefaultsGridListToJob;
-begin
-  with Form1.AppDefaults do begin
-    job.partsize_x:= StrToFloatDef(Cells[1,1], 0);
-    job.partsize_y:= StrToFloatDef(Cells[1,2], 0);
-    job.partsize_z:= StrToFloatDef(Cells[1,3], 0);
-
-    job.z_penlift:= StrToFloatDef(Cells[1,4], 10.0);
-    job.z_penup:= StrToFloatDef(Cells[1,5], 5.0);
-    job.z_gauge:= StrToFloatDef(Cells[1,6], 10);
-
-    job.optimize_drills:= Cells[1,7] = 'ON';
-    job.use_excellon_dia:= Cells[1,8] = 'ON';
-
-    job.toolchange_pause:= Cells[1,9] = 'ON';
-    Form1.CheckPenChangePause.Checked:= job.toolchange_pause;
-
-    job.toolchange_x:= StrToFloatDef(Cells[1,10], 0);
-    job.toolchange_y:= StrToFloatDef(Cells[1,11], 0);
-    job.toolchange_z:= StrToFloatDef(Cells[1,12], 0);
-
-    job.parkposition_on_end:= Cells[1,13] = 'ON';
-    Form1.CheckEndPark.Checked:= job.parkposition_on_end;
-
-    job.park_x:= StrToFloatDef(Cells[1,14], 0);
-    job.park_y:= StrToFloatDef(Cells[1,15], 0);
-    job.park_z:= StrToFloatDef(Cells[1,16], 0);
-
-    job.cam_x:= StrToFloatDef(Cells[1,17], 0);
-    job.cam_y:= StrToFloatDef(Cells[1,18], 0);
-    job.cam_z:= StrToFloatDef(Cells[1,19], 0);
-
-    job.use_probe:= Cells[1,20] = 'ON';
-    job.probe_x:= StrToFloatDef(Cells[1,21], 0);
-    job.probe_y:= StrToFloatDef(Cells[1,22], 0);
-    job.probe_z:= StrToFloatDef(Cells[1,23], 0);
-
-    job.invert_z:= Cells[1,24] = 'ON';
-  end;
-end;
 
 
 procedure PenGridListToJob;
@@ -480,8 +440,85 @@ begin
       pens[i].speed:= 500;
     end;
   end;
-  DefaultsGridListToJob;
+  with Form1.AppDefaults do begin
+    RowCount:= 26;
+    Rows[1].DelimitedText:='"Part Size X",250';
+    Rows[2].DelimitedText:='"Part Size Y",150';
+    Rows[3].DelimitedText:='"Part Size Z",5';
+    Rows[4].DelimitedText:='"Z Lift above Part",10';
+    Rows[5].DelimitedText:='"Z Up above Part",5';
+    Rows[6].DelimitedText:='"Z Gauge",10';
+    Rows[7].DelimitedText:='"Optimize Drill Path",ON';
+    Rows[8].DelimitedText:= '"Use Excellon Drill Diameters",ON';
+    Rows[9].DelimitedText:= '"Tool Change Pause",OFF';
+    Rows[10].DelimitedText:='"Tool Change X absolute",10';
+    Rows[11].DelimitedText:='"Tool Change Y absolute",100';
+    Rows[12].DelimitedText:='"Tool Change Z absolute",-5';
+    Rows[13].DelimitedText:='"Park Position on End",ON';
+    Rows[14].DelimitedText:='"Park X absolute",200';
+    Rows[15].DelimitedText:='"Park Y absolute",100';
+    Rows[16].DelimitedText:='"Park Z absolute",-5';
+    Rows[17].DelimitedText:='"Cam X Offset","-20"';
+    Rows[18].DelimitedText:='"Cam Y Offset","40"';
+    Rows[19].DelimitedText:='"Cam Z Height above Part",20';
+    Rows[20].DelimitedText:='"Use Tool Z Probe",OFF';
+    Rows[21].DelimitedText:='"Probe X absolute",30';
+    Rows[22].DelimitedText:='"Probe Y absolute",30';
+    Rows[23].DelimitedText:='"Probe Z absolute",-5';
+    Rows[24].DelimitedText:='"Invert Z in G-Code",OFF';
+    Rows[25].DelimitedText:='"Scale Z Feed",1';
+  end;
+
   ClearFiles;
+end;
+
+procedure DefaultsGridListToJob;
+begin
+  with Form1.AppDefaults do begin
+    if RowCount < 26 then begin
+      showMessage('Job File invalid. Check number of #Default entries!' +
+        #13 + 'Job will be reset to default values.');
+      InitJob;
+    end;
+    job.partsize_x:= StrToFloatDef(Cells[1,1], 0);
+    job.partsize_y:= StrToFloatDef(Cells[1,2], 0);
+    job.partsize_z:= StrToFloatDef(Cells[1,3], 0);
+
+    job.z_penlift:= StrToFloatDef(Cells[1,4], 10.0);
+    job.z_penup:= StrToFloatDef(Cells[1,5], 5.0);
+    job.z_gauge:= StrToFloatDef(Cells[1,6], 10);
+
+    job.optimize_drills:= Cells[1,7] = 'ON';
+    job.use_excellon_dia:= Cells[1,8] = 'ON';
+
+    job.toolchange_pause:= Cells[1,9] = 'ON';
+    Form1.CheckPenChangePause.Checked:= job.toolchange_pause;
+
+    job.toolchange_x:= StrToFloatDef(Cells[1,10], 0);
+    job.toolchange_y:= StrToFloatDef(Cells[1,11], 0);
+    job.toolchange_z:= StrToFloatDef(Cells[1,12], 0);
+
+    job.parkposition_on_end:= Cells[1,13] = 'ON';
+    Form1.CheckEndPark.Checked:= job.parkposition_on_end;
+
+    job.park_x:= StrToFloatDef(Cells[1,14], 0);
+    job.park_y:= StrToFloatDef(Cells[1,15], 0);
+    job.park_z:= StrToFloatDef(Cells[1,16], 0);
+
+    job.cam_x:= StrToFloatDef(Cells[1,17], 0);
+    job.cam_y:= StrToFloatDef(Cells[1,18], 0);
+    job.cam_z:= StrToFloatDef(Cells[1,19], 0);
+
+    job.use_probe:= Cells[1,20] = 'ON';
+    job.probe_x:= StrToFloatDef(Cells[1,21], 0);
+    job.probe_y:= StrToFloatDef(Cells[1,22], 0);
+    job.probe_z:= StrToFloatDef(Cells[1,23], 0);
+
+    job.invert_z:= Cells[1,24] = 'ON';
+    job.z_feedmult:= StrToFloatDef(Cells[1,25], 1);
+    if job.z_feedmult < 0.1 then
+      job.z_feedmult:= 0.1;
+  end;
 end;
 
 // #############################################################################
@@ -604,7 +641,8 @@ begin
         Form1.MemoComment.Lines.Add(sl.Strings[i]);
       end;
     end;
-  end;
+  end else
+    InitJob;
   sl.Free;
 end;
 
@@ -657,6 +695,7 @@ procedure TForm1.JobOpenExecute(Sender: TObject);
 begin
   if OpenJobDialog.Execute then begin
     InitJob;
+    DefaultsGridListToJob;
     OpenJobFile(OpenJobDialog.Filename);
   end;
 end;
@@ -688,6 +727,7 @@ end;
 procedure TForm1.FileNew1Execute(Sender: TObject);
 begin
   InitJob;
+  DefaultsGridListToJob;
   draw_cnc_all;
 end;
 
@@ -709,8 +749,8 @@ begin
   with Form1 do begin
     BtnRun.Enabled:= false;
     BtnRun.Caption:= 'Run';
-    BtnStop.Enabled:= true;
-    // BtnEmergStop.Enabled:= true;
+    BtnStop.Enabled:= false;
+    BtnEmergStop.Enabled:= true;
     BtnZeroX.Enabled:= false;
     BtnZeroY.Enabled:= false;
     BtnZeroZ.Enabled:= false;
@@ -753,23 +793,19 @@ begin
   end;
 end;
 
-procedure DisableRunButtons;
+procedure EnableNotHomedButtons;
 begin
   with Form1 do begin
-    if ftdi_isopen then begin
-      BtnRun.Enabled:= false;
-    // BtnEmergStop.Enabled:= true;
-      BtnRun.Caption:= 'Run';
-    end else begin
+    if ftdi_isopen then
+      BtnRun.Caption:= 'Run'
+    else
       BtnRun.Caption:= 'Test Run';
-      BtnRun.Enabled:= true;
-      BtnStop.Enabled:= true;
-    end;
+    BtnRun.Enabled:= true;
     BtnStop.Enabled:= true;
     BtnZeroX.Enabled:= false;
     BtnZeroY.Enabled:= false;
     BtnZeroZ.Enabled:= false;
-    BtnMoveWorkZero.Enabled:= false;
+    BtnMoveWorkZero.Enabled:= true;
     BtnMoveToolChange.Enabled:= false;
     BtnMovePark.Enabled:= false;
     BtnHomeCycle.Enabled:= true;
@@ -798,6 +834,12 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 var
   grbl_ini: TRegistryIniFile;
+  my_ftdi_was_open: Boolean;
+  i: Integer;
+  vid, pid: word;
+  my_device: fDevice;
+  my_description: String;
+
 begin
   TimerFinished:= false;
   MachineRunning:= false;
@@ -808,9 +850,8 @@ begin
   grbl_sendlist:= TStringList.create;
   grbl_sendlist.clear;
   LEDbusy:= Tled.Create;
-  InitJob;
   TimerCount1:= 0;
-
+  InitJob;
   UnHilite;
   Caption := 'GRBLize';
   BtnRescan.Visible:= true;
@@ -822,25 +863,30 @@ begin
     Top:= grbl_ini.ReadInteger('MainForm','Top',150);
     Left:= grbl_ini.ReadInteger('MainForm','Left',200);
     JobSettingsPath:= grbl_ini.ReadString('Settings','Path',JobSettingsPath);
-    ftdi_selected_device:= grbl_ini.ReadInteger('Settings','Device',-1);
-
+    //ftdi_selected_device:= grbl_ini.ReadInteger('Settings','Device',-1);
+    ftdi_serial:= grbl_ini.ReadString('Settings','Device','NONE');
+    my_ftdi_was_open:= grbl_ini.ReadBool('Settings','DevOpen',false);
     WindowMenu1.Items[0].Checked:= grbl_ini.ReadBool('DrawingForm','Visible',true);
     WindowMenu1.Items[1].Checked:= grbl_ini.ReadBool('CamForm','Visible',false);
     WindowMenu1.Items[2].Checked:= grbl_ini.ReadBool('SceneForm','Visible',false);
-
-    SetUpFTDI;
-    if (ftdi_device_count > 0) and (ftdi_selected_device >= 0) then begin
-      InitFTDI(ftdi_selected_device);
-      if ftdi_isopen then begin
-        BtnRescan.Visible:= false;
-        BtnClose.Visible:= true;
-        DeviceView.Text:= ftdi_sernum_arr[ftdi_selected_device]
-          + ' - ' + ftdi_desc_arr[ftdi_selected_device];
-      end;
-    end;
   finally
     grbl_ini.Free;
   end;
+
+  Form1.Memo1.lines.add('// ' + SetUpFTDI);
+  if (ftdi_device_count > 0) and my_ftdi_was_open then
+    if ftdi.isPresentBySerial(ftdi_serial) then begin
+      // Öffnet Device nach Seriennummer
+      // Stellt sicher, dass das beim letzten Form1.Close
+      // geöffnete Device auch weiterhin verfügbar ist.
+      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial));
+      if ftdi_isopen then begin
+        ftdi.getDeviceInfo(my_device, pid, vid, ftdi_serial, my_description);
+        BtnRescan.Visible:= false;
+        BtnClose.Visible:= true;
+        DeviceView.Text:= ftdi_serial + ' - ' + my_description;
+      end;
+    end;
 
   if not IsFormOpen('Form4') then
     Form4 := TForm4.Create(Self);
@@ -908,9 +954,8 @@ begin
     grbl_ini.WriteBool('CamForm','Visible',Form1.WindowMenu1.Items[1].Checked);
     grbl_ini.WriteBool('SceneForm','Visible',Form1.WindowMenu1.Items[2].Checked);
     if ftdi_isopen then
-      grbl_ini.WriteInteger('Settings','Device', ftdi_selected_device)
-    else
-      grbl_ini.WriteInteger('Settings','Device', -1)
+      grbl_ini.WriteString('Settings','Device', ftdi_serial);
+    grbl_ini.WriteBool('Settings','DevOpen',ftdi_isopen);
   finally
     grbl_ini.Free;
   end;
@@ -1738,7 +1783,7 @@ begin
   if ftdi_isopen then begin
     if WaitTimerFinishedResync then begin
       GetStatusEnabled:= true;
-      DisableRunButtons;
+      EnableNotHomedButtons;
       Form1.BtnRefreshGrblSettingsClick(nil);
       Form1.BtnZeroXClick(nil);
       Form1.BtnZeroYClick(nil);
@@ -1759,11 +1804,12 @@ var
 begin
   if ftdi_isopen and GetStatusEnabled and (not CancelProc) then begin
   // wenn Sendeliste leer, neue Koordinaten anfordern
-    while (grbl_receiveCount <> 0) do begin
+    while (grbl_receiveCount <> 0) and (not CancelProc) do begin
       my_str:= grbl_receiveStr(80, true); // noch im Buffer
       DecodeResponse(my_str);
     end;
-    grbl_sendStr('?', false, false);     // neuen Status anfordern
+    if not CancelProc then
+      grbl_sendStr('?', false, false);     // neuen Status anfordern
   end;
   TimerFinished:= true;
   StatusTimerFlag:= true;
@@ -1784,7 +1830,7 @@ begin
   if ftdi_device_count > 0 then
     for i := 0 to ftdi_device_count - 1 do begin
       LV := deviceselectbox.ListView1.Items.Add;
-      LV.Caption := 'Device '+IntToStr(I);
+      LV.Caption := 'Device '+IntToStr(i);
       LV.SubItems.Add(ftdi_sernum_arr[i]);
       LV.SubItems.Add(ftdi_desc_arr[i]);
     end
@@ -1794,12 +1840,12 @@ begin
   deviceselectbox.ShowModal;
   if (deviceselectbox.ModalResult=MrOK) and (ftdi_device_count > 0) then begin
     ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
-    InitFTDI(ftdi_selected_device);
+    Memo1.lines.add('// ' + InitFTDI(ftdi_selected_device));
     if ftdi_isopen then begin
       BtnRescan.Visible:= false;
       BtnClose.Visible:= true;
-      DeviceView.Text:= ftdi_sernum_arr[ftdi_selected_device]
-      + ' - ' + ftdi_desc_arr[ftdi_selected_device];
+      ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
+      DeviceView.Text:= ftdi_serial + ' - ' + ftdi_desc_arr[ftdi_selected_device];
     end;
   end;
   CheckResponse;
@@ -1902,61 +1948,91 @@ end;
 // ############################ R U N  TAB BUTTONS #############################
 // #############################################################################
 
-procedure SendListExitProc;
+procedure CancelExitProc;
 var
   my_response: String;
 begin
-  my_response:= grbl_sendStr('M5' + #13, false, true); // Spindle Off sofort senden
-  Form1.Memo1.lines.add('M5 // #Process cancelled by user');
-  grbl_sendlist.clear; // alles abgearbeitet
+  Form1.Memo1.lines.add('');
+  if ftdi_isopen then begin
+    WaitTimerFinished; // bitte nicht unterbrechen
+    GetStatusEnabled:= false;
+    grbl_sendlist.clear; // alles abgearbeitet
+    CancelWait:= false;
+    my_response:= grbl_sendStr('M5' + #13, false, true); // Spindle Off sofort senden
+    Form1.Memo1.lines.add('M5' + ' // ' + my_response);
+  end else
+    Form1.Memo1.lines.add('M5 // #Device not open');
+  MachineRunning:= false;
+end;
+
+procedure EmergencyExitProc;
+var
+  my_response: String;
+begin
+  Form1.Memo1.lines.add('');
+  if ftdi_isopen then begin
+    GetStatusEnabled:= false;
+    grbl_sendlist.clear;  // alles löschen
+    my_response:= grbl_sendStr(#24, false, true); // Ctrl-X Reset sofort senden
+    CancelWait:= false;
+    grbl_receiveStr(100, true);
+    Form1.Memo1.lines.add('// CTRL-X RESET: ' + my_response);
+    grbl_receiveStr(100, true);
+    Form1.Memo1.lines.add(' // ' + my_response);
+    showmessage('EMERGENCY STOP. Steps missed - please run'
+      + #13 + 'Home Cycle to release ALARM LOCK.');
+    EnableNotHomedButtons;
+  end else
+    Form1.Memo1.lines.add('// CTRL-X RESET: #Device not open');
+  HomingPerformed:= false;
   MachineRunning:= false;
 end;
 
 procedure SendList(wait_for_idle: Boolean);
+// Steht etwas in der Sendeliste? Dann abschicken und auf Antwort warten
 var
   i, my_count: Integer;
   my_str, my_response: String;
   my_finished: Boolean;
 begin
   MachineRunning:= true;
-  my_count:= grbl_sendlist.count;
   if ftdi_isopen then begin
-  // Steht etwas in der Sendeliste? Dann abschicken und auf Antwort warten
+    if EmergencyStop then
+      EmergencyExitProc;
+    my_count:= grbl_sendlist.count;
     if my_count > 0 then begin
-      WaitTimerFinished; // bitte nicht unterbrechen
       GetStatusEnabled:= false;
-      my_finished:= false;
-      if not grbl_resync then begin
-        showmessage('GRBL Resync failed on Execute!');
-        GetStatusEnabled:= true;
-        grbl_sendlist.clear; // alles abgearbeitet
-        MachineRunning:= false;
-        exit;
-      end;
+      WaitTimerFinished; // bitte nicht unterbrechen
       LEDbusy.Checked:= true;
       for i:= 0 to my_count-1 do begin
-        if CancelProc then begin
-          SendListExitProc;
-          break;
-        end;
-        if StatusTimerFlag then begin
+        if StatusTimerFlag and (not CancelProc) then begin
           grbl_sendStr('?', false, false);     // selbst Status anfordern
           my_str:= grbl_receiveStr(100, false);
           DecodeResponse(my_str);
           Application.ProcessMessages;
           StatusTimerFlag:= false;
         end;
+        if EmergencyStop then begin
+          EmergencyExitProc;
+          break;
+        end;
         if CancelProc then begin
-          SendListExitProc;
+          CancelExitProc;
           break;
         end;
         my_str:= grbl_sendlist.Strings[i];
-        my_response:= grbl_sendStr(my_str + #13, true, true);
-        Form1.Memo1.lines.add(my_str + ' // ' + my_response);
+        if length(my_str) > 1 then
+          if my_str[1] <> '/' then begin
+            // Befehl ist kein Kommentar, also abschicken
+            my_response:= grbl_sendStr(my_str + #13, true, true);
+            Form1.Memo1.lines.add(my_str + ' // ' + my_response);
+          end;
       end;
-      if wait_for_idle then
+      if wait_for_idle and (not CancelProc) then
+      // ggf. auf Idle-Zustand warten bis Maschine in Ruhe
+        my_finished:= false;
         repeat
-          if StatusTimerFlag then begin
+          if StatusTimerFlag then begin  // kommt alle 100 ms
             grbl_sendStr('?', false, false);     // Status anfordern
             my_str:= grbl_receiveStr(80, false);
             my_finished:= not AnsiContainsStr(my_str,'Run');
@@ -1965,30 +2041,28 @@ begin
             StatusTimerFlag:= false;
           end;
           Application.ProcessMessages;
+          if EmergencyStop then
+            EmergencyExitProc;
+          if CancelProc then
+            CancelExitProc;
         until my_finished or CancelProc;
     end;
-    if EmergencyStop then begin
-      MachineRunning:= false;
-      my_response:= grbl_sendStr(#24, false, true); // Ctrl-X Reset sofort senden
-      grbl_receiveStr(1000, true);
-      Form1.Memo1.lines.add('// CTRL-X: ' + my_response);
-      grbl_receiveStr(100, true);
-      Form1.Memo1.lines.add(' // ' + my_response);
-      showmessage('Emergency Stop. Please run Home Cycle to release ALARM LOCK.');
-      DisableRunButtons;
-      HomingPerformed:= false;
-    end;
   end else begin
+    my_count:= grbl_sendlist.count;
     if my_count > 0 then begin
       LEDbusy.Checked:= true;
       for i:= 0 to my_count-1 do begin
+        if EmergencyStop then begin
+          EmergencyExitProc;
+          break;
+        end;
         if CancelProc then begin
-          Form1.Memo1.lines.add('M5 // #Process cancelled by user');
+          CancelExitProc;
           break;
         end;
         my_str:= grbl_sendlist.Strings[i];
         Form1.Memo1.lines.add(my_str + ' // #Device not open');
-        mdelay(50);
+        mdelay(25);
       end;
     end;
   end;
@@ -2001,8 +2075,20 @@ procedure SendlistExecute;
 begin
   CancelProc:= false;
   EmergencyStop:= false;
-  SendList(true);  // wait for Idle TRUE
+  GetStatusEnabled:= false;
+  WaitTimerFinished; // bitte nicht unterbrechen
+  if grbl_resync then begin
+    SendList(true);  // wait for Idle TRUE
+  end else begin
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('// GRBL RESYNC FAILED');
+    showmessage('GRBL Resync/Response Test failed on Execute!'+ #13
+      + 'Close and reconnect device if problem persists.');
+    grbl_sendlist.clear; // alles abgearbeitet
+    MachineRunning:= false;
+  end;
   CancelProc:= false;
+  GetStatusEnabled:= true;
 end;
 
 procedure TForm1.ResetGRBLClick(Sender: TObject);
@@ -2012,6 +2098,7 @@ begin
   CancelProc:= true;
   CancelWait:= true;
   EmergencyStop:= true;
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// EMERGENCY STOP');
   if not MachineRunning then begin
     grbl_sendlist.clear; // alles löschen
@@ -2022,6 +2109,7 @@ end;
 
 procedure TForm1.BtnStopClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// CANCEL PROCESS');
   CancelProc:= true;
   CancelWait:= true;
@@ -2030,13 +2118,15 @@ end;
 
 procedure TForm1.BtnZeroXClick(Sender: TObject);
 begin
-  Form1.Memo1.lines.add('// SET Y ZERO');
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('// SET X ZERO');
   grbl_addStr('G92 X0');
   SendlistExecute;
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Y ZERO');
   grbl_addStr('G92 Y0');
   SendlistExecute;
@@ -2044,6 +2134,7 @@ end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Z ZERO');
   grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
   SendlistExecute;
@@ -2051,8 +2142,9 @@ end;
 
 procedure TForm1.BtnHomeCycleClick(Sender: TObject);
 begin
+  DisableButtons;
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// HOME CYCLE');
-  DisableRunButtons;
   grbl_addStr('$h');
   grbl_offsXY(0,0);
   grbl_offsZ(0);
@@ -2065,6 +2157,7 @@ end;
 
 procedure TForm1.BtnMoveWorkZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
   grbl_addStr('M5');
   grbl_moveZ(job.park_z, true);
@@ -2075,6 +2168,7 @@ end;
 
 procedure TForm1.BtnMoveParkClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TO PARK POSITION');
   grbl_addStr('M5');
   grbl_moveZ(job.park_z, true);
@@ -2084,6 +2178,7 @@ end;
 
 procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TO TOOL CHANGE POSITION');
   grbl_addStr('M5');
   grbl_moveZ(job.park_z, true);
@@ -2100,11 +2195,13 @@ var i, my_len, p, last_pen: Integer;
 
 begin
   Memo1.lines.Clear;
-  Memo1.lines.add('// GRBL G-CODE DEBUG OUPUT');
+  Memo1.lines.add('// RUN STARTED');
   my_len:= length(final_array);
   if my_len < 1 then
     exit;
   last_pen:= -1;
+  Form1.Memo1.lines.add('');
+  Memo1.lines.add('// SPINDLE ON, MOVE ZERO');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(0,0,false);
   grbl_millXYF(0,0,777); // neuen Speed-Wert erzwingen
@@ -2120,6 +2217,8 @@ begin
     if length(my_entry.millings) = 0 then
       continue;
     if CheckPenChangePause.Checked and (my_entry.pen <> last_pen) then begin
+      Memo1.lines.add('');
+      Memo1.lines.add('// TOOL CHANGE PAUSE - USE TOOL'+ IntToStr(my_entry.pen));
       // move to tool change position
       // TO DO: Neuen Z-Wert ermöglichen
       grbl_addStr('M5');
@@ -2139,6 +2238,8 @@ begin
     for p:= 0  to length(my_entry.millings)-1 do begin
       if CancelProc then
         break;
+      Memo1.lines.add('');
+      Memo1.lines.add('// RUN BLOCK '+ IntToStr(i) + ' PATH '+ IntToStr(p));
       grbl_moveZ(job.z_penup, false);
       if my_entry.shape = drillhole then
         grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
@@ -2149,15 +2250,18 @@ begin
     SendList(false);
   end;
   if not CancelProc then
-    if CheckEndPark.Checked then
+    if CheckEndPark.Checked and HomingPerformed then
       BtnMoveParkClick(Sender)
     else begin
+      Memo1.lines.add('');
+      Memo1.lines.add('// SPINDLE OFF');
       grbl_addStr('M5');
       grbl_moveZ(job.z_penlift, false);
       grbl_moveXY(0,0, false);
       SendList(true);
     end;
-  Form1.Memo1.lines.add('// FINISHED');
+  Memo1.lines.add('');
+  Memo1.lines.add('// FINISHED');
   CancelProc:= false;
 end;
 

@@ -14,6 +14,7 @@ type
 
   function SetupFTDI: String;
   function InitFTDI(my_device:Integer): String;
+  function InitFTDIbySerial(my_serial: String):String;
   function CheckCom(my_ComNumber: Integer): Integer;  // check if a COM port is available
 
   // fordert Maschinenstatus mit "?" an
@@ -85,9 +86,10 @@ var
   ftdi: Tftdichip;
   ftdi_isopen : Boolean;
   ftdi_selected_device: Integer;  // FTDI-Frosch-Device-Nummer
+  ftdi_serial: String;
   ftdi_device_count: dword;
   ftdi_device_list: pftdiDeviceList;
-  ftdi_sernum_arr, ftdi_desc_arr: Array[0..15] of ShortString;
+  ftdi_sernum_arr, ftdi_desc_arr: Array[0..15] of String;
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
   grbl_sendlist, grbl_receveivelist: TSTringList;
@@ -220,7 +222,7 @@ end;
 
 
 function grbl_resync: boolean;
-// Resync, sende #13 und warte 500 ms auf OK
+// Resync, sende #13 und warte 50 ms auf OK
 var my_str: String;
   i, n: Integer;
 begin
@@ -228,15 +230,18 @@ begin
   grbl_resync:= false;
   my_str:= '';
   if ftdi_isopen then begin
-    mdelay(100);
-    for i:= 0 to 7 do begin
+    while grbl_receiveCount <> 0 do begin
+      mdelay(100); // falls noch etwas vorliegt
       grbl_rx_clear;
+    end;
+    for i:= 0 to 7 do begin  // Anzahl Versuche
       my_str:= #13;
       ftdi.write(@my_str[1], 1, n);
-      mdelay(100);
-      my_str:= grbl_receiveStr(20, false);
+      my_str:= grbl_receiveStr(50, false);
       if (my_str = 'ok') or CancelWait then
         break;
+      mdelay(100); // nochmal versuchen
+      grbl_rx_clear;
     end;
     grbl_resync:= (my_str = 'ok');
   end else
@@ -259,7 +264,7 @@ begin
 end;
 
 procedure grbl_checkXY(var x,y: Double);
-// limits z to upper limit
+// limits xy to machine limits
 begin
 end;
 
@@ -339,12 +344,15 @@ end;
 
 procedure grbl_millZF(z: Double; f: Integer);
 // GCode-String G0 x,y mit abschließendem CR an GRBL senden, auf OK warten
-// F (speed) wird nur gesendet, wenn es sich geändert hat!
+// F (speed) wird hier immer neu gesetzt wg. möglichem GRBL-Z-Scaling
 var my_str: String;
 begin
   grbl_checkZ(z);
-  my_str:= 'G1 Z'+ FloatToSTrDot(z);
-  my_str:= my_str + ' F' + IntToStr(f);
+  if (job.z_feedmult < 0.9) or (job.z_feedmult > 1.1) then begin
+    my_str:= 'G1 Z'+ FloatToSTrDot(z) + ' F' + IntToStr(round(f * job.z_feedmult));
+    grbl_addStr(my_str);
+  end;
+  my_str:= 'G1 Z'+ FloatToSTrDot(z) + ' F' + IntToStr(f);
   grbl_addStr(my_str);
   grbl_oldf:= f;
   grbl_oldz:= z;
@@ -430,7 +438,7 @@ var i, my_len: Integer;
       grbl_millZF(z, job.pens[millpen].speed);
     until (z <= my_z_end) or CancelProc;
   end;
-  grbl_moveZ(job.z_penlift, false);
+  grbl_moveZ(job.z_penup, false);
 end;
 
 
@@ -474,7 +482,7 @@ var i, my_len: Integer;
       grbl_millXY(x,y);
     end;
   until (my_z_limit <= my_z_end) or CancelProc;
-  grbl_moveZ(job.z_penlift, false);
+  grbl_moveZ(job.z_penup, false);
 end;
 
 
@@ -484,16 +492,20 @@ end;
 function SetupFTDI: String;
 var
   i: longint;
+  vid, pid: word;
+  device: fDevice;
 
 begin
   ftdi_isopen:= false;
   ftdi:= tftdichip.create;  { Create class instance }
   { Get the device list }
   if not ftdi.createDeviceInfoList(ftdi_device_count, ftdi_device_list) then begin
-    result:= '### Failed to create device info list';
+    result:= 'Failed to create device info list';
     freeandnil(ftdi);
     exit;
   end;
+  result:= 'Found ' + IntToStr(ftdi_device_count) + ' FTDI devices';
+
   { Iterate through the device list that was returned }
   if ftdi_device_count > 0 then
     for i := 0 to ftdi_device_count - 1 do begin
@@ -506,19 +518,19 @@ function InitFTDI(my_device:Integer):String;
 begin
     { Check if device is present }
   if not ftdi.isPresentBySerial(ftdi_sernum_arr[my_device]) then begin
-    result:= '### Device not present';
+    result:= 'Device not present';
     ftdi.destroy;
     ftdi := nil;
     exit;
   end;
 
   if not ftdi.openDeviceBySerial(ftdi_sernum_arr[my_device]) then begin
-    result:= '### Failed to open device';
+    result:= 'Failed to open device';
     ftdi.destroy;
     ftdi := nil;
     exit;
   end;
-  { Configure for 57600 baud, 8 bit, 1 stop bit, no parity, no flow control }
+  { Configure for 19200 baud, 8 bit, 1 stop bit, no parity, no flow control }
   if ftdi.resetDevice then begin
     ftdi_isopen:= true;
     ftdi.setBaudRate(fBaud19200);
@@ -526,7 +538,37 @@ begin
     ftdi.setFlowControl(fFlowNone, 0, 0);
     result:= 'USB connected';
   end else
-    result:= '### Reset error';
+    result:= 'Reset error';
+end;
+
+function InitFTDIbySerial(my_serial: String):String;
+var
+  i: Integer;
+begin
+  if ftdi_device_count > 0 then begin
+    if not ftdi.isPresentBySerial(my_serial) then begin
+      result:= 'Device not present';
+      ftdi.destroy;
+      ftdi := nil;
+      exit;
+    end;
+
+    if not ftdi.openDeviceBySerial(my_serial) then begin
+      result:= 'Failed to open device';
+      ftdi.destroy;
+      ftdi := nil;
+      exit;
+    end;
+    { Configure for 19200 baud, 8 bit, 1 stop bit, no parity, no flow control }
+    if ftdi.resetDevice then begin
+      ftdi_isopen:= true;
+      ftdi.setBaudRate(fBaud19200);
+      ftdi.setDataCharacteristics(fBits8, fStopBits1, fParityNone);
+      ftdi.setFlowControl(fFlowNone, 0, 0);
+      result:= 'USB connected';
+    end else
+      result:= 'Reset error';
+  end;
 end;
 
 end.

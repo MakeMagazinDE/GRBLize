@@ -176,6 +176,7 @@ end;
 
 procedure TForm3.BtnCamIsAtZeroClick(Sender: TObject);
 begin
+  Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendlistExecute;
@@ -190,9 +191,11 @@ begin
 
   if HilitePoint >= 0 then begin
     hilite_to_toolcursor;
+    Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
   end else begin
     hilite_center_to_toolcursor;
+    Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
   end;
   x:= ToolCursor.X / c_hpgl_scale;

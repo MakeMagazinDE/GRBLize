@@ -75,6 +75,7 @@ object deviceselectbox: Tdeviceselectbox
       ShowWorkAreas = True
       TabOrder = 1
       ViewStyle = vsReport
+      OnDblClick = ListView1DblClick
     end
     object CancelButton: TButton
       Left = 327
