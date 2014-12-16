@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.96a ';
+  c_VerStr: String = '0.96b ';
 
 type
   TForm1 = class(TForm)
