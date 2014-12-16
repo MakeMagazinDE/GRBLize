@@ -3,13 +3,15 @@
 ###CNC-Steuerung für GRBL-JOG Projekt
 
 Erstellt mit Delphi 2005 PE. Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)**. 
-Ausführbare Datei (.EXE, Win32) im Verzeichnis **/bin**, benötigt "default.job", ggf. die Beispiel-Plot-Dateien und gegebenenfalls ftd2xx.dll, letzteres aber nur, falls nicht ohnehin schon im System vom FTDI-Treiber-Download installiert.
+
+Ausführbare Datei (.EXE, Win32) im Verzeichnis **[/bin](https://github.com/heise/GRBLize/tree/master/bin)**, benötigt "default.job", ggf. die Beispiel-Plot-Dateien und 
+gegebenenfalls ftd2xx.dll, letzteres aber nur, falls nicht ohnehin schon im System vom FTDI-Treiber-Download 
+installiert.
 
 Auf der rechten Spalte der Github-Seite finden Sie den Button "Download ZIP". Dies lädt das komplette Projekt herunter einschl. Sourcen. Nach Entpacken findet sich das Windows-Executable (32 Bit) im Unterverzeichnis /bin.
 
-Sie finden die ausführbare Datei (.EXE) auch auf **https://github.com/heise/GRBLize/tree/master/bin**
-
-Das Projekt befindet sich noch in Entwicklung, bitte auf evt. Updates prüfen. Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[https://github.com/heise/GRBL-JOG](GRBL-JOG)**.
+Das Projekt befindet sich noch in Entwicklung, bitte auf evt. Updates prüfen. 
+Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-JOG](https://github.com/heise/GRBL-JOG)**.
 
 ###Version History
 
@@ -19,7 +21,7 @@ Das Projekt befindet sich noch in Entwicklung, bitte auf evt. Updates prüfen. Di
 
 ###CNC Control Software for GRBL Jogger Project
 
-Executable for Windows XP/7/8 in folder **/bin**. No Installation required, but configuration file "default.job" and example plot files 
+Executable for Windows XP/7/8 in folder **[/bin](https://github.com/heise/GRBLize/tree/master/bin)**. No Installation required, but configuration file "default.job" and example plot files 
 must be placed in same folder. Please see article in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)** for usage.
 
 Made with Delphi 2005 PE. Sources to be compiled with Borland Delphi 2005 Personal Edition (and up) for those interested in improving it. GRBLize 
