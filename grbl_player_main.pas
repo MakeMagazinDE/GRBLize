@@ -864,8 +864,8 @@ begin
     Left:= grbl_ini.ReadInteger('MainForm','Left',200);
     JobSettingsPath:= grbl_ini.ReadString('Settings','Path',JobSettingsPath);
     //ftdi_selected_device:= grbl_ini.ReadInteger('Settings','Device',-1);
-    ftdi_serial:= grbl_ini.ReadString('Settings','Device','NONE');
-    my_ftdi_was_open:= grbl_ini.ReadBool('Settings','DevOpen',false);
+    ftdi_serial:= grbl_ini.ReadString('Settings','DeviceSerial','NONE');
+    my_ftdi_was_open:= grbl_ini.ReadBool('Settings','DeviceOpen',false);
     WindowMenu1.Items[0].Checked:= grbl_ini.ReadBool('DrawingForm','Visible',true);
     WindowMenu1.Items[1].Checked:= grbl_ini.ReadBool('CamForm','Visible',false);
     WindowMenu1.Items[2].Checked:= grbl_ini.ReadBool('SceneForm','Visible',false);
@@ -954,8 +954,8 @@ begin
     grbl_ini.WriteBool('CamForm','Visible',Form1.WindowMenu1.Items[1].Checked);
     grbl_ini.WriteBool('SceneForm','Visible',Form1.WindowMenu1.Items[2].Checked);
     if ftdi_isopen then
-      grbl_ini.WriteString('Settings','Device', ftdi_serial);
-    grbl_ini.WriteBool('Settings','DevOpen',ftdi_isopen);
+      grbl_ini.WriteString('Settings','DeviceSerial', ftdi_serial);
+    grbl_ini.WriteBool('Settings','DeviceOpen',ftdi_isopen);
   finally
     grbl_ini.Free;
   end;

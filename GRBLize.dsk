@@ -71,9 +71,9 @@ BottomMiddelPanelData=0000080001000100000009000000446F636B5369746533000000000000
 [View0]
 CustomEditViewType=TEditView
 Module=E:\Dropbox\GIT\GRBLize\grbl_player_main.pas
-CursorX=28
-CursorY=16
-TopLine=1
+CursorX=54
+CursorY=939
+TopLine=854
 LeftCol=1
 Elisions=
 Bookmarks={1,747,25}{4,1844,1}{5,2148,1}
