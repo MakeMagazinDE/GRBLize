@@ -15,7 +15,8 @@ Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-JOG](h
 
 ###Version History
 
-- 0.96b: Latest build, bugfix on FTDI class, new Z Feed Scaling parameter for use with woodmill (otherwise Z feed will be too slow)
+- 0.96d: Latest build, On run, will keep Z up at park position height until first mill to clear work part. 
+- 0.96b: bugfix on FTDI class, new Z Feed Scaling parameter, also useful with c't woodmill (otherwise Z feed will be too slow)
 - 0.95b: First public beta
 - 0.94a: Internal alpha, some serious bugs
 

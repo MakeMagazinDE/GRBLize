@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.96b ';
+  c_VerStr: String = '0.96d ';
 
 type
   TForm1 = class(TForm)
@@ -1353,19 +1353,20 @@ begin
   my_float:= StrToFloatDef(my_str, 0);
 
   case StringgridPens.Col of   // Dia, Z, Speed, X Offset, Y Offset, Z+/Cycle
+    3:  // Dia
+      begin
+        my_float:= my_float - 0.5;
+        if my_float < 0 then
+          my_float:= 0;
+        StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= FloatToStr(my_float);
+        PenGridListToJob;
+        param_change;
+      end;
     4: // Z
       begin
         my_float:= my_float - 0.1;
         StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= FloatToStr(my_float);
         PenGridListToJob;
-      end;
-    6, 7, 8:
-      begin
-        my_float:= int(my_float) - 1;
-        StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= FloatToStr(my_float);
-        PenGridListToJob;
-        if StringgridPens.Col = 8 then
-          param_change;
       end;
     5:  // Speed
       begin
@@ -1375,13 +1376,13 @@ begin
         StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= IntToStr(my_int);
         PenGridListToJob;
       end;
-    3:  // Dia
+    6, 7, 8:
       begin
-        my_float:= my_float - 0.5;
-        if my_float < 0 then
-          my_float:= 0;
+        my_float:= int(my_float) - 1;
         StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= FloatToStr(my_float);
         PenGridListToJob;
+        if StringgridPens.Col = 8 then
+          param_change;
       end;
     10:  // Z+
       begin
@@ -1406,6 +1407,13 @@ begin
   my_float:= StrToFloatDef(my_str, 0);
 
   case StringgridPens.Col of   // Dia, Z, Speed, X Offset, Y Offset, Scale,  Z+/Cycle
+    3: // Dia
+      begin
+        my_float:= my_float + 0.5;
+        StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= FloatToStr(my_float);
+        PenGridListToJob;
+        param_change;
+      end;
     4:  // Z
       begin
         my_float:= my_float + 0.1;
@@ -1425,12 +1433,6 @@ begin
         PenGridListToJob;
         if StringgridPens.Col = 8 then
           param_change;
-      end;
-    3: // Dia
-      begin
-        my_float:= my_float + 0.5;
-        StringgridPens.Cells[StringgridPens.Col, StringgridPens.Row]:= FloatToStr(my_float);
-        PenGridListToJob;
       end;
     10: // Z+/Cycle
       begin
@@ -2207,7 +2209,6 @@ begin
   grbl_millXYF(0,0,777); // neuen Speed-Wert erzwingen
   grbl_addStr('M3');
   SendlistExecute;
-  mdelay(100);
   for i:= 0 to my_len-1 do begin
     if CancelProc then
       break;
@@ -2231,24 +2232,24 @@ begin
       grbl_addStr('M3');
       grbl_moveZ(job.park_z, true);
       grbl_moveXY(0, 0, false); // Zum Werkstück-Nullpunkt zurück, Z ist noch oben
+      grbl_moveZ(job.z_penlift, false);
+      SendList(true);  // warte auf Idle wenn beendet
     end;
-    grbl_moveZ(job.z_penlift, false);
-    SendList(true);  // warte auf Idle wenn beendet
     last_pen:= my_entry.pen;
     for p:= 0  to length(my_entry.millings)-1 do begin
       if CancelProc then
         break;
       Memo1.lines.add('');
       Memo1.lines.add('// RUN BLOCK '+ IntToStr(i) + ' PATH '+ IntToStr(p));
-      grbl_moveZ(job.z_penup, false);
       if my_entry.shape = drillhole then
         grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
       else
         grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
     end;
-    grbl_moveZ(job.z_penlift, false);
     SendList(false);
   end;
+  // grbl_millpath und grbl_drillpath enden mit job.z_penup, deshalb:
+  grbl_moveZ(job.z_penlift, false);
   if not CancelProc then
     if CheckEndPark.Checked and HomingPerformed then
       BtnMoveParkClick(Sender)
@@ -2256,7 +2257,6 @@ begin
       Memo1.lines.add('');
       Memo1.lines.add('// SPINDLE OFF');
       grbl_addStr('M5');
-      grbl_moveZ(job.z_penlift, false);
       grbl_moveXY(0,0, false);
       SendList(true);
     end;

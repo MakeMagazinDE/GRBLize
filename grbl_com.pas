@@ -417,6 +417,7 @@ var i, my_len: Integer;
   if my_len < 1 then
     exit;
 
+  // Tool ist noch oben
   x:= (millpath[0].x + offset.x) / c_hpgl_scale;
   y:= (millpath[0].y + offset.y) / c_hpgl_scale;
   grbl_moveXY(x,y, false);
@@ -452,6 +453,10 @@ var i, my_len: Integer;
   my_len:= length(millpath);
   if my_len < 1 then
     exit;
+  // Tool ist noch oben
+  x:= (millpath[0].x + offset.x) / c_hpgl_scale;
+  y:= (millpath[0].y + offset.y) / c_hpgl_scale;
+  grbl_moveXY(x,y, false);
 
   my_z_limit:= 0;
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
@@ -467,8 +472,8 @@ var i, my_len: Integer;
     x:= (millpath[0].x + offset.x) / c_hpgl_scale;
     y:= (millpath[0].y + offset.y) / c_hpgl_scale;
     grbl_moveXY(x,y, false);
-    grbl_moveZ(0, false);
-    grbl_millZF(z, job.pens[millpen].speed);
+    grbl_moveZ(0, false); // annähern auf Oberfläche
+    grbl_millZF(z, job.pens[millpen].speed); // langsam eintauchen
     for i:= 1 to my_len - 1 do begin
       if CancelProc then
         break;
