@@ -901,6 +901,7 @@ end;
 
 procedure TForm2.DrawingBoxMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
+// Grafik verschieben
 begin
   if (ssLeft in Shift) then begin
     bm_scroll.x:= bm_scroll.x + X - mouse_start.x;
@@ -913,18 +914,22 @@ end;
 
 procedure TForm2.DrawingBoxMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
+// Select/Move mit linker Maustaste
+// Popup-Menu mit rechter Maustaste
 var pt: TPoint;
 begin
   if (ssLeft in Shift) then begin
     SetCursor(Screen.Cursors[crSize]);
     mouse_start.x:= X;
     mouse_start.y:= Y;
+    search_entry_in_drawing(x,y);
     draw_cnc_all;
     exit;
   end;
   if (ssRight in Shift) then begin
-    search_entry_in_drawing(x,y);
-    draw_cnc_all;
+    // if HiliteBlock < 0 then
+    //  search_entry_in_drawing(x,y);
+    // draw_cnc_all;
     pt.x := X + 15;
     pt.y := Y - 10;
     pt := DrawingBox.ClientToScreen(pt);

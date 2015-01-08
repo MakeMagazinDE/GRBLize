@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.96d ';
+  c_VerStr: String = '0.96e ';
 
 type
   TForm1 = class(TForm)
@@ -115,6 +115,8 @@ type
     PanelLED: TPanel;
     Label4: TLabel;
     Panel4: TPanel;
+    PlayGcodeBtn: TSpeedButton;
+    procedure PlayGcodeBtnClick(Sender: TObject);
     procedure ResetGRBLClick(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure StringGridPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -1168,6 +1170,7 @@ begin
   with StringGridFiles do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
     if (Row > 0) and (Col = 0) then begin
+      OpenFileDialog.FilterIndex:= 0;
       if OpenFileDialog.Execute then
         Cells[0, Row]:= OpenFileDialog.Filename
       else
@@ -2265,6 +2268,54 @@ begin
   CancelProc:= false;
 end;
 
+
+procedure TForm1.PlayGcodeBtnClick(Sender: TObject);
+// G-Code-Datei abspielen
+var
+  my_ReadFile: TextFile;
+  my_line: String;
+  my_count: integer;
+
+begin
+  OpenFileDialog.FilterIndex:= 2;
+  if not OpenFileDialog.Execute then
+    exit;
+  my_line:='';
+  FileMode := fmOpenRead;
+  AssignFile(my_ReadFile, OpenFileDialog.FileName);
+  CurrentPen:= 10;
+  PendingAction:= lift;
+
+  Reset(my_ReadFile);
+  my_count:= 0;
+  while not Eof(my_ReadFile) do begin
+    if CancelProc then
+      break;
+    Readln(my_ReadFile,my_line);
+    grbl_addStr(my_line);
+    inc(my_count);
+    if my_count > 100 then begin
+      SendList(false);
+      my_count:= 0;
+    end;
+  end;
+  CloseFile(my_ReadFile);
+  SendList(true);
+  if not CancelProc then
+    if CheckEndPark.Checked and HomingPerformed then
+      BtnMoveParkClick(Sender)
+    else begin
+      Memo1.lines.add('');
+      Memo1.lines.add('// SPINDLE OFF');
+      grbl_addStr('M5');
+      grbl_moveXY(0,0, false);
+      SendList(true);
+    end;
+  Memo1.lines.add('');
+  Memo1.lines.add('// FINISHED');
+  CancelProc:= false;
+end;
+
 // #############################################################################
 
 procedure TForm1.ShowDrawing1Click(Sender: TObject);
@@ -2302,6 +2353,7 @@ begin
   AboutBox.VersionInfo.Caption:= c_VerStr;
   Aboutbox.ShowModal;
 end;
+
 
 
 
