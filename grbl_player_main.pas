@@ -2209,9 +2209,11 @@ begin
   Memo1.lines.add('// SPINDLE ON, MOVE ZERO');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(0,0,false);
-  grbl_millXYF(0,0,777); // neuen Speed-Wert erzwingen
+  grbl_millXYF(0,0,333); // neuen Speed-Wert erzwingen
   grbl_addStr('M3');
   SendlistExecute;
+  Memo1.lines.add('// SPINDLE ACCEL WAIT');
+  mdelay(3000);          // Spindel-Hochlaufzeit
   for i:= 0 to my_len-1 do begin
     if CancelProc then
       break;
@@ -2229,10 +2231,14 @@ begin
       grbl_moveZ(job.toolchange_z, true);
       grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
       SendList(true);
+      Memo1.lines.add('// TOOL CHANGE');
       ShowMessage('Milling paused - Change tool to '
         + #13+ FloatToStr(job.pens[my_entry.pen].diameter)+' mm when path finished'
         + #13+ 'and click OK when done. Will keep Z Zero Value.');
       grbl_addStr('M3');
+      SendlistExecute;
+      Memo1.lines.add('// SPINDLE ACCEL WAIT');
+      mdelay(3000);          // Spindel-Hochlaufzeit
       grbl_moveZ(job.park_z, true);
       grbl_moveXY(0, 0, false); // Zum Werkstück-Nullpunkt zurück, Z ist noch oben
       grbl_moveZ(job.z_penlift, false);
