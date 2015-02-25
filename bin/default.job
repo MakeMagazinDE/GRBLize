@@ -1,5 +1,5 @@
 #Files
-ct-logo.plt,-1,0°,OFF,0,0,40," "
+" ",-1,0°,OFF,0,0,40," "
 " ",-1,0°,OFF,-10,0,100," "
 " ",-1,0°,OFF,0,0,100," "
 " ",-1,0°,OFF,0,0,100," "
@@ -63,11 +63,8 @@ D20,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0"
 "Probe Y absolute",30
 "Probe Z absolute",-5
 "Invert Z in G-Code",OFF
-"Scale Z Feed","0,5"
+"Scale Z Feed","0,25"
 #Blocks
-1,1,ON,"3,0",CONTOUR,"45,05/3,63 - 75,38/52,23","60,20/27,93",27
-2,1,ON,"3,0",CONTOUR,"37,55/28,15 - 51,38/52,23","44,45/40,17",6
-3,1,ON,"3,0",CONTOUR,"9,80/3,73 - 41,15/40,02","25,48/21,88",38
 #Comment
-Kleines Beispiel
+Defaults for new job
 #End
