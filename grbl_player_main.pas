@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.96e ';
+  c_VerStr: String = '0.96f';
 
 type
   TForm1 = class(TForm)
@@ -468,7 +468,7 @@ begin
     Rows[22].DelimitedText:='"Probe Y absolute",30';
     Rows[23].DelimitedText:='"Probe Z absolute",-5';
     Rows[24].DelimitedText:='"Invert Z in G-Code",OFF';
-    Rows[25].DelimitedText:='"Scale Z Feed",1';
+    Rows[25].DelimitedText:='"Scale Z Feed",0.25';
   end;
 
   ClearFiles;
@@ -517,7 +517,7 @@ begin
     job.probe_z:= StrToFloatDef(Cells[1,23], 0);
 
     job.invert_z:= Cells[1,24] = 'ON';
-    job.z_feedmult:= StrToFloatDef(Cells[1,25], 1);
+    job.z_feedmult:= StrToFloatDef(Cells[1,25], 0.25);
     if job.z_feedmult < 0.1 then
       job.z_feedmult:= 0.1;
   end;
@@ -730,6 +730,9 @@ procedure TForm1.FileNew1Execute(Sender: TObject);
 begin
   InitJob;
   DefaultsGridListToJob;
+  if FileExists('default.job') then
+    OpenJobFile('default.job');
+  JobSettingsPath:= 'new.job';
   draw_cnc_all;
 end;
 
@@ -2207,10 +2210,10 @@ begin
   last_pen:= -1;
   Form1.Memo1.lines.add('');
   Memo1.lines.add('// SPINDLE ON, MOVE ZERO');
+  grbl_addStr('M3');
   grbl_moveZ(job.park_z, true);
   grbl_moveXY(0,0,false);
   grbl_millXYF(0,0,333); // neuen Speed-Wert erzwingen
-  grbl_addStr('M3');
   SendlistExecute;
   Memo1.lines.add('// SPINDLE ACCEL WAIT');
   mdelay(3000);          // Spindel-Hochlaufzeit
