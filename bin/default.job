@@ -42,6 +42,7 @@ D20,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0"
 "Part Size X",250
 "Part Size Y",150
 "Part Size Z",5
+"Z Feed",200
 "Z Lift above Part",10
 "Z Up above Part",5
 "Z Gauge",10
@@ -64,6 +65,7 @@ D20,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0"
 "Probe Z absolute",-5
 "Invert Z in G-Code",OFF
 "Scale Z Feed","0,25"
+"Spindle Accel Time (s)",5
 #Blocks
 #Comment
 Defaults for new job

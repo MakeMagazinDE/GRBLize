@@ -179,7 +179,7 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
 end;
 
@@ -201,7 +201,7 @@ begin
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
 end;
 

@@ -52,6 +52,7 @@ const
     speed: Integer;
     z_end: Double;
     z_inc: Double;
+    atc: Integer;
   end;
 
   Tblock_record = record
@@ -84,6 +85,7 @@ const
     partsize_x: Double;
     partsize_y: Double;
     partsize_z: Double;
+    z_feed: Integer;
     z_penlift: Double;
     z_penup: Double;
     z_gauge: Double;
@@ -106,6 +108,13 @@ const
     use_excellon_dia: Boolean;
     optimize_drills: Boolean;
     use_probe: Boolean;
+    spindle_wait: Integer; // Hochlaufzeit
+    atc_enabled: Boolean;
+    atc_zero_x: Double;
+    atc_zero_y: Double;
+    atc_pickup_z: Double;
+    atc_delta_x: Double;
+    atc_delta_y: Double;
   end;
 
 const

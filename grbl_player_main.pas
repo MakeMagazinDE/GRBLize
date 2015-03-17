@@ -13,7 +13,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '0.96f';
+  c_VerStr: String = '0.97a';
 
 type
   TForm1 = class(TForm)
@@ -116,6 +116,7 @@ type
     Label4: TLabel;
     Panel4: TPanel;
     PlayGcodeBtn: TSpeedButton;
+    CheckUseATC: TCheckBox;
     procedure PlayGcodeBtnClick(Sender: TObject);
     procedure ResetGRBLClick(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
@@ -193,7 +194,7 @@ type
 
 
   procedure EnableTestButtons;
-  procedure SendlistExecute;
+  procedure SendlistWaitIdle;
   procedure CheckResponse;
   procedure WaitTimerFinished;
 
@@ -322,6 +323,7 @@ begin
     job.pens[j].scale:= StrToFloatDef(Cells[8,i],100);
     job.pens[j].shape:= Tshape(StrToIntDef(Cells[9,i],0));
     job.pens[j].z_inc:= StrToFloatDef(Cells[10,i],1);
+    job.pens[j].atc:= StrToIntDef(Cells[11,i],0);
   end;
   NeedsRedraw:= true;
   NeedsRelist:= true;
@@ -351,6 +353,7 @@ begin
     // Shape in DrawCell erledigt!
     Cells[9,i+1]:=  IntToStr(ord(job.pens[i].shape));
     Cells[10,i+1]:= FormatFloat('0.0',job.pens[i].z_inc);
+    Cells[11,i+1]:= IntToStr(job.pens[i].atc);
   end;
   Form1.StringgridPens.Repaint;
   for i:= 0 to c_numOfFiles do
@@ -398,7 +401,7 @@ procedure InitJob;
 var i: Integer;
 begin
   Form1.StringgridPens.Rows[0].DelimitedText:=
-    'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc"';
+    'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc",ATC';
   Form1.StringGridFiles.Rows[0].DelimitedText:=
     '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %"';
   Form1.StringGridBlocks.Rows[0].DelimitedText:=
@@ -411,6 +414,7 @@ begin
       pens[i]:= PenInit;
       pens[i].offset.x:= 0;
       pens[i].offset.y:= 0;
+      pens[i].atc:= 0;
     end;
     pens[0].color:=clblack;
     pens[1].color:=$00004080;
@@ -443,32 +447,40 @@ begin
     end;
   end;
   with Form1.AppDefaults do begin
-    RowCount:= 26;
+    RowCount:= 34;
     Rows[1].DelimitedText:='"Part Size X",250';
     Rows[2].DelimitedText:='"Part Size Y",150';
     Rows[3].DelimitedText:='"Part Size Z",5';
-    Rows[4].DelimitedText:='"Z Lift above Part",10';
-    Rows[5].DelimitedText:='"Z Up above Part",5';
-    Rows[6].DelimitedText:='"Z Gauge",10';
-    Rows[7].DelimitedText:='"Optimize Drill Path",ON';
-    Rows[8].DelimitedText:= '"Use Excellon Drill Diameters",ON';
-    Rows[9].DelimitedText:= '"Tool Change Pause",OFF';
-    Rows[10].DelimitedText:='"Tool Change X absolute",10';
-    Rows[11].DelimitedText:='"Tool Change Y absolute",100';
-    Rows[12].DelimitedText:='"Tool Change Z absolute",-5';
-    Rows[13].DelimitedText:='"Park Position on End",ON';
-    Rows[14].DelimitedText:='"Park X absolute",200';
-    Rows[15].DelimitedText:='"Park Y absolute",100';
-    Rows[16].DelimitedText:='"Park Z absolute",-5';
-    Rows[17].DelimitedText:='"Cam X Offset","-20"';
-    Rows[18].DelimitedText:='"Cam Y Offset","40"';
-    Rows[19].DelimitedText:='"Cam Z Height above Part",20';
-    Rows[20].DelimitedText:='"Use Tool Z Probe",OFF';
-    Rows[21].DelimitedText:='"Probe X absolute",30';
-    Rows[22].DelimitedText:='"Probe Y absolute",30';
-    Rows[23].DelimitedText:='"Probe Z absolute",-5';
-    Rows[24].DelimitedText:='"Invert Z in G-Code",OFF';
-    Rows[25].DelimitedText:='"Scale Z Feed",0.25';
+    Rows[4].DelimitedText:='"Z Feed",200';
+    Rows[5].DelimitedText:='"Z Lift above Part",10';
+    Rows[6].DelimitedText:='"Z Up above Part",5';
+    Rows[7].DelimitedText:='"Z Gauge",10';
+    Rows[8].DelimitedText:='"Optimize Drill Path",ON';
+    Rows[9].DelimitedText:= '"Use Excellon Drill Diameters",ON';
+    Rows[10].DelimitedText:= '"Tool Change Pause",OFF';
+    Rows[11].DelimitedText:='"Tool Change X absolute",10';
+    Rows[12].DelimitedText:='"Tool Change Y absolute",100';
+    Rows[13].DelimitedText:='"Tool Change Z absolute",-5';
+    Rows[14].DelimitedText:='"Park Position on End",ON';
+    Rows[15].DelimitedText:='"Park X absolute",200';
+    Rows[16].DelimitedText:='"Park Y absolute",100';
+    Rows[17].DelimitedText:='"Park Z absolute",-5';
+    Rows[18].DelimitedText:='"Cam X Offset","-20"';
+    Rows[19].DelimitedText:='"Cam Y Offset","40"';
+    Rows[20].DelimitedText:='"Cam Z Height above Part",20';
+    Rows[21].DelimitedText:='"Use Tool Z Probe",OFF';
+    Rows[22].DelimitedText:='"Probe X absolute",30';
+    Rows[23].DelimitedText:='"Probe Y absolute",30';
+    Rows[24].DelimitedText:='"Probe Z absolute",-5';
+    Rows[25].DelimitedText:='"Invert Z in G-Code",OFF';
+    Rows[26].DelimitedText:='"Scale Z Feed",1';
+    Rows[27].DelimitedText:='"Spindle Accel Time (s)",4';
+    Rows[28].DelimitedText:='"ATC enable",OFF';
+    Rows[29].DelimitedText:='"ATC zero X absolute",50';
+    Rows[30].DelimitedText:='"ATC zero Y absolute",20';
+    Rows[31].DelimitedText:='"ATC pickup height Z abs",-20';
+    Rows[32].DelimitedText:='"ATC row X distance",20';
+    Rows[33].DelimitedText:='"ATC row Y distance",0';
   end;
 
   ClearFiles;
@@ -477,49 +489,59 @@ end;
 procedure DefaultsGridListToJob;
 begin
   with Form1.AppDefaults do begin
-    if RowCount < 26 then begin
+    if RowCount < 34 then begin
       showMessage('Job File invalid. Check number of #Default entries!' +
         #13 + 'Job will be reset to default values.');
       InitJob;
+      exit;
     end;
     job.partsize_x:= StrToFloatDef(Cells[1,1], 0);
     job.partsize_y:= StrToFloatDef(Cells[1,2], 0);
     job.partsize_z:= StrToFloatDef(Cells[1,3], 0);
 
-    job.z_penlift:= StrToFloatDef(Cells[1,4], 10.0);
-    job.z_penup:= StrToFloatDef(Cells[1,5], 5.0);
-    job.z_gauge:= StrToFloatDef(Cells[1,6], 10);
+    job.z_feed:= StrToIntDef(Cells[1,4], 200);
+    job.z_penlift:= StrToFloatDef(Cells[1,5], 10.0);
+    job.z_penup:= StrToFloatDef(Cells[1,6], 5.0);
+    job.z_gauge:= StrToFloatDef(Cells[1,7], 10);
 
-    job.optimize_drills:= Cells[1,7] = 'ON';
-    job.use_excellon_dia:= Cells[1,8] = 'ON';
+    job.optimize_drills:= Cells[1,8] = 'ON';
+    job.use_excellon_dia:= Cells[1,9] = 'ON';
 
-    job.toolchange_pause:= Cells[1,9] = 'ON';
+    job.toolchange_pause:= Cells[1,10] = 'ON';
     Form1.CheckPenChangePause.Checked:= job.toolchange_pause;
 
-    job.toolchange_x:= StrToFloatDef(Cells[1,10], 0);
-    job.toolchange_y:= StrToFloatDef(Cells[1,11], 0);
-    job.toolchange_z:= StrToFloatDef(Cells[1,12], 0);
+    job.toolchange_x:= StrToFloatDef(Cells[1,11], 0);
+    job.toolchange_y:= StrToFloatDef(Cells[1,12], 0);
+    job.toolchange_z:= StrToFloatDef(Cells[1,13], 0);
 
-    job.parkposition_on_end:= Cells[1,13] = 'ON';
+    job.parkposition_on_end:= Cells[1,14] = 'ON';
     Form1.CheckEndPark.Checked:= job.parkposition_on_end;
 
-    job.park_x:= StrToFloatDef(Cells[1,14], 0);
-    job.park_y:= StrToFloatDef(Cells[1,15], 0);
-    job.park_z:= StrToFloatDef(Cells[1,16], 0);
+    job.park_x:= StrToFloatDef(Cells[1,15], 0);
+    job.park_y:= StrToFloatDef(Cells[1,16], 0);
+    job.park_z:= StrToFloatDef(Cells[1,17], 0);
 
-    job.cam_x:= StrToFloatDef(Cells[1,17], 0);
-    job.cam_y:= StrToFloatDef(Cells[1,18], 0);
-    job.cam_z:= StrToFloatDef(Cells[1,19], 0);
+    job.cam_x:= StrToFloatDef(Cells[1,18], 0);
+    job.cam_y:= StrToFloatDef(Cells[1,19], 0);
+    job.cam_z:= StrToFloatDef(Cells[1,20], 0);
 
-    job.use_probe:= Cells[1,20] = 'ON';
-    job.probe_x:= StrToFloatDef(Cells[1,21], 0);
-    job.probe_y:= StrToFloatDef(Cells[1,22], 0);
-    job.probe_z:= StrToFloatDef(Cells[1,23], 0);
+    job.use_probe:= Cells[1,21] = 'ON';
+    job.probe_x:= StrToFloatDef(Cells[1,22], 0);
+    job.probe_y:= StrToFloatDef(Cells[1,23], 0);
+    job.probe_z:= StrToFloatDef(Cells[1,24], 0);
 
-    job.invert_z:= Cells[1,24] = 'ON';
-    job.z_feedmult:= StrToFloatDef(Cells[1,25], 0.25);
+    job.invert_z:= Cells[1,25] = 'ON';
+    job.z_feedmult:= StrToFloatDef(Cells[1,26], 1);
     if job.z_feedmult < 0.1 then
       job.z_feedmult:= 0.1;
+    job.spindle_wait:= StrToIntDef(Cells[1,27], 3);
+    job.atc_enabled:= Cells[1,28] = 'ON';
+    Form1.CheckUseATC.Checked:= job.atc_enabled;
+    job.atc_zero_x:= StrToFloatDef(Cells[1,29], 50);
+    job.atc_zero_y:= StrToFloatDef(Cells[1,30], 20);
+    job.atc_pickup_z:= StrToFloatDef(Cells[1,31], -20);
+    job.atc_delta_x:= StrToFloatDef(Cells[1,32], 20);
+    job.atc_delta_y:= StrToFloatDef(Cells[1,33], 0);
   end;
 end;
 
@@ -1314,7 +1336,7 @@ begin
         PenGridListToJob;
         param_change;
       end;
-    4,5,6,7,10:  // Z, F, Xofs, Yofs, Z+
+    4,5,6,7,10,11:  // Z, F, Xofs, Yofs, Z+
       begin
         Options:= Options + [goEditing];
         PenGridListToJob;
@@ -1565,7 +1587,7 @@ begin
   if aRow = 0 then with AppDefaults,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
-  end else if (aRow < 7) and (aCol = 0) then with AppDefaults,Canvas do begin
+  end else if (aRow < 8) and (aCol = 0) then with AppDefaults,Canvas do begin
     Font.Color := clred;
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
   end else if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF')) then // ON, OFF
@@ -2079,7 +2101,8 @@ begin
   MachineRunning:= false;
 end;
 
-procedure SendlistExecute;
+procedure SendlistWaitIdle;
+// wie SendList, aber mit Resync und warten auf Idle
 begin
   CancelProc:= false;
   EmergencyStop:= false;
@@ -2110,7 +2133,7 @@ begin
   Form1.Memo1.lines.add('// EMERGENCY STOP');
   if not MachineRunning then begin
     grbl_sendlist.clear; // alles löschen
-    SendlistExecute;     // E-Stop ausführen
+    SendlistWaitIdle;     // E-Stop ausführen
     EmergencyStop:= false;
   end;
 end;
@@ -2129,7 +2152,7 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET X ZERO');
   grbl_addStr('G92 X0');
-  SendlistExecute;
+  SendlistWaitIdle;
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
@@ -2137,7 +2160,7 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Y ZERO');
   grbl_addStr('G92 Y0');
-  SendlistExecute;
+  SendlistWaitIdle;
 end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
@@ -2145,7 +2168,7 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Z ZERO');
   grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
-  SendlistExecute;
+  SendlistWaitIdle;
 end;
 
 procedure TForm1.BtnHomeCycleClick(Sender: TObject);
@@ -2157,7 +2180,7 @@ begin
   grbl_offsXY(0,0);
   grbl_offsZ(0);
   grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
-  SendlistExecute;
+  SendlistWaitIdle;
   HomingPerformed:= true;
   EnableRunButtons;
 end;
@@ -2168,10 +2191,10 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
   grbl_addStr('M5');
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(0,0, false);
   grbl_moveZ(job.z_penlift, false);
-  SendlistExecute;
+  SendlistWaitIdle;
 end;
 
 procedure TForm1.BtnMoveParkClick(Sender: TObject);
@@ -2179,9 +2202,10 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TO PARK POSITION');
   grbl_addStr('M5');
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(job.park_x, job.park_y, true);
-  SendlistExecute;
+  grbl_moveZ(job.park_z, true);
+  SendlistWaitIdle;
 end;
 
 procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
@@ -2189,17 +2213,20 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TO TOOL CHANGE POSITION');
   grbl_addStr('M5');
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
   grbl_moveZ(job.toolchange_z, true);
-  SendlistExecute;
+  SendlistWaitIdle;
 end;
 
 
 procedure TForm1.BtnRunClick(Sender: TObject);
 // Pfade an GRBL senden
-var i, my_len, p, last_pen: Integer;
+var i, my_len, p, last_pen, my_old_atc_tool, my_new_atc_tool, my_btn: Integer;
   my_entry: Tfinal;
+  my_atc_x, my_atc_y: Double;
+  my_str, my_list: String;
+  my_has_atc: Boolean;
 
 begin
   Memo1.lines.Clear;
@@ -2209,14 +2236,42 @@ begin
     exit;
   last_pen:= -1;
   Form1.Memo1.lines.add('');
-  Memo1.lines.add('// SPINDLE ON, MOVE ZERO');
-  grbl_addStr('M3');
-  grbl_moveZ(job.park_z, true);
-  grbl_moveXY(0,0,false);
-  grbl_millXYF(0,0,333); // neuen Speed-Wert erzwingen
-  SendlistExecute;
-  Memo1.lines.add('// SPINDLE ACCEL WAIT');
-  mdelay(3000);          // Spindel-Hochlaufzeit
+  grbl_moveZ(0, true);
+  SendlistWaitIdle;
+  my_list:= '';
+  my_str:= ', Mill';
+  my_has_atc:= false;
+  for i := 0 to StringGridPens.RowCount-1 do begin
+    if i = 10 then
+      my_str:= ', Drill';
+    if job.pens[i].enable and (job.pens[i].atc <> 0) then begin
+      my_list:= my_list + #13 + ('Pen/Tool #' + IntToStr(i)
+        + my_str + ' Dia. '  + FloatToStr(job.pens[i].diameter)
+        + 'mm at ATC #' + IntToStr(job.pens[i].atc));
+      my_has_atc:= true;
+    end;
+  end;
+  if CheckUseATC.Checked and not my_has_atc then begin
+    my_btn := MessageDlg('No ATC tools found. Will disable <Use ATC> Chekbox.' +
+      #13 + 'Continue?', mtError, mbOKCancel, 0);
+    if my_btn = mrCancel then
+      exit;
+    CheckUseATC.Checked:= false;
+  end else if CheckUseATC.Checked then begin
+    my_btn := MessageDlg('Make sure spindle is loaded with probe/dummy tool 0, ATC slot 0 is empty' +
+      #13 + 'and ATC tray is loaded with these tools:' +
+      #13 + my_list, mtError, mbOKCancel, 0);
+    if my_btn = mrCancel then
+      exit;
+  end else begin
+    Memo1.lines.add('// SPINDLE ON');
+    grbl_addStr('M3');
+    Sendlist(true);
+    Memo1.lines.add('// SPINDLE ACCEL WAIT '+ IntToStr(job.spindle_wait) + ' SEC');
+    if ftdi_isopen then
+      mdelay(job.spindle_wait * 1000);  // Spindel-Hochlaufzeit
+  end;
+
   for i:= 0 to my_len-1 do begin
     if CancelProc then
       break;
@@ -2225,29 +2280,97 @@ begin
       continue;
     if length(my_entry.millings) = 0 then
       continue;
-    if CheckPenChangePause.Checked and (my_entry.pen <> last_pen) then begin
+    if CheckUseATC.Checked and (my_entry.pen <> last_pen) then begin
       Memo1.lines.add('');
-      Memo1.lines.add('// TOOL CHANGE PAUSE - USE TOOL'+ IntToStr(my_entry.pen));
+      grbl_moveZ(0, true); // move Z up
+      if last_pen = -1 then begin
+        last_pen:= 0;
+        Memo1.lines.add('// SPINDLE STOPPED');
+      end else begin                    // bei erstem Werkzeug nicht warten
+        grbl_addStr('M5');
+        SendlistWaitIdle;
+        Memo1.lines.add('// SPINDLE BRAKE WAIT '+ IntToStr(job.spindle_wait) + ' SEC');
+        if ftdi_isopen then
+          mdelay(job.spindle_wait * 1000);  // wie Spindel-Hochlaufzeit
+      end;
+
+      my_old_atc_tool:= job.pens[last_pen].atc;
+      my_new_atc_tool:= job.pens[my_entry.pen].atc;
+
+// Zuletzt benutztes Werkzeug (oder Probe/Dummy nach Start) wieder ablegen
+      Form1.Memo1.lines.add('');
+      my_atc_x:= job.atc_zero_x + (my_old_atc_tool * job.atc_delta_x);
+      my_atc_y:= job.atc_zero_y + (my_old_atc_tool * job.atc_delta_y);
+      Memo1.lines.add('// UNLOAD TOOL #'+ IntToStr(last_pen));
+      Memo1.lines.add('// ATC POSITION '+ IntToStr(my_old_atc_tool)
+        + ' AT ' + FloatToStr(my_atc_x) + ',' + FloatToStr(my_atc_y));
+      grbl_moveZ(0, true);  // move Z up
+      grbl_moveXY(my_atc_x, my_atc_y, true);
+      SendlistWaitIdle;
+      grbl_moveZ(job.atc_pickup_z + 10, true);  // move Z down near pickup-Höhe
+      grbl_addStr('M8');                // Ausblasen
+      SendlistWaitIdle;
+      mdelay(500);
+      grbl_moveZ(0, true);     // move Z up
+      SendlistWaitIdle;
+      mdelay(500);
+
+// Neues Werkzeug aufnehmen
+      Form1.Memo1.lines.add('');
+      my_atc_x:= job.atc_zero_x + (my_new_atc_tool * job.atc_delta_x);
+      my_atc_y:= job.atc_zero_y + (my_new_atc_tool * job.atc_delta_y);
+      Memo1.lines.add('// LOAD TOOL #'+ IntToStr(my_entry.pen));
+      Memo1.lines.add('// ATC POSITION '+ IntToStr(my_new_atc_tool)
+        + ' AT ' + FloatToStr(my_atc_x) + ',' + FloatToStr(my_atc_y));
+      grbl_moveZ(0, true);  // move Z up
+      grbl_moveXY(my_atc_x, my_atc_y, true);
+      Sendlist(true);
+      grbl_moveZ(job.atc_pickup_z + 20, true);  // move Z down
+      Sendlist(true);
+      grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
+      grbl_addStr('M9');                // pick up tool
+      SendlistWaitIdle;
+      mdelay(500);
+      grbl_moveZ(0, true);  // move Z up
+      SendlistWaitIdle;
+
+      Form1.Memo1.lines.add('');
+      grbl_addStr('M3');
+      SendlistWaitIdle;
+      Memo1.lines.add('// SPINDLE ACCEL WAIT '+ IntToStr(job.spindle_wait) + ' SEC');
+      if ftdi_isopen then
+        mdelay(job.spindle_wait * 1000);  // Spindel-Hochlaufzeit
+
+    end else if CheckPenChangePause.Checked and (my_entry.pen <> last_pen) then begin
+      Memo1.lines.add('');
       // move to tool change position
       // TO DO: Neuen Z-Wert ermöglichen
+      Memo1.lines.add('// SPINDLE BRAKE WAIT '+ IntToStr(job.spindle_wait) + ' SEC');
       grbl_addStr('M5');
-      grbl_moveZ(job.toolchange_z, true);
+      SendlistWaitIdle;
+      if ftdi_isopen then
+        mdelay(job.spindle_wait * 1000);  // Spindel-Hochlaufzeit
+      grbl_moveZ(0, true);
       grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
+      grbl_moveZ(job.toolchange_z, true);
       SendList(true);
-      Memo1.lines.add('// TOOL CHANGE');
-      ShowMessage('Milling paused - Change tool to '
+      Memo1.lines.add('// PEN/TOOL CHANGE');
+      ShowMessage('Milling paused - Change pen/tool to '
         + #13+ FloatToStr(job.pens[my_entry.pen].diameter)+' mm when path finished'
         + #13+ 'and click OK when done. Will keep Z Zero Value.');
+      Form1.Memo1.lines.add('');
+      Memo1.lines.add('// SPINDLE ACCEL WAIT '+ IntToStr(job.spindle_wait) + ' SEC');
       grbl_addStr('M3');
-      SendlistExecute;
-      Memo1.lines.add('// SPINDLE ACCEL WAIT');
-      mdelay(3000);          // Spindel-Hochlaufzeit
-      grbl_moveZ(job.park_z, true);
-      grbl_moveXY(0, 0, false); // Zum Werkstück-Nullpunkt zurück, Z ist noch oben
-      grbl_moveZ(job.z_penlift, false);
-      SendList(true);  // warte auf Idle wenn beendet
+      SendlistWaitIdle;
+      if ftdi_isopen then
+        mdelay(job.spindle_wait * 1000);  // Spindel-Hochlaufzeit
+      grbl_moveZ(0, true);
+      SendlistWaitIdle;  // warte auf Idle wenn beendet
     end;
+
     last_pen:= my_entry.pen;
+
+    // kompletten Milling- oder Drill-Pfad abfahren
     for p:= 0  to length(my_entry.millings)-1 do begin
       if CancelProc then
         break;
@@ -2259,10 +2382,58 @@ begin
         grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
     end;
     SendList(false);
-  end;
+  end; // Ende der Block-Schleife
+
   // grbl_millpath und grbl_drillpath enden mit job.z_penup, deshalb:
-  grbl_moveZ(job.z_penlift, false);
-  if not CancelProc then
+  grbl_moveZ(0, true); // move Z up
+  SendlistWaitIdle;
+
+  // Immer abschließende Aktion wenn ATC enabled
+  if CheckUseATC.Checked then begin
+    Memo1.lines.add('');
+    Memo1.lines.add('// SPINDLE BRAKE WAIT '+ IntToStr(job.spindle_wait) + ' SEC');
+    if ftdi_isopen then
+      mdelay(job.spindle_wait * 1000);  // wie Spindel-Hochlaufzeit
+
+    // Zuletzt benutztes Werkzeug wieder ablegen
+    my_old_atc_tool:= job.pens[last_pen].atc;
+    Form1.Memo1.lines.add('');
+    my_atc_x:= job.atc_zero_x + (my_old_atc_tool * job.atc_delta_x);
+    my_atc_y:= job.atc_zero_y + (my_old_atc_tool * job.atc_delta_y);
+    Memo1.lines.add('// UNLOAD TOOL #'+ IntToStr(last_pen));
+    Memo1.lines.add('// ATC POSITION '+ IntToStr(my_old_atc_tool)
+      + ' AT ' + FloatToStr(my_atc_x) + ',' + FloatToStr(my_atc_y));
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(my_atc_x, my_atc_y, true);
+    SendlistWaitIdle;
+    grbl_moveZ(job.atc_pickup_z + 10, true);  // move Z down
+    grbl_addStr('M8');                // Ausblasen
+    SendlistWaitIdle;
+    mdelay(500);
+    grbl_moveZ(0, true);  // move Z up
+    SendlistWaitIdle;
+    mdelay(500);
+
+    // Probe/Dummy-Werkzeug aufnehmen
+    Form1.Memo1.lines.add('');
+    my_atc_x:= job.atc_zero_x;
+    my_atc_y:= job.atc_zero_y;
+    Memo1.lines.add('// LOAD PROBE TOOL #0');
+    Memo1.lines.add('// ATC POSITION 0 AT ' + FloatToStr(my_atc_x) + ',' + FloatToStr(my_atc_y));
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(my_atc_x, my_atc_y, true);
+    SendlistWaitIdle;
+    grbl_moveZ(job.atc_pickup_z + 20, true);  // move Z down
+    SendlistWaitIdle;
+    grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
+    grbl_addStr('M9');                // pick up tool
+    SendlistWaitIdle;
+    mdelay(500);
+    grbl_moveZ(0, true);  // move Z up
+    SendlistWaitIdle;
+  end;
+
+  if not CancelProc then begin
     if CheckEndPark.Checked and HomingPerformed then
       BtnMoveParkClick(Sender)
     else begin
@@ -2272,9 +2443,9 @@ begin
       grbl_moveXY(0,0, false);
       SendList(true);
     end;
+  end;
   Memo1.lines.add('');
   Memo1.lines.add('// FINISHED');
-  CancelProc:= false;
 end;
 
 
@@ -2309,7 +2480,6 @@ begin
     end;
   end;
   CloseFile(my_ReadFile);
-  SendList(true);
   if not CancelProc then
     if CheckEndPark.Checked and HomingPerformed then
       BtnMoveParkClick(Sender)

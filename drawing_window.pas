@@ -1055,7 +1055,7 @@ begin
   ToolCursor.X:= 0;
   ToolCursor.Y:= 0;
   grbl_offsXY(0, 0);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
   ToolCursorBlock:= HiliteBlock;
@@ -1070,7 +1070,7 @@ begin
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
   grbl_offsXY(x, y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
   ToolCursorBlock:= HiliteBlock;
@@ -1085,7 +1085,7 @@ begin
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
   grbl_offsXY(x, y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
   ToolCursorBlock:= HiliteBlock;
@@ -1098,7 +1098,7 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
   ToolCursor.X:= -round(job.cam_x * c_hpgl_scale);
@@ -1115,7 +1115,7 @@ begin
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
   ToolCursor.X:= ToolCursor.X - round(job.cam_x * c_hpgl_scale);
@@ -1132,7 +1132,7 @@ begin
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
   ToolCursor.X:= ToolCursor.X - round(job.cam_x * c_hpgl_scale);
@@ -1148,10 +1148,10 @@ begin
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
   ToolCursor.X:= 0;
   ToolCursor.Y:= 0;
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(0,0, false);
   grbl_moveZ(job.z_penlift, false);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
 end;
@@ -1164,11 +1164,11 @@ begin
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.z_penlift, false);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
 end;
@@ -1181,11 +1181,11 @@ begin
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.z_penlift, false);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
 end;
@@ -1196,10 +1196,10 @@ procedure TForm2.pu_moveCamToPartZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   grbl_moveZ(job.cam_z, false);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
 end;
 
@@ -1211,11 +1211,11 @@ begin
   hilite_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x-job.cam_x, y-job.cam_y, false);
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
   grbl_moveZ(job.cam_z, false);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
 end;
@@ -1228,11 +1228,11 @@ begin
   hilite_center_to_toolcursor;
   x:= ToolCursor.X / c_hpgl_scale;
   y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_moveZ(job.park_z, true);
+  grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x-job.cam_x, y-job.cam_y, false);
   grbl_offsXY(x-job.cam_x, y-job.cam_y);
   grbl_moveZ(job.cam_z, false);
-  SendlistExecute;
+  SendlistWaitIdle;
   NeedsRedraw:= true;
   NeedsRefresh3D:= true;
 end;
