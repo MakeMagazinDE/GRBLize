@@ -1,11 +1,11 @@
 object Form3: TForm3
   Left = 0
   Top = 0
-  Width = 794
-  Height = 506
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
   Caption = 'Camera View'
+  ClientHeight = 472
+  ClientWidth = 778
   Color = clBtnFace
   Constraints.MaxHeight = 508
   Constraints.MaxWidth = 794
