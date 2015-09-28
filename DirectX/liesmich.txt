@@ -1,0 +1,21 @@
+
+Die Dateien in diesem Verzeichnis werden benötigt, um das VSampleDemo Projekt
+zu kompilieren.
+
+Die Dateien stammen von http://www.clootie.ru/delphi/download_dx92.html#Headers.
+Die Datei jedi.inc stammt aus der JCL von http://www.delphi-jedi.org/.
+
+Alle diese Dateien scheinen unter der Mozilla Public License Version veröfentlicht worden sein: 
+(http://www.mozilla.org/MPL/MPL-1.1.html).
+Deshalb sollte es erlaubt sein, diese Datei-Zusammenstellung in Form dieses Archives für
+das VSampleDemo Projekt zur Verfügung zu stellen.
+
+Datei-Listing des Verzeichnisses:
+
+23.10.2006  02:00           239.320 Direct3D9.pas
+23.10.2006  00:42           269.725 DirectDraw.pas
+01.05.2007  02:18         1.383.503 DirectShow9.pas
+01.05.2007  02:18           104.064 DirectSound.pas
+18.04.2006  23:27             3.407 DirectX.inc
+01.05.2007  02:18             6.507 DXTypes.pas
+10.03.2008  00:54            49.311 Jedi.inc
