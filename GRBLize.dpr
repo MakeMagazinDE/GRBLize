@@ -1,7 +1,6 @@
 program GRBLize;
 
-{%File 'drill_import.inc'}
-{%File 'hpgl_import.inc'}
+
 
 uses
   Forms,
@@ -34,4 +33,5 @@ begin
   Application.CreateForm(TForm1, Form1);
   Application.CreateForm(TAboutBox, AboutBox);
   Application.Run;
+  Application.Terminate;
 end.

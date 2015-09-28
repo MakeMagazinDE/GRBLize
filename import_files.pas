@@ -18,7 +18,7 @@ const
   Tshape = (online, inside, outside, pocket, drillhole);
   Trotate = (deg0, deg90, deg180, deg270);
 
-  TpointFloat = record
+  TFloatPoint = record
     X: Double;
     Y: Double;
   end;
@@ -53,6 +53,7 @@ const
     z_end: Double;
     z_inc: Double;
     atc: Integer;
+    tooltip: Integer;
   end;
 
   Tblock_record = record
@@ -124,7 +125,8 @@ const
    ('CONTOUR', 'INSIDE', 'OUTSIDE', 'POCKET', 'DRILL');
   ShapeColorArray: Array [0..4] of Tcolor =
    (clBlack, clBlue, clRed, clFuchsia, clgreen);
-
+  ToolTipArray: Array [0..5] of String[15] =
+   ('Flat Tip', 'Cone 30°', 'Cone 45°', 'Cone 60°', 'Cone 90°','Ball Tip');
   zeroPoint: TIntPoint = (
     X: 0;
     Y: 0;
@@ -161,8 +163,6 @@ var
   final_array: Array of Tfinal;
 
 
-  ToolCursor: TIntpoint; // in HPGL-Units
-  ToolCursorBlock: Integer;
   CurrentPen, PendingPen: Integer;
   LastAction, PendingAction: Taction;
   CurrentBlockID,
@@ -191,7 +191,7 @@ function FloatToStrDot(my_val: Double):String;
 var
   my_Settings: TFormatSettings;
 begin
-  GetLocaleFormatSettings(GetUserDefaultLCID, my_Settings);
+  my_Settings.Create;
   my_Settings.DecimalSeparator := '.';
   FloatToStrDot:= FormatFloat('0.00',my_val,my_Settings);
 end;
@@ -200,9 +200,9 @@ function StrDotToFloat(my_str: String): Double;
 var
   my_Settings: TFormatSettings;
 begin
-  GetLocaleFormatSettings(GetUserDefaultLCID, my_Settings);
+  my_Settings.Create;
   my_Settings.DecimalSeparator := '.';
-  StrDotToFloat:= StrToFloat(my_str,my_Settings);
+  StrDotToFloat:= StrToFloatDef(my_str,0,my_Settings);
 end;
 
 // #############################################################################
@@ -499,8 +499,8 @@ begin
 end;
 
 // #############################################################################
-{$I hpgl_import.inc}
-{$I drill_import.inc}
+{$I hpgl_import.pas}
+{$I drill_import.pas}
 // #############################################################################
 
 

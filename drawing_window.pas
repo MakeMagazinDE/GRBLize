@@ -57,7 +57,6 @@ type
     MenuItem18: TMenuItem;
     MenuItem22: TMenuItem;
     N3: TMenuItem;
-    procedure DrawingBoxClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure pu_camIsAtPointClick(Sender: TObject);
     procedure pu_camIsAtCenterClick(Sender: TObject);
@@ -109,21 +108,26 @@ var
   bm_scroll: Tpoint;
   mouse_start: Tpoint;
   mouse_x, mouse_y: Integer;
+  NeedsRedraw, drawing_tool_down  : Boolean;
   HilitePen, HiliteBlock, HilitePath, HilitePoint: Integer;
+  drawing_ToolPos: TFloatPoint; // in mm!
 
 procedure UnHilite;
 procedure draw_cnc_all;
 procedure hilite_to_toolcursor;
 procedure hilite_center_to_toolcursor;
 procedure Uncheck_Popups;
+procedure SetDrawingToolPosMM(x, y, z: Double);
 
 
 implementation
 
-uses grbl_player_main;
+uses grbl_player_main, glscene_view;
 
 {$R *.dfm}
 
+// #############################################################################
+// Umrechnungen
 // #############################################################################
 
 function x_to_screen(x: Integer):Integer;
@@ -137,6 +141,27 @@ function y_to_screen(y: Integer):Integer;
 begin
   y_to_screen:= drawing_offset_y - round(y * Scale * 25) div 1000;
 end;
+
+function FloatPointToOffsGraph(pf: TFloatPoint; po: TIntPoint):Tpoint;
+// Float-Point in mm auf Grafik umrechnen inkl. Offset
+begin
+  pf.x:= pf.X + (po.X / c_hpgl_scale);  // pf in mm
+  FloatPointToOffsGraph.x:= round(pf.x * Scale) + drawing_offset_x;  // neue Grafik-Kordinaten
+  pf.Y:= pf.Y + (po.Y / c_hpgl_scale);  // pf in mm
+  FloatPointToOffsGraph.Y:= drawing_offset_Y - round(pf.Y * Scale);  // neue Grafik-Kordinaten
+end;
+
+function HPGLPointToOffsGraph(pi, po: TIntPoint):Tpoint;
+// HPGL-Point auf Grafik umrechnen inkl. Offset
+var pf: TFloatPoint;
+begin
+  pf.X:= (pi.X + po.X) / c_hpgl_scale;  // pf in mm
+  HPGLPointToOffsGraph.x:= round(pf.x * Scale) + drawing_offset_x;  // neue Grafik-Kordinaten
+  pf.Y:= (pi.Y + po.Y) / c_hpgl_scale;  // pf in mm
+  HPGLPointToOffsGraph.Y:= drawing_offset_Y - round(pf.Y * Scale);  // neue Grafik-Kordinaten
+end;
+
+// #############################################################################
 
 procedure UnHilite;
 begin
@@ -359,13 +384,6 @@ begin
   end;
 end;
 
-function offset_bm_point(pt, po: TIntPoint):Tpoint;
-begin
-  pt.x:= Round((pt.x+ po.X) * Scale * 25) div 1000;  // neue Kordinaten
-  offset_bm_point.x:= pt.x + drawing_offset_x ;
-  pt.y:= Round((pt.y + po.Y) * Scale * 25) div 1000;
-  offset_bm_point.y:= drawing_offset_y - pt.y;
-end;
 
 function get_bm_point(var my_path: Tpath; my_idx: Integer; my_offset: TIntPoint; var pt: TPoint): Boolean;
 // Holt einen Punkt und Punkt mit Offset aus BlockArray-Path
@@ -461,7 +479,6 @@ begin
 end;
 
 // #############################################################################
-
 
 procedure draw_final_entry(my_final_entry: Tfinal; is_highlited: Boolean; var last_point: TPoint);
 // Eintrag aus finalem Array zeichnen einschlieﬂlich mill-Pfaden
@@ -588,7 +605,7 @@ begin
 
 
     Canvas.Pen.Width := 1;
-    if (my_final_entry.shape <> online) then begin
+//    if (my_final_entry.shape <> online) then begin
       if my_final_entry.enable then
         Canvas.Pen.Style:= psSolid      // psDashDot , psDot
       else
@@ -614,7 +631,7 @@ begin
           Canvas.lineto(po1.x, po1.y);        // zur¸ck zum ersten Punkt
         end;
       end;
-    end;
+//    end;
     Canvas.Pen.Style:= psSolid;     // psDashDot , psDot
 
 // -----------------------------------------------------------------------------
@@ -625,8 +642,8 @@ begin
       Canvas.Pen.Color:= my_fill_color1 or $00404040;  // Linienfarbe
       Canvas.Brush.Color:= Canvas.Pen.Color;
       Canvas.Font.Color:= clwhite;  // Zeichenfarbe
-      pmin:= offset_bm_point(my_final_entry.bounds.min, my_offset);
-      pmax:= offset_bm_point(my_final_entry.bounds.max, my_offset);
+      pmin:= HPGLPointToOffsGraph(my_final_entry.bounds.min, my_offset);
+      pmax:= HPGLPointToOffsGraph(my_final_entry.bounds.max, my_offset);
       p1.x:= pmin.x;
       p1.y:= (pmin.y + pmax.y) div 2;
       p2.x:= pmax.x;
@@ -658,11 +675,12 @@ begin
 end;
 
 procedure draw_tool;
+
 var
   po1: Tpoint;
 
 begin
-  po1 := offset_bm_point(ToolCursor, ZeroPoint);
+  po1 := FloatPointToOffsGraph(drawing_ToolPos, ZeroPoint);
 
   with Form2.DrawingBitmap do begin
     // Cursorlinien zeichnen
@@ -683,9 +701,13 @@ begin
     Canvas.TextOut(po1.x-13,po1.y-21, 'TOOL');
 
     Canvas.Pen.Color:= clgray;
-    Canvas.Brush.Color:= clnone;
+    if drawing_tool_down then
+      Canvas.Brush.Color:= clwhite
+    else
+      Canvas.Brush.Color:= clnone;
     Canvas.Pen.Width := 2;
     Canvas.Ellipse(po1.x-6,po1.y-6,po1.x+6,po1.y+6);
+    Canvas.Brush.Color:= clnone;
 
     Canvas.Pen.Color:= clred;
     po1.x:= po1.x + round(job.cam_x * scale);
@@ -702,7 +724,7 @@ end;
 // #############################################################################
 
 procedure draw_grid(my_bitmap: TBitmap);
-var p1, po1: Tpoint;
+var p1, po1, pmax: Tpoint;
   my_delta, my_ruler: Integer;
   my_div, my_subdiv, my_text_x: Integer;
 begin
@@ -719,6 +741,11 @@ begin
     po1.Y:= 0;
     add_scroll_offset(po1);
     p1:= po1;
+
+    pmax.X:= round(job.partsize_x * Scale);
+    pmax.Y:= round(job.partsize_y * Scale);
+    add_scroll_offset(pmax);
+
     if Scale > 4 then begin
       my_div:= 10;
       my_subdiv:= 1;
@@ -732,13 +759,14 @@ begin
     end;
     my_delta:= round(my_subdiv * Scale);
     my_ruler:= 0;
+    // vertikale Linien bis Offset
     repeat
       p1.X:= p1.X + my_delta;
       my_ruler:= my_ruler + my_subdiv;
       if (my_ruler mod my_div) = 0 then begin
-        Canvas.Pen.Color:= $00202020;
+        Canvas.Pen.Color:= $00303030;
         Canvas.moveto(p1.X, p1.Y);
-        Canvas.lineto(p1.X, 0);
+        Canvas.lineto(p1.X, pmax.y);
         my_text_x:= 6; // Center Text
         if my_ruler >= 100 then
           my_text_x:= 9;
@@ -746,11 +774,11 @@ begin
           my_text_x:= 12;
         Canvas.TextOut(p1.X-my_text_x, p1.Y+2, IntToSTr(my_ruler));
       end else begin
-        Canvas.Pen.Color:= $00171717;
+        Canvas.Pen.Color:= $00202020;
         Canvas.moveto(p1.X, p1.Y);
-        Canvas.lineto(p1.X, 0);
+        Canvas.lineto(p1.X, pmax.y);
       end;
-    until p1.X > width;
+    until (p1.X > width) or (p1.X >= pmax.X);
     // horizontale Linien bis Offset
     p1:= po1;
     my_ruler:= 0;
@@ -758,10 +786,10 @@ begin
       p1.Y:= p1.Y - my_delta;
       my_ruler:= my_ruler + my_subdiv;
       if (my_ruler mod my_div) = 0 then begin
-        Canvas.Pen.Color:= $00202020;
+        Canvas.Pen.Color:= $00303030;
         Canvas.Pen.mode:= pmCopy;
         Canvas.moveto(p1.X, p1.Y);
-        Canvas.lineto(Width, p1.Y);
+        Canvas.lineto(pmax.X, p1.Y);
         my_text_x:= 14;
         if my_ruler >= 100 then
           my_text_x:= 20;
@@ -769,19 +797,21 @@ begin
           my_text_x:= 26;
         Canvas.TextOut(p1.X-my_text_x, p1.Y-7, IntToSTr(my_ruler));
       end else begin
-        Canvas.Pen.Color:= $00171717;
+        Canvas.Pen.Color:= $00202020;
         Canvas.moveto(p1.X, p1.Y);
-        Canvas.lineto(Width, p1.Y);
+        Canvas.lineto(pmax.X, p1.Y);
       end;
-    until p1.Y < 0;
+    until (p1.Y < 0) or (p1.Y - pmax.Y <= 0);
   end;
 end;
 
 procedure draw_cnc_all;
 var
   j: Integer;
-  po1, po2: Tpoint;
+  po1, po2, pmax: Tpoint;
 begin
+  if not Form1.ShowDrawing1.Checked then
+    exit;
   set_drawing_scales;
   draw_grid(Form2.DrawingBitmap);
 
@@ -799,7 +829,12 @@ begin
     Canvas.Pen.Color:= clgray;
 
     draw_tool;
+
     // Null-Linien zeichnen
+    pmax.X:= round(job.partsize_x * Scale);
+    pmax.Y:= round(job.partsize_y * Scale);
+    add_scroll_offset(pmax);
+
     po1.x := 0;
     po1.y := 0;
     add_scroll_offset(po1);
@@ -813,9 +848,11 @@ begin
 
     Canvas.Pen.Width := 1;
     Canvas.moveto(po1.x, po1.y);
-    Canvas.lineto(po1.x, 0);
-    Canvas.moveto(po1.x, po1.y);
-    Canvas.lineto(Width, po1.y);
+    Canvas.lineto(po1.x, po1.y);
+    Canvas.lineto(pmax.X, po1.y);
+    Canvas.lineto(pmax.X, pmax.y);
+    Canvas.lineto(po1.X, pmax.y);
+    Canvas.lineto(po1.x, po1.y);
     if (HiliteBlock < 0) then
       Canvas.Pen.Width := 2;
     Canvas.Ellipse(po1.x-6,po1.y-6,po1.x+6,po1.y+6);
@@ -832,16 +869,13 @@ end;
 procedure TForm2.FormCreate(Sender: TObject);
 var
   grbl_ini:TRegistryIniFile;
-  form_visible: boolean;
 begin
-  ToolCursorBlock:= -1;
   grbl_ini:=TRegistryIniFile.Create('GRBLize');
   try
     Top:= grbl_ini.ReadInteger('DrawingForm','Top',130);
     Left:= grbl_ini.ReadInteger('DrawingForm','Left',130);
     Width:= grbl_ini.ReadInteger('DrawingForm','Width',800);
     Height:= grbl_ini.ReadInteger('DrawingForm','Height',600);
-    form_visible:= grbl_ini.ReadBool('DrawingForm','Visible',true);
   finally
     grbl_ini.Free;
   end;
@@ -996,7 +1030,7 @@ begin
     final_array[HiliteBlock].enable:= PopupMenuPoint.Items[0].Checked;
     NeedsRedraw:= true;
     NeedsRelist:= true;
-    NeedsRefresh3D:= true;
+    Form4.FormRefresh(Sender);
   end;
 end;
 
@@ -1012,38 +1046,52 @@ begin
     item_change(HiliteBlock);
     NeedsRedraw:= true;
     NeedsRelist:= true;
-    NeedsRefresh3D:= true;
+    Form4.FormRefresh(Sender);
   end;
 end;
 
 procedure hilite_to_toolcursor;
-// setzt ToolCursor-Koordinaten in Plotter-Units
-var ZeroOfs: TIntpoint;
+// setzt drawing_ToolPos-Koordinaten in Plotter-Units
+var ZeroOfs, pt: TIntpoint;
 begin
   if (HilitePoint >= 0) then begin
-    ToolCursor:= final_Array[HiliteBlock].millings[HilitePath, HilitePoint];
+    pt:= final_Array[HiliteBlock].millings[HilitePath, HilitePoint];
     ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
-    ToolCursor.X := ToolCursor.X + ZeroOfs.X;
-    ToolCursor.Y := ToolCursor.Y + ZeroOfs.Y;
+    pt.X := pt.X + ZeroOfs.X;
+    pt.Y := pt.Y + ZeroOfs.Y;
+    drawing_ToolPos.X:= pt.X / c_hpgl_scale;
+    drawing_ToolPos.Y:= pt.Y / c_hpgl_scale;
   end else if (HiliteBlock >= 0) then begin
-    ToolCursor:= final_Array[HiliteBlock].bounds.min;
+    pt:= final_Array[HiliteBlock].bounds.min;
     ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
-    ToolCursor.X := ToolCursor.X + ZeroOfs.X;
-    ToolCursor.Y := ToolCursor.Y + ZeroOfs.Y;
+    pt.X := pt.X + ZeroOfs.X;
+    pt.Y := pt.Y + ZeroOfs.Y;
+    drawing_ToolPos.X:= pt.X / c_hpgl_scale;
+    drawing_ToolPos.Y:= pt.Y / c_hpgl_scale;
   end;
 end;
 
 
 procedure hilite_center_to_toolcursor;
-// setzt ToolCursor-Koordinaten in Plotter-Units
-var ZeroOfs: TIntpoint;
+// setzt drawing_ToolPos-Koordinaten in Plotter-Units
+var ZeroOfs, pt: TIntpoint;
 begin
   if (HiliteBlock >= 0) then begin
-    ToolCursor:= final_Array[HiliteBlock].bounds.mid;
+    pt:= final_Array[HiliteBlock].bounds.mid;
     ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
-    ToolCursor.X := ToolCursor.X + ZeroOfs.X;
-    ToolCursor.Y := ToolCursor.Y + ZeroOfs.Y;
+    pt.X := pt.X + ZeroOfs.X;
+    pt.Y := pt.Y + ZeroOfs.Y;
+    drawing_ToolPos.X:= pt.X / c_hpgl_scale;
+    drawing_ToolPos.Y:= pt.Y / c_hpgl_scale;
   end;
+end;
+
+procedure SetDrawingToolPosMM(x, y, z: Double);
+begin
+  NeedsRedraw:= Form1.ShowDrawing1.Checked;
+  drawing_ToolPos.X:= x;
+  drawing_ToolPos.Y:= y;
+  drawing_tool_down:= z <= 0;
 end;
 
 // #############################################################################
@@ -1052,13 +1100,12 @@ procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO PART ZERO');
-  ToolCursor.X:= 0;
-  ToolCursor.Y:= 0;
+  drawing_ToolPos.X:= 0;
+  drawing_ToolPos.Y:= 0;
   grbl_offsXY(0, 0);
-  SendlistWaitIdle;
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-  ToolCursorBlock:= HiliteBlock;
+  SetSimPositionMMxy(0,0);
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_toolisatpointClick(Sender: TObject);
@@ -1067,13 +1114,12 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO POINT');
   hilite_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
+  x:= drawing_ToolPos.X;
+  y:= drawing_ToolPos.Y;
   grbl_offsXY(x, y);
-  SendlistWaitIdle;
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-  ToolCursorBlock:= HiliteBlock;
+  SetSimPositionMMxy(x,y);
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
@@ -1082,13 +1128,12 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO CENTER');
   hilite_center_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
+  x:= drawing_ToolPos.X;
+  y:= drawing_ToolPos.Y;
   grbl_offsXY(x, y);
-  SendlistWaitIdle;
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-  ToolCursorBlock:= HiliteBlock;
+  SetSimPositionMMxy(x,y);
+  SendGrblAndWaitForIdle;
 end;
 
 // #############################################################################
@@ -1098,12 +1143,11 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendlistWaitIdle;
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-  ToolCursor.X:= -round(job.cam_x * c_hpgl_scale);
-  ToolCursor.Y:= -round(job.cam_y * c_hpgl_scale);
-  ToolCursorBlock:= -1;
+  drawing_ToolPos.X:= -job.cam_x;
+  drawing_ToolPos.Y:= -job.cam_y;
+  SetSimPositionMMxy(-job.cam_x,-job.cam_y);
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
@@ -1112,15 +1156,14 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
   hilite_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_offsXY(x-job.cam_x, y-job.cam_y);
-  SendlistWaitIdle;
+  x:= drawing_ToolPos.X - job.cam_x;
+  y:= drawing_ToolPos.Y - job.cam_y;
+  grbl_offsXY(x, y);
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-  ToolCursor.X:= ToolCursor.X - round(job.cam_x * c_hpgl_scale);
-  ToolCursor.Y:= ToolCursor.Y - round(job.cam_y * c_hpgl_scale);
-  ToolCursorBlock:= HiliteBlock;
+  drawing_ToolPos.X:= x;
+  drawing_ToolPos.Y:= y;
+  SetSimPositionMMxy(x,y);
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
@@ -1129,15 +1172,14 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
   hilite_center_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_offsXY(x-job.cam_x, y-job.cam_y);
-  SendlistWaitIdle;
+  x:= drawing_ToolPos.X - job.cam_x;
+  y:= drawing_ToolPos.Y - job.cam_y;
+  grbl_offsXY(x, y);
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-  ToolCursor.X:= ToolCursor.X - round(job.cam_x * c_hpgl_scale);
-  ToolCursor.Y:= ToolCursor.Y - round(job.cam_y * c_hpgl_scale);
-  ToolCursorBlock:= HiliteBlock;
+  drawing_ToolPos.X:= x;
+  drawing_ToolPos.Y:= y;
+  SetSimPositionMMxy(x,y);
+  SendGrblAndWaitForIdle;
 end;
 
 // #############################################################################
@@ -1146,14 +1188,12 @@ procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
-  ToolCursor.X:= 0;
-  ToolCursor.Y:= 0;
-  grbl_moveZ(0, true);  // move Z up
+  drawing_ToolPos.X:= 0;
+  drawing_ToolPos.Y:= 0;
+  grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(0,0, false);
   grbl_moveZ(job.z_penlift, false);
-  SendlistWaitIdle;
-  NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
@@ -1162,15 +1202,13 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO POINT');
   hilite_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_moveZ(0, true);  // move Z up
+  x:= drawing_ToolPos.X;
+  y:= drawing_ToolPos.Y;
+  grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.z_penlift, false);
-  SendlistWaitIdle;
-  NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
@@ -1179,15 +1217,13 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO CENTER');
   hilite_center_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_moveZ(0, true);  // move Z up
+  x:= drawing_ToolPos.X;
+  y:= drawing_ToolPos.Y;
+  grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.z_penlift, false);
-  SendlistWaitIdle;
-  NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 // #############################################################################
@@ -1199,8 +1235,7 @@ begin
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   grbl_moveZ(job.cam_z, false);
-  SendlistWaitIdle;
-  NeedsRedraw:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
@@ -1209,15 +1244,13 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO POINT');
   hilite_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
+  x:= drawing_ToolPos.X - job.cam_x;
+  y:= drawing_ToolPos.Y - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(x-job.cam_x, y-job.cam_y, false);
-  grbl_offsXY(x-job.cam_x, y-job.cam_y);
+  grbl_moveXY(x, y, false);
+  grbl_offsXY(x, y);
   grbl_moveZ(job.cam_z, false);
-  SendlistWaitIdle;
-  NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
@@ -1226,15 +1259,13 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO CENTER');
   hilite_center_to_toolcursor;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
+  x:= drawing_ToolPos.X - job.cam_x;
+  y:= drawing_ToolPos.Y - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(x-job.cam_x, y-job.cam_y, false);
-  grbl_offsXY(x-job.cam_x, y-job.cam_y);
+  grbl_moveXY(x, y, false);
+  grbl_offsXY(x, y);
   grbl_moveZ(job.cam_z, false);
-  SendlistWaitIdle;
-  NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 // #############################################################################
@@ -1253,12 +1284,6 @@ end;
 procedure TForm2.FormPaint(Sender: TObject);
 begin
   NeedsRedraw:= true;
-  NeedsRefresh3D:= true;
-end;
-
-procedure TForm2.DrawingBoxClick(Sender: TObject);
-begin
-  NeedsRefresh3D:= true;
 end;
 
 end.

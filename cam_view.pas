@@ -42,7 +42,7 @@ var
 
 implementation
 
-uses grbl_player_main, import_files, drawing_window, grbl_com;
+uses grbl_player_main, import_files, drawing_window, grbl_com, glscene_view;
 
 {$R *.dfm}
 
@@ -179,8 +179,9 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendlistWaitIdle;
+  SetSimPositionMMxy(-job.cam_x, -job.cam_y);
   NeedsRedraw:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm3.BtnCamAtHiliteClick(Sender: TObject);
@@ -198,11 +199,12 @@ begin
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
   end;
-  x:= ToolCursor.X / c_hpgl_scale;
-  y:= ToolCursor.Y / c_hpgl_scale;
-  grbl_offsXY(x-job.cam_x, y-job.cam_y);
-  SendlistWaitIdle;
+  x:= drawing_ToolPos.X-job.cam_x;
+  y:= drawing_ToolPos.Y-job.cam_y;
+  grbl_offsXY(x, y);
+  SetSimPositionMMxy(x, y);
   NeedsRedraw:= true;
+  SendGrblAndWaitForIdle;
 end;
 
 
