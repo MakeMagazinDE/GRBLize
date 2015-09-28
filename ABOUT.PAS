@@ -1,4 +1,4 @@
-unit ABOUT;
+unit about;
 
 interface
 

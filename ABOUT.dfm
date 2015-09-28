@@ -508,8 +508,8 @@ object AboutBox: TAboutBox
     object VersionInfo: TLabel
       Left = 120
       Top = 40
-      Width = 129
-      Height = 25
+      Width = 67
+      Height = 16
       Caption = 'VersionInfo'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
