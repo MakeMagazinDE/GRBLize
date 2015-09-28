@@ -549,20 +549,24 @@ begin
   ftdi:= tftdichip.create;  { Create class instance }
   { Get the device list }
   if not ftdi.createDeviceInfoList(ftdi_device_count, ftdi_device_list) then begin
-    result:= '### Failed to create device info list';
+    result:= '### Error: Failed to create device info list';
     freeandnil(ftdi);
     exit;
   end;
   { Iterate through the device list that was returned }
-  for i := 0 to ftdi_device_count - 1 do begin
-  {$IFDEF UNICODE}
-    ftdi_sernum_arr[i] := UnicodeString(ftdi_device_list^[i].serialNumber);
-    ftdi_desc_arr[i] := UnicodeString(ftdi_device_list^[i].description);
-  {$ELSE}
-    ftdi_sernum_arr[i] := AnsiString(ftdi_device_list^[i].serialNumber);
-    ftdi_desc_arr[i] := AnsiString(ftdi_device_list^[i].description);
-  {$ENDIF}
-  end;
+  if ftdi_device_count > 0 then begin
+    result:= InttoStr (ftdi_device_count) +  ' FTDI devices found';
+    for i := 0 to ftdi_device_count - 1 do begin
+    {$IFDEF UNICODE}
+      ftdi_sernum_arr[i] := UnicodeString(ftdi_device_list^[i].serialNumber);
+      ftdi_desc_arr[i] := UnicodeString(ftdi_device_list^[i].description);
+    {$ELSE}
+      ftdi_sernum_arr[i] := AnsiString(ftdi_device_list^[i].serialNumber);
+      ftdi_desc_arr[i] := AnsiString(ftdi_device_list^[i].description);
+    {$ENDIF}
+    end;
+  end else
+    result:= '### Error: No FTDI devices found - simulation only';
 end;
 
 function InitFTDI(my_device:Integer):String;
