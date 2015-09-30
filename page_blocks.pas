@@ -121,12 +121,15 @@ begin
         my_bool:= true;
       end;
       final_array[HiliteBlock].enable:= my_bool;
+      Form4.FormRefresh(sender);
     end else if Col = 4 then begin
       if final_array[Row-1].shape = drillhole then
         final_array[Row-1].shape:= online
       else
-        inc(final_array[Row-1].shape);
-      Cells[4,Row]:= ShapeArray[ord(final_array[Row-1].shape)];
+        inc(final_array[HiliteBlock].shape);
+      Cells[4,Row]:= ShapeArray[ord(final_array[HiliteBlock].shape)];
+      item_change(HiliteBlock);
+      Form4.FormRefresh(sender);
     end;
   end;
 end;

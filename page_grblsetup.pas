@@ -4,37 +4,88 @@
 // #############################################################################
 
 
+procedure setDelays;
+begin
+  if deviceselectbox.CheckBoxNewGRBL.Checked then begin
+    // Configure for 115200 baud, 8 bit, 1 stop bit, no parity, no flow control
+    grbl_delay_short:= 4;
+    grbl_delay_long:= 16;
+    grbl_isnew:= true;
+  end else begin
+    grbl_delay_short:= 10;
+    grbl_delay_long:= 50;
+    grbl_isnew:= false;
+  end;
+end;
+
+procedure setRespondedButtons;
+begin
+  with Form1 do begin
+    BtnRescan.Visible:= false;
+    BtnClose.Visible:= true;
+    CheckBoxSim.enabled:= true;
+    CheckBoxSim.Checked:= false;
+    if grbl_checkResponse then begin
+      grbl_is_connected:= true;
+      EnableNotHomedButtons;
+      BtnRefreshGrblSettingsClick(nil);
+    end;
+  end;
+end;
+
 procedure TForm1.BtnRescanClick(Sender: TObject);
 // Auswahl des Frosches unter FTDI-Devices
 var i : Integer; LV : TListItem;
+  COMAvailableList: Array[0..31] of Integer;
+
 begin
 // Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
+  setDelays;
   deviceselectbox.ListView1.Items.clear;
   SetUpFTDI;
+  com_isopen:= false;
+  ftdi_isopen:= false;
+  com_name:='';
   if ftdi_device_count > 0 then
     for i := 0 to ftdi_device_count - 1 do begin
       LV := deviceselectbox.ListView1.Items.Add;
       LV.Caption := 'Device '+IntToStr(i);
       LV.SubItems.Add(ftdi_sernum_arr[i]);
       LV.SubItems.Add(ftdi_desc_arr[i]);
-    end
-  else
-    exit;
+    end;
+  deviceselectbox.ComboBoxCOMport.Items.clear;
+  deviceselectbox.ComboBoxCOMport.Items.add('none (FTDI direct)');
+  for i := 0 to 31 do begin
+    if CheckCom(i) = 0 then begin
+      deviceselectbox.ComboBoxCOMport.Items.add('COM' + IntToSTr(i) + ':');
+    end;
+  end;
   deviceselectbox.ListView1.Items[0].Selected := true;
+  deviceselectbox.ComboBoxCOMport.ItemIndex:= 0; // Auswahl erzwingen
   deviceselectbox.ShowModal;
-  if (deviceselectbox.ModalResult=MrOK) and (ftdi_device_count > 0) then begin
-    ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
-    Memo1.lines.add('// ' + InitFTDI(ftdi_selected_device));
-    if ftdi_isopen then begin
-      BtnRescan.Visible:= false;
-      BtnClose.Visible:= true;
-      ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
-      DeviceView.Text:= ftdi_serial + ' - ' + ftdi_desc_arr[ftdi_selected_device];
-      CheckBoxSim.enabled:= true;
-      CheckBoxSim.Checked:= false;
-      CheckResponse;
-      EnableNotHomedButtons;
-      Form1.BtnRefreshGrblSettingsClick(nil);
+  if (deviceselectbox.ModalResult=MrOK) then begin
+    if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
+      com_selected_port:= deviceselectbox.ComboBoxCOMport.ItemIndex - 1;
+      com_name:= deviceselectbox.ComboBoxCOMport.Text;
+      com_isopen:= COMopen(com_name);
+      Memo1.lines.add('// Open serial port ' + com_name);
+      if com_isopen then begin
+        COMSetup(trim(deviceselectbox.EditBaudrate.Text));
+        DeviceView.Text:= 'Serial port ' + com_name;
+        setRespondedButtons;
+      end;
+    end else begin
+      com_selected_port:= -1;
+      com_isopen:= false;
+      if (ftdi_device_count > 0) then begin
+        ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
+        Memo1.lines.add('// ' + InitFTDI(ftdi_selected_device, deviceselectbox.EditBaudrate.Text));
+        if ftdi_isopen then begin
+          ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
+          DeviceView.Text:= ftdi_serial + ' - ' + ftdi_desc_arr[ftdi_selected_device];
+          setRespondedButtons;
+        end;
+      end;
     end;
   end;
 end;
@@ -44,9 +95,13 @@ begin
   CheckBoxSim.enabled:= false;
   CheckBoxSim.Checked:= true;
   CancelGrbl:= true;
+  if com_isopen then
+    COMClose;
   if ftdi_isopen then
     ftdi.closeDevice;
   ftdi_isopen:= false;
+  com_isopen:= false;
+  grbl_is_connected:= false;
   BtnRescan.Visible:= true;
   BtnClose.Visible:= false;
   DeviceView.Text:= '(not selected)';
@@ -85,12 +140,12 @@ var
 begin
   CancelGrbl:= false;
   CancelWait:= false;
-  if ftdi_isopen then
+  if grbl_is_connected then
     with Form1.SgGrblSettings do begin
       LEDbusy.Checked:= true;
       DisableTimerStatus;
       mdelay(120);
-      grbl_resync;
+      grbl_checkResponse;
       Rowcount:= 2;
       grbl_sendStr(#24, false);   // Reset CTRL-X
       my_str:= grbl_receiveStr(500);
@@ -130,17 +185,17 @@ var i : Integer;
 begin
   CancelGrbl:= false;
   CancelWait:= false;
-  if ftdi_isopen then begin
+  if grbl_is_connected then begin
     LEDbusy.Checked:= true;    // wird in BtnRefreshGrblSettingsClick zurückgesetzt
     TimerStatus.Enabled:= false;
     mdelay(120);
-    grbl_resync;
     with SgGrblSettings do begin
-      if RowCount < 3 then
+      grbl_checkResponse;
+      if (RowCount < 3) then begin
+        showmessage('GRBL settings are empty.');
+        LEDbusy.Checked:= false;
         exit;
-      if not grbl_resync then
-        showmessage('GRBL Resync failed on Send Settings!')
-      else for i:= 1 to Rowcount-1 do begin
+      end else for i:= 1 to Rowcount-1 do begin
         if CancelGrbl then
           break;
         if Cells[0,i] = '' then
@@ -157,7 +212,7 @@ begin
   end;
 end;
 
-procedure PopulateStringGrid(aGrid: TStringGrid; const my_fileName: string);
+procedure LoadStringGrid(aGrid: TStringGrid; const my_fileName: string);
 var
   my_StringList, my_Line: TStringList;
   aCol, aRow: Integer;
@@ -190,7 +245,7 @@ procedure TForm1.BtnLoadGrblSetupClick(Sender: TObject);
 begin
   OpenFileDialog.FilterIndex:= 4;
   if OpenFileDialog.Execute then
-    PopulateStringGrid(SgGrblSettings,OpenFileDialog.filename);
+    LoadStringGrid(SgGrblSettings,OpenFileDialog.filename);
 end;
 
 procedure TForm1.BtnSaveGrblSetupClick(Sender: TObject);

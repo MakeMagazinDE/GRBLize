@@ -1,14 +1,14 @@
 object Form2: TForm2
   Left = 0
   Top = 0
-  Width = 880
-  Height = 657
   Cursor = crCross
   HorzScrollBar.Visible = False
   VertScrollBar.Visible = False
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
   Caption = 'Drawing'
+  ClientHeight = 623
+  ClientWidth = 864
   Color = clBtnFace
   Constraints.MaxHeight = 800
   Constraints.MaxWidth = 1200
@@ -38,7 +38,6 @@ object Form2: TForm2
     ParentColor = False
     ParentShowHint = False
     ShowHint = True
-    OnClick = DrawingBoxClick
     OnMouseDown = DrawingBoxMouseDown
     OnMouseMove = DrawingBoxMouseMove
     OnMouseUp = DrawingBoxMouseUp
@@ -213,6 +212,7 @@ object Form2: TForm2
     end
   end
   object PopupMenuPart: TPopupMenu
+    AutoPopup = False
     Left = 168
     Top = 16
     object pu_isAtZero2: TMenuItem
@@ -245,6 +245,7 @@ object Form2: TForm2
     end
   end
   object PopupMenuPoint: TPopupMenu
+    AutoPopup = False
     Left = 1120
     Top = 8
     object MenuItem1: TMenuItem

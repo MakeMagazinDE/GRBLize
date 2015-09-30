@@ -112,6 +112,7 @@ begin
     SgPens.Repaint;
     PenGridListToJob;
     param_change;
+    Form4.FormRefresh(sender);
   end;
 end;
 
@@ -197,6 +198,7 @@ begin
         end;
       end;
     end; //case
+    Form4.FormRefresh(sender);
     Repaint;
   end;
 end;

@@ -2,9 +2,11 @@
 
 ###CNC-Steuerung für GRBL-JOG Projekt
 
-Erstellt mit Delphi XE8 und GLScene_v1.3_December_2014. Development-Version für GRBL 0.9g-j. Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)**. 
+Erstellt mit Delphi 2005 PE. Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)**. 
 
-Ausführbare Datei (.EXE, Win32) im Verzeichnis **[/bin](https://github.com/heise/GRBLize/tree/master/Win32/bin)**, benötigt "default.job", ggf. die Beispiel-Plot-Dateien und gegebenenfalls ftd2xx.dll, letzteres aber nur, falls nicht ohnehin schon im System vom FTDI-Treiber-Download installiert.
+Ausführbare Datei (.EXE, Win32) im Verzeichnis **[/bin](https://github.com/heise/GRBLize/tree/master/bin)**, benötigt "default.job", ggf. die Beispiel-Plot-Dateien und 
+gegebenenfalls ftd2xx.dll, letzteres aber nur, falls nicht ohnehin schon im System vom FTDI-Treiber-Download 
+installiert.
 
 Auf der rechten Spalte der Github-Seite finden Sie den Button "Download ZIP". Dies lädt das komplette Projekt herunter einschl. Sourcen. Nach Entpacken findet sich das Windows-Executable (32 Bit) im Unterverzeichnis /bin.
 
@@ -13,8 +15,7 @@ Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-JOG](h
 
 ###Version History
 
-- 1.0b: Edge version. Supports GRBL 0.9j. New finite elements 3D visualisation, jogpad etc. New robust communication.
-- 0.96d: On run, will keep Z up at park position height until first mill to clear work part. 
+- 0.96d: Latest build, On run, will keep Z up at park position height until first mill to clear work part. 
 - 0.96b: bugfix on FTDI class, new "Z Feed Scaling" parameter, multiplies XY feed value for Z to prevent tool damage (<1 = slower). Also useful with c't woodmill (>1 = faster, otherwise Z feed will be too slow).
 - 0.95b: First public beta
 - 0.94a: Internal alpha, some serious bugs

@@ -8,7 +8,7 @@ interface
 
 //uses SysUtils, FTDIdll, FTDIchip, FTDItypes;
 uses SysUtils, StrUtils, Windows, Classes, Forms, Controls, Menus,
-  Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper;
+  Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect;
 
 type
   TFileBuffer = Array of byte;
@@ -16,9 +16,18 @@ type
   procedure mdelay(const Milliseconds: DWord);
 
   function SetupFTDI: String;
-  function InitFTDI(my_device:Integer): String;
-  function InitFTDIbySerial(my_serial: String):String;
-  function CheckCom(my_ComNumber: Integer): Integer;  // check if a COM port is available
+  function InitFTDI(my_device:Integer; baud_str: String):String;
+  function InitFTDIbySerial(my_serial: String; baud_str: String):String;
+
+   // für Kommunikation nicht über FTDI, sondern über COM-port
+  function CheckCom(my_ComNumber: Integer): Integer;   // COM# verfügbar?
+  function COMOpen(const com_name: String): Boolean;
+  procedure COMRxClear;
+  procedure COMClose;
+  function COMSetup(baud_str: String): Boolean;
+  function COMReceiveStr(timeout: DWORD): string;
+
+  function grbl_checkResponse: Boolean;
 
   // fordert Maschinenstatus mit "?" an
   function grbl_statusStr: string;
@@ -87,28 +96,23 @@ type
 
   function GetStatus(var pos_changed: Boolean): Boolean;
 
-const
-{$IFDEF GRBL115}
-  c_delay_short = 4;
-  c_delay_long = 16;
-{$ELSE}
-  c_delay_short = 10;
-  c_delay_long = 50;
-{$ENDIF}
 
 var
 //FTDI-Device
   ftdi: Tftdichip;
-  ftdi_isopen : Boolean;
-  ftdi_selected_device: Integer;  // FTDI-Frosch-Device-Nummer
-  ftdi_serial: String;
-  ftdi_device_count: dword;
+  com_isopen, ftdi_isopen : Boolean;
+  com_selected_port, ftdi_selected_device: Integer;  // FTDI-Frosch-Device-Nummer
+  com_name, ftdi_serial: String;
+  com_device_count, ftdi_device_count: dword;
   ftdi_device_list: pftdiDeviceList;
   ftdi_sernum_arr, ftdi_desc_arr: Array[0..15] of String;
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
   grbl_sendlist, grbl_receveivelist: TSTringList;
-  grbl_checksema: boolean;
+  grbl_checksema, grbl_isnew: boolean;
+  grbl_delay_short, grbl_delay_long: Word;
+  ComFile: THandle;
+  grbl_is_connected: boolean;
 
 
 implementation
@@ -156,29 +160,176 @@ begin
     Result := GetLastError;
 end;
 
+
+function COMOpen(const com_name: String): Boolean;
+var
+  DeviceName: array[0..15] of Char;
+  my_Name: AnsiString;
+begin
+// Wir versuchen, COM1 zu öffnen.
+// Sollte dies fehlschlagen, gibt die Funktion false zurück.
+  my_name:= com_name; // in AnsiSTring kopieren
+
+  StrPCopy(DeviceName, my_name);
+  ComFile := CreateFile(DeviceName, GENERIC_READ or GENERIC_WRITE,
+    0, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+
+  if ComFile = INVALID_HANDLE_VALUE then
+    Result := False
+  else
+    Result := True;
+end;
+
+
+procedure COMClose;
+// nicht vergessen den COM Port wieder zu schliessen!
+begin
+  CloseHandle(ComFile);
+  com_isopen:= false;
+end;
+
+
+function COMReceiveCount: DWORD;
+// Anzahl der Bytes im COM-Rx-Buffer
+var Comstat: _Comstat;
+    Errors: DWORD;
+begin
+  if ClearCommError(ComFile, Errors, @Comstat) then
+    COMReceiveCount:= Comstat.cbInQue
+  else
+    COMReceiveCount:= 0;
+end;
+
+procedure COMRxClear;
+// evt. im Buffer stehende Daten löschen
+begin
+//  PurgeComm(ComFile,PURGE_TXCLEAR);
+  PurgeComm(ComFile,PURGE_RXCLEAR);
+end;
+
+function COMSetup(baud_str: String): Boolean;
+const
+  RxBufferSize = 256;
+  TxBufferSize = 256;
+var
+  DCB: TDCB;
+  Config: AnsiString;
+  CommTimeouts: TCommTimeouts;
+begin
+// wir gehen davon aus das das Einstellen des COM Ports funktioniert.
+// sollte dies fehlschlagen wird der Rückgabewert auf "FALSE" gesetzt.
+  Result := True;
+  if not SetupComm(ComFile, RxBufferSize, TxBufferSize) then
+    Result := False;
+  if not GetCommState(ComFile, DCB) then
+    Result := False;
+  // hier die Baudrate, Parität usw. konfigurieren
+  Config := 'baud' + baud_str + 'parity=n data=8 stop=1';
+  if not BuildCommDCB(@Config[1], DCB) then
+    Result := False;
+  if not SetCommState(ComFile, DCB) then
+    Result := False;
+  with CommTimeouts do begin
+    ReadIntervalTimeout         := 1;
+    ReadTotalTimeoutMultiplier  := 1;
+    ReadTotalTimeoutConstant    := 1000;
+    WriteTotalTimeoutMultiplier := 1;
+    WriteTotalTimeoutConstant   := 1000;
+  end;
+  if not SetCommTimeouts(ComFile, CommTimeouts) then
+    Result := False;
+end;
+
+procedure COMSetTimeout(read_timeout: DWord);
+var
+  CommTimeouts: TCommTimeouts;
+begin
+  with CommTimeouts do begin
+    ReadIntervalTimeout         := 0;
+    ReadTotalTimeoutMultiplier  := 0;
+    ReadTotalTimeoutConstant    := read_timeout;
+    WriteTotalTimeoutMultiplier := 0;
+    WriteTotalTimeoutConstant   := 1000;
+  end;
+  SetCommTimeouts(ComFile, CommTimeouts);
+end;
+
+function COMReadChar: Char;
+var
+  c: AnsiChar;
+  BytesRead: DWORD;
+begin
+  Result := #0;
+  if ReadFile(ComFile, c, 1, BytesRead, nil) then
+    Result := char(c);
+end;
+
+function COMReceiveStr(timeout: DWORD): string;
+// wartet unendlich, wenn timeout = 0
+var
+  my_str: AnsiString;
+  BytesRead: DWORD;
+  i: Integer;
+  my_char: Char;
+  targettime: cardinal;
+  has_timeout: Boolean;
+begin
+  COMSetTimeout(1);
+  Result := '';
+  my_str:= '';
+  CancelWait:= false;
+  has_timeout:= timeout > 0;
+  targettime := GetTickCount + cardinal(timeout);
+  repeat
+    i:= COMReceiveCount;
+    if i > 0 then begin
+      my_char:= COMReadChar;
+      if my_char >= #32 then
+        my_str:= my_str + my_char;
+    end;
+    Application.processmessages;
+  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
+  if has_timeout then
+    if (GetTickCount > targettime) then
+      my_str:= '#Timeout';
+  if CancelWait then
+    my_str:= '#Cancelled';
+  Result:= my_str;
+end;
+
+function COMsendStr(sendStr: String; my_getok: boolean): String;
+// liefert "ok" wenn my_getok TRUE war und GRBL mit "ok" geantwortet hat
+// String sollte mit #13 abgeschlossen sein, kann aber auch einzelnes
+// GRBL-Steuerzeichen sein (?,!,~,CTRL-X)
+var
+  BytesWritten: DWORD;
+  my_str: AnsiString;
+begin
+  my_str := AnsiString(sendStr);
+  WriteFile(ComFile, my_str[1], Length(my_str), BytesWritten, nil);
+  if my_getok then begin
+    Result:= COMReceiveStr(0);
+  end;
+end;
+
 // #############################################################################
 // #############################################################################
 
-
-function grbl_receiveCount: Integer;
+function FTDIreceiveCount: Integer;
 // gibt Anzahl der Zeichen im Empfangspuffer zurück
 var i: Integer;
 begin
-  if ftdi_isopen then begin
-    i:= 0;
-    ftdi.getReceiveQueueStatus(i);
-    grbl_receiveCount:= i;
-  end else
-    grbl_receiveCount:= 0;
+  i:= 0;
+  ftdi.getReceiveQueueStatus(i);
+  Result:= i;
 end;
 
-procedure grbl_rx_clear;
+procedure FTDIrxClear;
 begin
-  if ftdi_isopen then
-    ftdi.purgeQueue(fReceiveQueue);
+  ftdi.purgeQueue(fReceiveQueue);
 end;
 
-function grbl_receiveStr(timeout: Integer): string;
+function FTDIreceiveStr(timeout: Integer): string;
 // wartet unendlich, wenn timeout = 0
 var
   my_str: AnsiString;
@@ -188,51 +339,104 @@ var
   has_timeout: Boolean;
 begin
   CancelWait:= false;
-  if ftdi_isopen then begin
-    my_str:= '';
-    has_timeout:= timeout > 0;
-    targettime := GetTickCount + timeout;
-    repeat
-      i:= grbl_receiveCount;
-      if i > 0 then begin
-        ftdi.read(@my_char, 1, i);
-        if my_char >= #32 then
-          my_str:= my_str + my_char;
-      end;
-      Application.processmessages;
-    until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
-    if has_timeout then
-      if (GetTickCount > targettime) then
-        my_str:= '#Timeout';
-    if CancelWait then
-      my_str:= '#Cancelled';
-  end else
-    my_str:= '#Device not open';
-  grbl_receiveStr:= my_str;
+  my_str:= '';
+  has_timeout:= timeout > 0;
+  targettime := GetTickCount + cardinal(timeout);
+  repeat
+    i:= FTDIreceiveCount;
+    if i > 0 then begin
+      ftdi.read(@my_char, 1, i);
+      if my_char >= #32 then
+        my_str:= my_str + my_char;
+    end;
+    Application.processmessages;
+  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
+  if has_timeout then
+    if (GetTickCount > targettime) then
+      my_str:= '#Timeout';
+  if CancelWait then
+    my_str:= '#Cancelled';
+  Result:= my_str;
 end;
 
-function grbl_sendStr(sendStr: String; my_getok: boolean): String;
-// liefert TRUE wenn my_getok TRUE war und GRBL mit "ok" geantwortet hat
+function FTDIsendStr(sendStr: String; my_getok: boolean): String;
+// liefert "ok" wenn my_getok TRUE war und GRBL mit "ok" geantwortet hat
 // String sollte mit #13 abgeschlossen sein, kann aber auch einzelnes
 // GRBL-Steuerzeichen sein (?,!,~,CTRL-X)
 var
   i: longint;
   my_str: AnsiString;
 begin
-{$IFDEF UNICODE}
   my_str:= AnsiString(sendStr);
-{$ELSE}
-  my_str:= sendStr;
-{$ENDIF}
   CancelWait:= false;
-  grbl_sendStr:= '';
-  if ftdi_isopen then begin
-    ftdi.write(@my_str[1], length(my_str), i);
-    if my_getok then begin
-      grbl_sendStr:= grbl_receiveStr(0);
-    end;
+  Result:= '';
+  ftdi.write(@my_str[1], length(my_str), i);
+  if my_getok then begin
+    Result:= grbl_receiveStr(0);
   end;
 end;
+
+// #############################################################################
+// Abhängig davon, ob FTDI oder COM benutzt wird, entsprechende Routine aufrufen
+// #############################################################################
+
+function grbl_receiveCount: Integer;
+// gibt Anzahl der Zeichen im Empfangspuffer zurück
+var i: Integer;
+begin
+  result:= 0;
+  if ftdi_isopen then
+    result:= FTDIreceiveCount;
+  if com_isopen then
+    result:= COMreceiveCount;
+end;
+
+procedure grbl_rx_clear;
+begin
+  if ftdi_isopen then
+    FTDIrxClear;
+  if com_isopen then
+    COMRxClear;
+end;
+
+function grbl_receiveStr(timeout: Integer): string;
+begin
+  result:= '';
+  if ftdi_isopen then
+    result:= FTDIreceiveStr(timeout);
+  if com_isopen then
+    result:= COMReceiveStr(timeout);
+end;
+
+function grbl_sendStr(sendStr: String; my_getok: boolean): String;
+// liefert TRUE wenn my_getok TRUE war und GRBL mit "ok" geantwortet hat
+// String sollte mit #13 abgeschlossen sein, kann aber auch einzelnes
+// GRBL-Steuerzeichen sein (?,!,~,CTRL-X)
+begin
+  result:= '';
+  if ftdi_isopen then
+    result:= FTDIsendStr(sendStr, my_getok);
+  if com_isopen then
+    result:= COMsendStr(sendStr, my_getok);
+end;
+
+// #############################################################################
+// #############################################################################
+
+function grbl_checkResponse: Boolean;
+begin
+  grbl_sendlist.Clear;
+  result:= false;
+  if ftdi_isopen or com_isopen then
+    if grbl_resync then
+      result:= true
+    else begin
+      showmessage('No response or GRBL Resync failed on Send Settings.'
+        + #13+ 'Check if GRBL version matches setting in GRBL Defaults page.');
+      Form1.BtnCloseClick(nil);
+    end;
+end;
+
 
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
@@ -250,23 +454,23 @@ var my_str: AnsiString;
 begin
   CancelWait:= false;
   my_str:= '';
-  if ftdi_isopen then begin
+  if ftdi_isopen or com_isopen then begin
     while grbl_receiveCount <> 0 do begin
-      mdelay(c_delay_long); // falls noch etwas vorliegt
+      mdelay(grbl_delay_long); // falls noch etwas vorliegt
       grbl_rx_clear;
     end;
     for i:= 0 to 7 do begin  // Anzahl Versuche
-      my_str:= #13;
-      ftdi.write(@my_str[1], 1, n);
-      my_str:= grbl_receiveStr(c_delay_short);
+      grbl_sendStr(#13,false);
+      mdelay(grbl_delay_long);
+      my_str:= grbl_receiveStr(grbl_delay_long);
       if (my_str = 'ok') or CancelWait then
         break;
-      mdelay(c_delay_long); // nochmal versuchen
+      mdelay(grbl_delay_long); // nochmal versuchen
       grbl_rx_clear;
     end;
     grbl_resync:= (my_str = 'ok');
   end else
-    grbl_resync:= true;
+    grbl_resync:= false;
 end;
 
 procedure grbl_addStr(my_str: String);
@@ -569,16 +773,36 @@ begin
     result:= '### Error: No FTDI devices found - simulation only';
 end;
 
-function InitFTDI(my_device:Integer):String;
+procedure SetFTDIbaudRate(my_str: String);
+var
+  my_baud: fBaudRate;
 begin
-    { Check if device is present }
+  ftdi_isopen:= true;
+  my_str:= trim(my_str);
+  if my_str = '9600' then
+    my_baud:= fBaud9600
+  else if my_str = '19200' then
+    my_baud:= fBaud19200
+  else if my_str = '38400' then
+    my_baud:= fBaud38400
+  else if my_str = '57600' then
+    my_baud:= fBaud57600
+  else
+    my_baud:= fBaud115200;
+  ftdi.setBaudRate(my_baud);
+  ftdi.setDataCharacteristics(fBits8, fStopBits1, fParityNone);
+  ftdi.setFlowControl(fFlowNone, 0, 0);
+end;
+
+function InitFTDI(my_device:Integer; baud_str: String):String;
+begin
+// Check if device is present
   if not ftdi.isPresentBySerial(ftdi_sernum_arr[my_device]) then begin
     result:= 'Device not present';
     ftdi.destroy;
     ftdi := nil;
     exit;
   end;
-
   if not ftdi.openDeviceBySerial(ftdi_sernum_arr[my_device]) then begin
     result:= 'Failed to open device';
     ftdi.destroy;
@@ -586,22 +810,15 @@ begin
     exit;
   end;
   if ftdi.resetDevice then begin
-    ftdi_isopen:= true;
-{$IFDEF GRBL115}
-// Configure for 115200 baud, 8 bit, 1 stop bit, no parity, no flow control
-    ftdi.setBaudRate(fBaud115200);
-{$ELSE}
-// Configure for 19200 baud, 8 bit, 1 stop bit, no parity, no flow control
-    ftdi.setBaudRate(fBaud19200);
-{$ENDIF}
-    ftdi.setDataCharacteristics(fBits8, fStopBits1, fParityNone);
-    ftdi.setFlowControl(fFlowNone, 0, 0);
+    SetFTDIbaudRate(baud_str);
     result:= 'USB connected';
   end else
     result:= 'Reset error';
 end;
 
-function InitFTDIbySerial(my_serial: String):String;
+function InitFTDIbySerial(my_serial, baud_str: String):String;
+var
+  my_str: String; my_baud: fBaudRate;
 begin
   if ftdi_device_count > 0 then begin
     if not ftdi.isPresentBySerial(my_serial) then begin
@@ -618,22 +835,15 @@ begin
       exit;
     end;
     if ftdi.resetDevice then begin
-      ftdi_isopen:= true;
-{$IFDEF GRBL115}
-// Configure for 115200 baud, 8 bit, 1 stop bit, no parity, no flow control
-      ftdi.setBaudRate(fBaud115200);
-{$ELSE}
-// Configure for 19200 baud, 8 bit, 1 stop bit, no parity, no flow control
-      ftdi.setBaudRate(fBaud19200);
-{$ENDIF}
-      ftdi.setDataCharacteristics(fBits8, fStopBits1, fParityNone);
-      ftdi.setFlowControl(fFlowNone, 0, 0);
+      SetFTDIbaudRate(baud_str);
       result:= 'USB connected';
     end else
       result:= 'Reset error';
   end;
 end;
 
+// #############################################################################
+// #############################################################################
 
 function GetStatus(var pos_changed: Boolean): Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
@@ -646,30 +856,28 @@ var
 begin
   result:= false;
   pos_changed:= false;
-  if not ftdi_isopen then
+  if not grbl_is_connected then
     exit;
 
   while grbl_receiveCount > 0 do begin
-    my_response:= grbl_receiveStr(2);  // Dummy lesen
-    mdelay(c_delay_short);
+    my_response:= grbl_receiveStr(5);  // Dummy lesen
+    mdelay(grbl_delay_short);
   end;
   grbl_sendStr('?', false);          // neuen Status anfordern
-  mdelay(c_delay_short);
-  my_response:= grbl_receiveStr(c_delay_long); // ca. 50 Zeichen maximal
+  mdelay(grbl_delay_short);
+  my_response:= grbl_receiveStr(grbl_delay_long); // ca. 50 Zeichen maximal
   Form1.EditStatus.Text:= my_response;
 
-{$IFDEF GRBL115}
   // Format bei GRBL-JOG: Idle,MPos,100.00,0.00,0.00,WPos,100.00,0.00,0.00
   // Format bei GRBL 0.9j: <Idle,MPos:0.000,0.000,0.000,WPos:0.000,0.000,0.000>
-  if pos('>', my_response) < 1 then   // nicht vollständig
+  if grbl_isnew and (pos('>', my_response) < 1) then   // nicht vollständig
     exit;
-  if my_response[1] = '<' then begin
+  if grbl_isnew and (my_response[1] = '<') then begin
     my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
     my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
     my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
   end else
     exit;
-{$ENDIF}
 
   is_valid:= false;
   with Form1 do begin
@@ -745,5 +953,6 @@ begin
     old_grbl_wpos:= grbl_wpos;
   end;
 end;
+
 
 end.

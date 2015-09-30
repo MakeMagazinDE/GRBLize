@@ -59,6 +59,7 @@ type
     PageControl1: TPageControl;
     TabSheetPens: TTabSheet;
     Label7: TLabel;
+    SgPens: TStringGrid;
     TabSheetGroups: TTabSheet;
     TabSheetDefaults: TTabSheet;
     TabSheetRun: TTabSheet;
@@ -75,6 +76,7 @@ type
     BtnSendGrblSettings: TBitBtn;
     ColorDialog1: TColorDialog;
     Bevel4: TBevel;
+    BtnRunJob: TSpeedButton;
     BtnStop: TSpeedButton;
     BtnMoveWorkZero: TSpeedButton;
     BtnMovePark: TSpeedButton;
@@ -102,6 +104,7 @@ type
     ShowDrawing1: TMenuItem;
     Show3DPreview1: TMenuItem;
     ShowSpindleCam1: TMenuItem;
+    SgAppdefaults: TStringGrid;
     MemoComment: TMemo;
     Label3: TLabel;
     TimerStatus: TTimer;
@@ -119,21 +122,42 @@ type
     Panel4: TPanel;
     Panel2: TPanel;
     Label6: TLabel;
+    TrackBarSimSpeed: TTrackBar;
     Label10: TLabel;
     CheckBoxSim: TCheckBox;
+    BitBtn1: TBitBtn;
+    BitBtn2: TBitBtn;
+    BitBtn3: TBitBtn;
+    BitBtn4: TBitBtn;
+    BitBtn5: TBitBtn;
+    BitBtn6: TBitBtn;
+    BitBtn7: TBitBtn;
     BitBtn8: TBitBtn;
     BitBtn9: TBitBtn;
+    BitBtn10: TBitBtn;
+    BitBtn11: TBitBtn;
     BitBtn12: TBitBtn;
+    Bevel5: TBevel;
     CheckBoxJogpad: TCheckBox;
     TrackBarRepeatRate: TTrackBar;
     Label9: TLabel;
+    Label15: TLabel;
     BitBtn13: TBitBtn;
+    BitBtn14: TBitBtn;
+    BitBtn15: TBitBtn;
+    BitBtn16: TBitBtn;
+    BitBtn17: TBitBtn;
     BitBtn18: TBitBtn;
     Label16: TLabel;
     Label17: TLabel;
     Label18: TLabel;
     BtnLoadGrblSetup: TSpeedButton;
     BtnSaveGrblSetup: TSpeedButton;
+    EditStatus: TEdit;
+    TimerBlink: TTimer;
+    EditZoffs: TEdit;
+    Label19: TLabel;
+    ProgressBar1: TProgressBar;
     procedure RunGcode;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
@@ -199,7 +223,6 @@ type
     procedure ComboBoxGdiaChange(Sender: TObject);
     procedure BtnRunJobClick(Sender: TObject);
     procedure BtnRunGcodeClick(Sender: TObject);
-    procedure TimerSimElapsed(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure CheckBoxSimClick(Sender: TObject);
@@ -210,6 +233,7 @@ type
     procedure CheckBoxJogpadClick(Sender: TObject);
     procedure BtnLoadGrblSetupClick(Sender: TObject);
     procedure BtnSaveGrblSetupClick(Sender: TObject);
+    procedure TimerBlinkTimer(Sender: TObject);
 
   private
     { Private declarations }
@@ -226,7 +250,6 @@ type
     end;
 
 
-  procedure CheckResponse;
   procedure SendGrblAndWaitForIdle;
 
   
@@ -243,9 +266,7 @@ var
   DeviceList: TStringList;
   TimeOutValue,LEDtimer: Integer;  // Timer-Tick-Zähler
   TimeOut: Boolean;
-  TimerCount1:Integer;
-  CancelWait: Boolean;
-  CancelGrbl, CancelJob: Boolean;
+  CancelWait, CancelGrbl, CancelJob, CancelSim: Boolean;
 
   ComPortAvailableList: Array[0..31] of Integer;
   ComPortUsed: Integer;
@@ -256,9 +277,9 @@ var
   grbl_mpos, grbl_wpos, old_grbl_wpos: T3dFloat;
   grbl_busy: Boolean;
   TimerGrblCount: Integer;
-  SimRunTrigger: Boolean; //Start-Flag für Grbl-Timer
-  TimerStatusFinished: Boolean;
+  TimerStatusFinished, TimerBlinkToggle: Boolean;
   MouseJogAction: Boolean;
+
 
 implementation
 
@@ -282,10 +303,6 @@ begin
   end;
   IsOn:= led_on;
 end;
-
-
-// #############################################################################
-// #############################################################################
 
 procedure DisableButtons;
 begin
@@ -337,27 +354,14 @@ begin
     mdelay(Form1.TimerStatus.Interval + 10);
   end;
   while grbl_receiveCount > 0 do begin
-    grbl_receiveStr(c_delay_short);   // Dummy lesen
-    mdelay(c_delay_short);
-  end;
-end;
-
-procedure CheckResponse;
-begin
-  grbl_sendlist.Clear;
-  if ftdi_isopen then begin
-    if grbl_Resync then begin
-    end else begin
-      showmessage('GRBL not responding or busy!');
-      Form1.BtnCloseClick(nil);
-    end;
+    grbl_receiveStr(grbl_delay_short);   // Dummy lesen
+    mdelay(grbl_delay_short);
   end;
 end;
 
 // #############################################################################
 // ############################# I N C L U D E S ###############################
 // #############################################################################
-
 
 
 {$I page_blocks.pas}
@@ -368,12 +372,9 @@ end;
 {$I gcode_interpreter.pas}
 
 
-
 // #############################################################################
 // ############################ M A I N  F O R M ###############################
 // #############################################################################
-
-
 
 function IsFormOpen(const FormName : string): Boolean;
 var
@@ -398,24 +399,26 @@ var
   my_description: String;
 
 begin
-  SimRunTrigger:= false;
   TimerGrblCount:= 0;
+  grbl_delay_short:= 10; grbl_delay_long:= 20;
   grbl_receveivelist:= TStringList.create;
-  grbl_receveivelist.clear;
   grbl_sendlist:= TStringList.create;
-  grbl_sendlist.clear;
-  sim_sendlist:= Tstringlist.Create;
-  sim_sendlist.Clear;
+  grbl_is_connected:= false;
+  grbl_delay_short:= 10;
+  grbl_delay_long:= 50;
+  grbl_isnew:= false;
   LEDbusy:= Tled.Create;
-  TimerCount1:= 0;
   InitJob;
   UnHilite;
-  Caption := 'GRBLize';
-  BtnRescan.Visible:= true;
-  BtnClose.Visible:= false;
+  Caption := c_ProgNameStr;
+  BtnRescan.Visible:= true; BtnClose.Visible:= false;
   Form1.Show;
+
+  if not IsFormOpen('deviceselectbox') then
+    deviceselectbox := Tdeviceselectbox.Create(Self);
+  deviceselectbox.hide;
+
   grbl_ini:= TRegistry.Create;
-  LEDbusy.Checked:= true;
   try
     grbl_ini.RootKey := HKEY_CURRENT_USER;
     grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr,true);
@@ -425,6 +428,8 @@ begin
       Left:= grbl_ini.ReadInteger('MainFormLeft');
     if grbl_ini.ValueExists('MainFormJogpad') then
       CheckBoxJogpad.Checked:= grbl_ini.ReadBool('MainFormJogpad');
+    if grbl_ini.ValueExists('MainFormPage') then
+      PageControl1.ActivePageIndex:= grbl_ini.ReadInteger('MainFormPage');
     if grbl_ini.ValueExists('SettingsPath') then
       JobSettingsPath:= grbl_ini.ReadString('SettingsPath')
     else
@@ -443,6 +448,12 @@ begin
       WindowMenu1.Items[1].Checked:= grbl_ini.ReadBool('CamFormVisible');
     if grbl_ini.ValueExists('SceneFormVisible') then
       WindowMenu1.Items[2].Checked:= grbl_ini.ReadBool('SceneFormVisible');
+    if grbl_ini.ValueExists('NewGRBL') then
+      deviceselectbox.CheckBoxNewGRBL.Checked:= grbl_ini.ReadBool('NewGRBL');
+    if grbl_ini.ValueExists('ComBaudrate') then
+      deviceselectbox.EditBaudrate.Text:= grbl_ini.ReadString('ComBaudrate');
+    if grbl_ini.ValueExists('ComPort') then
+      deviceselectbox.ComboBoxComPort.Text:= grbl_ini.ReadString('ComPort');
   finally
     grbl_ini.Free;
   end;
@@ -453,7 +464,7 @@ begin
       // Öffnet Device nach Seriennummer
       // Stellt sicher, dass das beim letzten Form1.Close
       // geöffnete Device auch weiterhin verfügbar ist.
-      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial));
+      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text));
       if ftdi_isopen then begin
         ftdi.getDeviceInfo(my_device, pid, vid, ftdi_serial, my_description);
         BtnRescan.Visible:= false;
@@ -483,13 +494,6 @@ begin
   else
     Form2.hide;
 
-  if not IsFormOpen('deviceselectbox') then
-    deviceselectbox := Tdeviceselectbox.Create(Self);
-  deviceselectbox.hide;
-
-  SetSimPositionMMxyz(0, 0, 30);
-  SetDrawingToolPosMM(0, 0, 30);
-  SetSimToolMM(ComboBoxGdia.ItemIndex, ComboBoxGTip.ItemIndex, clGray);
   CheckBoxJogpadClick(sender);
 
   HomingPerformed:= false;
@@ -506,13 +510,18 @@ begin
     Form1.FileNew1Execute(sender);
 
   TimerDraw.Enabled:= true;
-  TimerSim.Enabled:= true;
-  CheckResponse;
-  LEDbusy.Checked:= false;
+  grbl_checkResponse;
   TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
   DisableButtons;
   SgGrblSettings.FixedCols:= 1;
   SgAppdefaults.FixedCols:= 1;
+  Form1.BringToFront;
+
+  Form4.FormRefresh(nil);
+  SetSimPositionMMxyz(0,0, job.z_gauge);
+  SetDrawingToolPosMM(0, 0, job.z_gauge);
+  SetSimToolMM(ComboBoxGdia.ItemIndex, ComboBoxGTip.ItemIndex, clGray);
+  SetDelays;
 end;
 
 
@@ -536,33 +545,41 @@ begin
   CancelJob:= true;
   CancelWait:= true;
 
-  if ftdi_isopen then begin
-    ftdi_isopen:= false;
-    ftdi.closeDevice;
-    freeandnil(ftdi);
-  end;
   TimerDraw.Enabled:= false;
   TimerStatus.Enabled:= false;
-  TimerSim.Enabled:= false;
-  grbl_ini:=TRegistry.Create;
+  grbl_ini:= TRegistry.Create;
   try
     grbl_ini.RootKey := HKEY_CURRENT_USER;
     grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
     grbl_ini.WriteInteger('MainFormTop',Top);
     grbl_ini.WriteInteger('MainFormLeft',Left);
     grbl_ini.WriteBool('MainFormJogpad', CheckBoxJogpad.Checked);
+    grbl_ini.WriteInteger('MainFormPage',PageControl1.ActivePageIndex);
     grbl_ini.WriteString('SettingsPath',JobSettingsPath);
     grbl_ini.WriteBool('DrawingFormVisible',Form1.WindowMenu1.Items[0].Checked);
     grbl_ini.WriteBool('CamFormVisible',Form1.WindowMenu1.Items[1].Checked);
     grbl_ini.WriteBool('SceneFormVisible',Form1.WindowMenu1.Items[2].Checked);
+    grbl_ini.WriteBool('NewGRBL',deviceselectbox.CheckBoxNewGRBL.Checked);
     if ftdi_isopen then
       grbl_ini.WriteString('SettingsDeviceSerial', ftdi_serial)
     else
       grbl_ini.WriteString('SettingsDeviceSerial', 'NONE');
     grbl_ini.WriteBool('SettingsDeviceOpen',ftdi_isopen);
+    grbl_ini.WriteString('ComBaudrate', deviceselectbox.EditBaudrate.Text);
+    grbl_ini.WriteString('ComPort', deviceselectbox.ComboBoxComPort.Text);
   finally
     grbl_ini.Free;
   end;
+
+  if com_isopen then
+    COMclose;
+  if ftdi_isopen then begin
+    ftdi_isopen:= false;
+    ftdi.closeDevice;
+    freeandnil(ftdi);
+  end;
+  grbl_is_connected:= false;
+
   mdelay(200);
   if IsFormOpen('AboutBox') then
     AboutBox.Close;
@@ -580,6 +597,7 @@ procedure TForm1.PageControl1Change(Sender: TObject);
 begin
   SgPens.Col:= 3;
   SgPens.Row:= 1;
+  Form4.FormRefresh(sender);
 end;
 
 // #############################################################################
@@ -612,20 +630,22 @@ end;
 // ############################## T I M E R ####################################
 // #############################################################################
 
+procedure TForm1.TimerBlinkTimer(Sender: TObject);
+begin
+  if (not HomingPerformed) and grbl_is_connected then
+    if TimerBlinkToggle then
+      Form1.BtnHomeCycle.Font.Color:= clPurple
+    else
+      Form1.BtnHomeCycle.Font.Color:= clfuchsia;
+  TimerBlinkToggle:= not TimerBlinkToggle;
+  if not grbl_is_connected then begin
+    grbl_wpos.z:= job.z_gauge;
+    PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+  end;
+end;
+
 procedure TForm1.TimerDrawElapsed(Sender: TObject);
 begin
-  inc(TimerCount1);
-  if (TimerCount1 = 10) and (not HomingPerformed) and ftdi_isopen then
-    Form1.BtnHomeCycle.Font.Color:= clPurple;
-  if (TimerCount1 = 20) and (not HomingPerformed) and ftdi_isopen then
-    Form1.BtnHomeCycle.Font.Color:= clfuchsia;
-  if (TimerCount1 >= 20) then begin
-    TimerCount1:= 0;
-    if not ftdi_isopen then begin
-      grbl_wpos.z:= job.z_gauge;
-      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-    end;
-  end;
   if NeedsRelist and (Form1.PageControl1.TabIndex = 2) then begin
     list_blocks;
     NeedsRelist:= false;
@@ -635,30 +655,6 @@ begin
     NeedsRedraw:= false;
   end;
 end;
-
-procedure TForm1.TimerSimElapsed(Sender: TObject);
-var
-  my_str: String;
-  my_count: Integer;
-begin
-  TimerSim.Enabled:= false;    // Re-Entry verhindern
-  if SimRunTrigger then begin
-    my_count:= sim_sendlist.count;
-    if my_count > 0 then begin
-      my_str:= sim_sendlist.Strings[0];
-      sim_sendlist.Delete(0);
-      InterpretGcodeLine(my_str);
-      if my_count = 1 then // war letzter Eintrag
-        Finalize3Dview;
-      sim_active:= true;  // muss nach Finalize3Dview aktiviert werden
-    end else begin
-      sim_active:= false;
-      SimRunTrigger:= false;
-    end;
-  end;
-  TimerSim.Enabled:= true;
-end;
-
 
 procedure TForm1.TimerStatusElapsed(Sender: TObject);
 // alle 100 ms aufgerufen. Zeit reicht zum Empfang der Statusmeldung
@@ -675,7 +671,6 @@ begin
   TimerStatusFinished:= true;
 end;
 
-
 procedure SendGrblAndWaitForIdle;
 // Resync und warten auf Idle
 var
@@ -684,22 +679,43 @@ var
   pos_changed: Boolean;
 begin
   my_count:= grbl_sendlist.Count;
+  Form1.ProgressBar1.Max:= my_count;
   if my_count = 0 then
     exit;
   LEDbusy.Checked:= true;
   if Form1.CheckBoxSim.checked then begin
-    for i:= 0 to my_count-1 do begin   // Alle Gcodes in sim-Stringlist übertragen
+    sim_active:= true;          // für Cadencer-Prozess
+    sim_render_finel:= false;   // wird bei bedarf (z<0) in InterpretGcodeLine gesetzt
+    for i:= 0 to my_count-1 do begin   // Alle Gcodes simulieren
       my_str:= grbl_sendlist[i];
-      sim_sendlist.Add(my_str);
-      if Form1.CheckBoxSim.checked then
-        Form1.Memo1.lines.add(my_str + ' // sim');
+      if Form1.TrackbarSimSpeed.Position < 10 then
+        Form1.Memo1.lines.add(my_str + ' // SIM');
+      InterpretGcodeLine(my_str);
+      if i mod 10 = 0 then begin            // etwas anderes passiert?
+        Form1.ProgressBar1.position:= i;
+        Application.ProcessMessages;
+      end;
+      if CancelSim then begin
+        // Schleife abbrechen und auf penlift-Höhe gehen
+        Form1.Memo1.lines.add('// SIM CANCELLED');
+        my_str:= 'M5';
+        Form1.Memo1.lines.add(my_str);
+        InterpretGcodeLine(my_str);
+        my_str:= 'G0 Z'+ FloatToStrDot(job.z_penlift);
+        Form1.Memo1.lines.add(my_str);
+        InterpretGcodeLine(my_str);
+        break;
+      end;
     end;
-    SimRunTrigger:= true;             // parallel Abarbeitung in TimerSim starten
-  end else if ftdi_isopen then begin
+    if sim_render_finel then
+      Finalize3Dview;
+    sim_active:= false;
+  end else if grbl_is_connected then begin
     DisableTimerStatus;
     my_count:= grbl_sendlist.Count;
     for i:= 0 to my_count-1 do begin
       if i mod 10 = 0 then begin           // alle 10 Zeilen Status anfordern
+        Form1.ProgressBar1.position:= i;
         getStatus(pos_changed);       // ist ein Dummy
         SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
         SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
@@ -717,22 +733,31 @@ begin
         Form1.Memo1.lines.add(' // JOB CANCELLED');
         my_str:= 'M5';
         my_response:= grbl_sendStr(my_str + #13, true);
-        my_str:= 'G0 Z'+ FormatFloat('0.00', job.z_penlift);
+        my_str:= 'G0 Z'+ FloatToStrDot(job.z_penlift);
         my_response:= grbl_sendStr(my_str + #13, true);
         Form1.Memo1.lines.add(my_str + ' // ' + my_response);
         break;
       end;
     end;
-    while getstatus(pos_changed) do  // noch beschäftigt?
-      mdelay(c_delay_long);
+    while getstatus(pos_changed) do begin // noch beschäftigt?
+      mdelay(grbl_delay_long);
+      SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+      SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
+    end;
   end;
+  // falls wg. speed abgeschaltet
+  Form4.GLLinesPath.Visible:= Form4.CheckToolpathVisible.Checked;
+  Form4.GLDummyCubeTool.visible:= true;
+
+
+  Form1.ProgressBar1.position:= 0;
   grbl_sendlist.Clear;
   Form1.TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
   LEDbusy.Checked:= false;
 end;
 
-
-
+// #############################################################################
+// ######################### M A I N   M E N U #################################
 // #############################################################################
 
 procedure TForm1.ShowDrawing1Click(Sender: TObject);

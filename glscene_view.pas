@@ -77,7 +77,7 @@ type
     GLDummyCubeTarget: TGLDummyCube;
     GLCadencer1: TGLCadencer;
     GLSphere2: TGLSphere;
-    GLLines3: TGLLines;
+    GLLineNeedle: TGLLines;
     GLSpaceTextToolZ: TGLSpaceText;
     GLLinesCallout: TGLLines;
     CheckLiveRender: TCheckBox;
@@ -128,9 +128,9 @@ procedure Finalize3Dview;
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 procedure SetSimPositionMMxyz(x, y, z:Double);
 procedure SetSimPositionMMxy(x, y:Double);
-procedure SimMillAtPos(x, y, z, dia: Double; new_vec: boolean);
+procedure SimMillAtPos(x, y, z, dia: Double; new_vec, show_tool: boolean);
 procedure SetSimPosColorMM(x, y, z:Double; tool_color: TColor);
-
+procedure MakeToolArray(dia: Double);
 
 
 var
@@ -141,9 +141,10 @@ var
   LEDbusy3d: TLed;
   Form4: TForm4;
   sim_x, sim_y, sim_z, sim_dia: Double;
-  sim_seek, sim_z_abovezero: Boolean;
+  sim_seek, sim_z_abovezero, sim_render_finel: Boolean;
   sim_tooltip: Integer;
   sim_color: TColor;
+  sim_feed: Integer;
   ena_solid, ena_finite: Boolean;
   toolpath_array: Array of TIntPoint;
   draw_tool_sema, render_sema: Boolean;
@@ -158,7 +159,6 @@ var
   tool_rpm: Integer;
   gl_arr_scale, gl_bresenham_scale: Integer;   // Teilung XY-Array für Simulation
   gl_mult_scale: Double;
-  sim_sendlist: TStringlist;
 
 const
   c_GLscale = 10.0;    // Faktor für GLscene
@@ -317,43 +317,104 @@ end;
 procedure Finalize3Dview;
 // letzte Aktualisierung
 begin
-  render_sema:= ena_finite and sim_active;
+  render_sema:= ena_finite;
   LEDbusy3d.Checked:= render_sema;
 end;
+
+
+// #############################################################################
+// ############################ M I L L  A R R A Y #############################
+// #############################################################################
 
 procedure MillArrayWithTool(x, y, z: Double);
 // Tool-Array mit Werkzeugform an Position XY des mill_array anwenden
 var
   ix, iy: Integer;
-  old_z: Double;
+  sz, old_z, new_z, height: Double;
   ax, ay, px, py: Integer;
 begin
   if not Form1.Show3DPreview1.Checked then
     exit;
+  if z > 0 then  // Höhe über Werkstück
+    exit;
+  sz:= z / c_GLscale;
   ax:= round(x * gl_arr_scale);
   ay:= round(y * gl_arr_scale);
-  // Werkzeug-Array anwenden
-    for ix:= 0 to tool_array_size-1 do
-      for iy:= 0 to tool_array_size-1 do begin
-        px:= ax + ix;
-        py:= ay + iy;
-        if (px <= mill_array_sizeX) and (py <= mill_array_sizeY)
-        and (px >= tool_mid_int) and (py >= tool_mid_int) then begin
-          old_z:= mill_array[px - tool_mid_int, py - tool_mid_int];
-          if tool_array[ix,iy] < old_z then
-            // es wurde etwas weggefräst
-            mill_array[px - tool_mid_int, py - tool_mid_int]:= tool_array[ix, iy];
-        end;
+   // Werkzeug-Array anwenden
+  for ix:= 0 to tool_array_size-1 do
+    for iy:= 0 to tool_array_size-1 do begin
+      px:= ax + ix;
+      py:= ay + iy;
+      if (px <= mill_array_sizeX) and (py <= mill_array_sizeY)
+      and (px >= tool_mid_int) and (py >= tool_mid_int) then begin
+      // wir sind innerhalb des Tool-Rechecks
+        old_z:= mill_array[px - tool_mid_int, py - tool_mid_int]; // ungefräst = 0
+        new_z:= sz + tool_array[ix,iy]; // in der Mitte Null, am Rand +10 zzgl. z
+        if (new_z < old_z) then
+          // es wurde etwas weggefräst
+          mill_array[px - tool_mid_int, py - tool_mid_int]:= new_z;
       end;
+    end;
 end;
 
-procedure SimMillAtPos(x, y, z, dia: Double; new_vec: boolean);
+
+
+procedure MakeToolArray(dia: Double);
+// Werkzeug für 3D-Sim erstellen, Grundform ist ein Kreis in einem quadratischen Array
+// Werkkeugspitze ist Null, außerhalb Werkzeug +10
+var
+  ix, iy: Integer;
+  vz, h, r: Double;  // Länge vom Kreismittelpunkt, Tool-Radius-Faktor
+begin
+  tool_array_size:= round(dia * gl_arr_scale);
+  r:= dia/2;
+  tool_mid:= round(r * gl_arr_scale);
+  tool_mid_int:= round(tool_mid);
+  setlength(tool_array, tool_array_size);
+  for ix:= 0 to tool_array_size-1 do begin
+    setlength(tool_array[ix], tool_array_size);
+  end;
+  for ix:= 0 to tool_array_size-1 do
+    for iy:= 0 to tool_array_size-1 do begin
+      vz:=sqrt(sqr(ix-tool_mid) + sqr(iy-tool_mid));
+      if (vz <= tool_mid) then begin // im gewünschten Radius?
+        // wir sind innerhalb der Kreisfläche. Jetzt Spitze bestimmen
+        h:= 10; // default außerhalb
+        case sim_tooltip of
+          0: // Flat tip
+            h:= 0;   // neue Frästiefe an diesem Punkt des Werkzeugs
+          1: // Cone 30°
+            h:= vz*3 / gl_arr_scale ;
+          2: // Cone 45°
+            h:= vz*2 / gl_arr_scale ;
+          3: // Cone 60°
+            h:= vz*1.5 / gl_arr_scale ;
+          4: // Cone 90°
+            h:= vz / gl_arr_scale ;
+          5: // Ball
+            h:= (tool_mid - sqrt(sqr(tool_mid) - sqr(vz))) / gl_arr_scale;
+        end;
+        tool_array[ix,iy]:= h / c_GLscale   // neue Frästiefe, positiv = im Werkstück
+      end else
+        tool_array[ix,iy]:= 10;  // weit außerhalb Werkstück
+    end;
+end;
+
+// #############################################################################
+// #############################################################################
+// #############################################################################
+
+procedure SimMillAtPos(x, y, z, dia: Double; new_vec, show_tool: boolean);
 var
   last_node: Integer;
   sx, sy, sz: Double; // auf GL skalierte Werte
 begin
   if not Form1.Show3DPreview1.Checked then
     exit;
+
+  Form4.GLLinesPath.Visible:= show_tool and Form4.CheckToolpathVisible.Checked;
+  Form4.GLDummyCubeTool.visible:= show_tool;
+
   sx:= x / c_GLscale;
   sy:= y / c_GLscale;
   sz:= z / c_GLscale;
@@ -378,7 +439,7 @@ begin
       sim_z_abovezero:= false;
       if ena_finite then
         MillArrayWithTool(x,y,z);
-      render_sema:= CheckLiveRender.checked and (Form1.TrackbarSimSpeed.Position <= 5);
+      render_sema:= CheckLiveRender.checked and (Form1.TrackbarSimSpeed.Position < 10);
     end else begin
       if not sim_z_abovezero then begin
         GLLinesPath.Nodes.AddNode(sx,sy,sz+0.02);
@@ -388,7 +449,7 @@ begin
       sim_z_abovezero:= true;
     end;
   end;
-  if draw_tool_sema or new_vec then //
+  if show_tool and (draw_tool_sema or new_vec) then //
     SetToolPosition(sx,sy,sz, sim_color);
   draw_tool_sema:= false;
 end;
@@ -501,6 +562,7 @@ begin
   GLCubeWP.Position.X:= 0; // Mitte
   GLCubeWP.Position.Y:= 0;
   GLCubeWP.Position.Z:= job.partsize_z / (c_GLscale*2);
+  GLDummyCubeTarget.Position.Z:= job.partsize_z / c_GLscale; // Stecknadel
 
   with GLExtrusionSolid1, Contours do begin
     DeleteChildren;
@@ -767,7 +829,7 @@ begin
   draw_tool_sema:= true;
   if sim_active then begin
     // wird bei laufendem Program sonst nicht aufgerufen
-    GLCadencer1Progress(Sender, 10, 0);
+    GLCadencer1Progress(Sender, 50, 0);
   end;
   if tool_running then begin
     if tool_rpm < 60 then

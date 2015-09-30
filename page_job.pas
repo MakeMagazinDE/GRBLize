@@ -2,9 +2,6 @@
 // ############################### FILES AND JOBS ##############################
 // #############################################################################
 
-
-
-
 procedure PenGridListToJob;
 var i, j: Integer;
 begin
@@ -448,6 +445,7 @@ begin
     OpenJobFile('default.job');
   JobSettingsPath:= 'new.job';
   draw_cnc_all;
+  Form4.FormRefresh(nil);
 end;
 
 // #############################################################################
@@ -460,6 +458,7 @@ begin
     exit;
   ClearFiles;
   draw_cnc_all;
+  Form4.FormRefresh(nil);
 end;
 
 

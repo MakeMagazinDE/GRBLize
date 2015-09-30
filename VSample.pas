@@ -1187,7 +1187,8 @@ BEGIN
   Result := GetCaptureIAMStreamConfig(pSC);
 
   IF Succeeded(Result) then
-    Result := pSC.SetFormat(FormatArr[ListIndex].mt);  // Sometimes delivers VFW_E_INVALIDMEDIATYPE, even for formats returned by GetStreamCaps
+    //Result := pSC.SetFormat(FormatArr[ListIndex].mt);
+    // Sometimes delivers VFW_E_INVALIDMEDIATYPE, even for formats returned by GetStreamCaps
 
   pIMediaControl.Run;
 END;

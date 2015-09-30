@@ -2,7 +2,6 @@
 // ############################# G-Code Interpreter ############################
 // #############################################################################
 
-
 // #############################################################################
 // Werkzeugbewegung in XYZ (3D-Bresenham)
 // #############################################################################
@@ -18,17 +17,19 @@ var
   cx, cy, cz               :integer;
   int_scale: Double;
   my_speed, my_delay: Integer;
+  show_tool: boolean;
 
 begin
   my_speed:= Form1.TrackbarSimSpeed.Position;
+  show_tool:= my_speed < 10;
   if fast_move then begin
     int_scale:= gl_bresenham_scale div 2;  // gröbere Auflössung für Seeks
     my_speed:= 5 + my_speed;
     my_delay:= 20;
   end else begin
     int_scale:= gl_bresenham_scale;
+    my_delay:= 10 - my_speed;
     my_speed:= my_speed * gl_bresenham_scale div 2 + 1;
-    my_delay:= 10;
   end;
 
 {
@@ -78,11 +79,11 @@ begin
       err_2:= err_2 + dz2;
       xx:= xx + ix;
       if Form1.Show3DPreview1.Checked then
-        SimMillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, sim_dia, false);
-      if Form1.ShowDrawing1.Checked then
+        SimMillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, sim_dia, false, show_tool);
+      if show_tool and Form1.ShowDrawing1.Checked then
       // wird ansonsten von DecodeResponse gesetzt
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
-      if (n mod my_speed = 0) and (my_speed < 20) then
+      if (n mod my_speed = 0) then
         mdelay(my_delay);
     end;
   end else if (ay >= ax) and (ay >= az) then begin
@@ -101,11 +102,11 @@ begin
       err_2:= err_2 + dz2;
       yy:= yy + iy;
       if Form1.Show3DPreview1.Checked then
-        SimMillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, sim_dia, false);
-      if Form1.ShowDrawing1.Checked then
+        SimMillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, sim_dia, false, show_tool);
+      if show_tool and Form1.ShowDrawing1.Checked then
       // wird ansonsten von DecodeResponse gesetzt
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
-      if (n mod my_speed = 0) and (my_speed < 20) then
+      if (n mod my_speed = 0) then
         mdelay(my_delay);
     end;
   end else if (az >= ax) and (az >= ay) then begin
@@ -124,17 +125,17 @@ begin
       err_2:= err_2 + dx2;
       zz:= zz + iz;
       if Form1.Show3DPreview1.Checked then
-        SimMillAtPos(xx/int_scale,yy/int_scale, zz/int_scale, sim_dia, false);
-      if Form1.ShowDrawing1.Checked then
+        SimMillAtPos(xx/int_scale,yy/int_scale, zz/int_scale, sim_dia, false, show_tool);
+      if show_tool and Form1.ShowDrawing1.Checked then
       // wird ansonsten von DecodeResponse gesetzt
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
-      if (n mod my_speed = 0) and (my_speed < 20) then
+      if (n mod my_speed = 0) then
         mdelay(my_delay);
     end;
   end;
   if Form1.Show3DPreview1.Checked then
-    SimMillAtPos(xf1, yf1, zf1, sim_dia, true);
-  if Form1.ShowDrawing1.Checked then
+    SimMillAtPos(xf1, yf1, zf1, sim_dia, true, show_tool);
+  if show_tool and Form1.ShowDrawing1.Checked then
     SetDrawingToolPosMM(xf1, yf1, zf1);
 end;
 
@@ -142,98 +143,25 @@ end;
 // G-Code-interpreter
 // #############################################################################
 
-procedure MakeToolArray(z_down, dia: Double);
-// Werkzeug für §D-Sim erstellen, Grundform ist ein Kreis in einem quadratischen Array
-var
-  ix, iy: Integer;
-  vz, h, r: Double;  // Länge vom Kreismittelpunkt, Tool-Radius-Faktor
-begin
-  tool_array_size:= round(dia * gl_arr_scale);
-  r:= dia/2;
-  h:= 0;
-  tool_mid:= round(r * gl_arr_scale);
-  tool_mid_int:= round(tool_mid);
-  setlength(tool_array, tool_array_size);
-  for ix:= 0 to tool_array_size-1 do begin
-    setlength(tool_array[ix], tool_array_size);
-  end;
-  for ix:= 0 to tool_array_size-1 do
-    for iy:= 0 to tool_array_size-1 do begin
-      vz:=sqrt(sqr(ix-tool_mid) + sqr(iy-tool_mid));
-      if (vz <= tool_mid) and (z_down < 0) then begin // <= gewünschter Radius?
-        // wir sind innerhalb der Kreisfläche. Jetzt Spitze bestimmen
-        case sim_tooltip of
-          0: // Flat tip
-            h:= 0;   // neue Frästiefe an diesem Punkt des Werkzeugs
-          1: // Cone 30°
-            h:= vz*3 / gl_arr_scale ;
-          2: // Cone 45°
-            h:= vz*2 / gl_arr_scale ;
-          3: // Cone 60°
-            h:= vz*1.5 / gl_arr_scale ;
-          4: // Cone 90°
-            h:= vz / gl_arr_scale ;
-          5: // Ball
-            h:= (tool_mid - sqrt(sqr(tool_mid) - sqr(vz))) / gl_arr_scale;
-        end;
-        tool_array[ix,iy]:= (h + sim_z) / c_GLscale   // neue Frästiefe
-      end else
-        tool_array[ix,iy]:= 0;
-    end;
-end;
-
 
 procedure InterpretGcodeLine(my_str: string);
 // interpretiert GRBL-Befehl und stellt ihn in 3D-Simulation dar
+// beherrscht nur rudimentäre Funktionenm reicht aber für 90% der Daten
+
 var
-  ix, iy, iz, ip: Integer;
+  idx, ip: Integer;
   old_x, old_y, old_z: Double;
   new_dia: Double;
   new_color, new_tooltip: Integer;
 
-  function extract_float(const grbl_str: string; var start_idx: integer; is_dotsep: Boolean): Double;
-  var i: Integer;
-    my_str: string;
-    my_Settings: TFormatSettings;
-  begin
-    my_Settings.Create;
-    my_str:= '';
-    while grbl_str[start_idx] < #33 do
-      inc(start_idx);
-    for i:= start_idx to length(grbl_str) do begin
-      if grbl_str[i] in ['0'..'9', '+', '-', ',', '.'] then
-        my_str:= my_str + grbl_str[i]
-      else
-        break;
-    end;
-    start_idx:= i+1;
-    If is_dotsep then begin
-      my_Settings.DecimalSeparator:= '.';
-      result:= StrToFloat(my_str, my_Settings);
-    end else
-      result:= StrToFloat(my_str);
-  end;
-
-  function extract_int(const grbl_str: string; var start_idx: integer): Integer;
-  var i: Integer;
-    my_str: string;
-  begin
-    my_str:= '';
-    while grbl_str[start_idx] < #33 do
-      inc(start_idx);
-    for i:= start_idx to length(grbl_str) do begin
-      if grbl_str[i] in ['0'..'9', '+', '-'] then
-        my_str:= my_str + grbl_str[i]
-      else
-        break;
-    end;
-    start_idx:= i+1;
-    result:= StrToInt(my_str);
-  end;
 
 begin
-  if pos('M3', my_str) > 0 then
+  if pos('M3', my_str) > 0 then begin
     tool_running:= true;
+    mdelay((12-Form1.TrackbarSimSpeed.Position)* 250);
+    if Form1.Show3DPreview1.Checked then // wird vorher aufgerufen
+      MakeToolArray(sim_dia);
+  end;
   if pos('M4', my_str) > 0 then
     tool_running:= true;
   if pos('M5', my_str) > 0 then
@@ -242,7 +170,7 @@ begin
     sim_seek:= false;
   if pos('G0', my_str) > 0 then
     sim_seek:= true;
-  if pos('G9', my_str) > 0 then
+  if pos('G9', my_str) > 0 then  // G92
     exit;
   ip := pos('BITCHANGE:', my_str);  // ist eigentlich ein Kommentar
   if ip > 0 then begin
@@ -251,39 +179,46 @@ begin
     new_tooltip:= extract_int(my_str, ip);
     new_color:= extract_int(my_str, ip);
     SetSimToolMM(new_dia, new_tooltip, new_color);
+    if Form1.Show3DPreview1.Checked then // wird vorher aufgerufen
+      MakeToolArray(sim_dia);
   end;
-  if pos('//', my_str) > 0 then    // andere Kommentare
+  if (my_str[1] = '/') or (my_str[1] = '(') then // andere Kommentare
     exit;
 
   old_x:= sim_x;
   old_y:= sim_y;
   old_z:= sim_z;
-  ix:= pos('X', my_str);
-  iy:= pos('Y', my_str);
-  iz:= pos('Z', my_str);
-  if ix > 0 then begin
-    inc(ix);
-    sim_x:= extract_float(my_str, ix, true); // GCode-Dezimaltrenner
-    if pos('G5', my_str) > 0 then begin
+  idx:= pos('X', my_str);
+  if idx > 0 then begin
+    inc(idx);
+    sim_x:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
+    if pos('G53', my_str) > 0 then begin
       sim_x:= -20;
     end;
   end;
-  if iy > 0 then begin
-    inc(iy);
-    sim_y:= extract_float(my_str, iy, true); // GCode-Dezimaltrenner
-    if pos('G5', my_str) > 0 then begin
+  idx:= pos('Y', my_str);
+  if idx > 0 then begin
+    inc(idx);
+    sim_y:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
+    if pos('G53', my_str) > 0 then begin
       sim_y:= -20;
     end;
   end;
-  if iz > 0 then begin
-    inc(iz);
-    sim_z:= extract_float(my_str, iz, true); // GCode-Dezimaltrenner
-    if pos('G5', my_str) > 0 then begin
+  idx:= pos('Z', my_str);
+  if idx > 0 then begin
+    inc(idx);
+    sim_z:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
+    if pos('G53', my_str) > 0 then begin
       sim_z:= 50;
     end;
+    if sim_z < 0 then
+      sim_render_finel:= true;
   end;
-  if Form1.Show3DPreview1.Checked then
-    MakeToolArray(sim_z, sim_dia);
+  idx:= pos('F', my_str);
+  if idx > 0 then begin
+    inc(idx);
+    sim_feed:= extract_int(my_str, idx);
+  end;
   bresenham3D(old_x, sim_x, old_y, sim_y, old_z, sim_z, sim_seek);
   LEDbusy3d.Checked:= false;
 end;

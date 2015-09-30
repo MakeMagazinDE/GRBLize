@@ -1,5 +1,49 @@
 // #############################################################################
-// ############################ R U N  TAB BUTTONS #############################
+// ############################ Hilfsfunktionen ################################
+// #############################################################################
+
+function extract_float(const grbl_str: string; var start_idx: integer; is_dotsep: Boolean): Double;
+var i: Integer;
+  my_str: string;
+  my_Settings: TFormatSettings;
+begin
+  my_Settings.Create;
+  my_str:= '';
+  while grbl_str[start_idx] < #33 do
+    inc(start_idx);
+  for i:= start_idx to length(grbl_str) do begin
+    if grbl_str[i] in ['0'..'9', '+', '-', ',', '.'] then
+      my_str:= my_str + grbl_str[i]
+    else
+      break;
+  end;
+  start_idx:= i+1;
+  If is_dotsep then begin
+    my_Settings.DecimalSeparator:= '.';
+    result:= StrToFloat(my_str, my_Settings);
+  end else
+    result:= StrToFloat(my_str);
+end;
+
+function extract_int(const grbl_str: string; var start_idx: integer): Integer;
+var i: Integer;
+  my_str: string;
+begin
+  my_str:= '';
+  while grbl_str[start_idx] < #33 do
+    inc(start_idx);
+  for i:= start_idx to length(grbl_str) do begin
+    if grbl_str[i] in ['0'..'9', '+', '-'] then
+      my_str:= my_str + grbl_str[i]
+    else
+      break;
+  end;
+  start_idx:= i+1;
+  result:= StrToInt(my_str);
+end;
+
+// #############################################################################
+// ######################## R U N  T A B  B U T T O N S ########################
 // #############################################################################
 
 
@@ -34,7 +78,7 @@ begin
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
   if Form1.Show3DPreview1.Checked then
-    SimMillAtPos(0, 0, job.z_penlift, sim_dia, false);
+    SimMillAtPos(0, 0, job.z_penlift, sim_dia, false, true);
   if Form1.ShowDrawing1.Checked then
     SetDrawingToolPosMM(0, 0, job.z_penlift);
 end;
@@ -144,9 +188,7 @@ end;
 
 Procedure SpindleAccelBrakeTime;
 begin
-  if Form1.CheckBoxSim.checked then
-    mdelay(1000) // Spindel-Hochlaufzeit in Simulation
-  else begin
+  if not Form1.CheckBoxSim.checked then begin
     SendGrblAndWaitForIdle;
     mdelay(job.spindle_wait * 1000)  // Spindel-Hochlaufzeit
   end;
@@ -414,7 +456,11 @@ procedure TForm1.RunGcode;
 // G-Code-Datei abspielen
 var
   my_ReadFile: TextFile;
-  my_line: String;
+  my_line, old_line: String;
+  pos0, pos1: Integer;
+  new_z, z_offs: Double;
+  line_count: Integer;
+  my_Settings: TFormatSettings;
 
 begin
   if Form4.ComboBoxSimType.ItemIndex = 1 then
@@ -430,23 +476,43 @@ begin
   AssignFile(my_ReadFile, OpenFileDialog.FileName);
   CurrentPen:= 0;
   PendingAction:= lift;
-
+  line_count:= 0;
   Reset(my_ReadFile);
+  z_offs:= StrToFloatDef(EditZoffs.Text, 0);
+  if z_offs <> 0 then
+    Memo1.lines.add('// USING Z OFFSET' + EditZoffs.Text);
+  my_Settings.Create;
+  my_Settings.DecimalSeparator:= '.';
   while not Eof(my_ReadFile) do begin
     if CancelJob then
       break;
-    Readln(my_ReadFile,my_line);
+    Readln(my_ReadFile, my_line);
+
+    pos0:= pos('Z', my_line);
+    if pos0 > 0 then begin
+      if not (pos('G53', my_line) > 0) then begin
+        pos1:= pos0+1;
+        new_z:= extract_float(my_line, pos1, true); // GCode-Dezimaltrenner
+        old_line:= my_line;
+        new_z:= new_z + z_offs;
+        my_line:= copy(old_line, 0, pos0) + FormatFloat('0.00', new_z, my_Settings)
+          + copy(old_line, pos1 - 1, 80);  // bis zum Ende der Zeile
+      end;
+    end;
+    inc (line_count);
+//    if line_count mod 500 = 0 then
+//      SendGrblAndWaitForIdle;
     grbl_addStr(my_line);
   end;
   CloseFile(my_ReadFile);
 
-  SendGrblAndWaitForIdle;
   if CancelJob then
     exit;
   if CheckEndPark.Checked and HomingPerformed then
     BtnMoveParkClick(nil)
   else begin
     Memo1.lines.add('// JOB ENDED, SPINDLE OFF');
+    grbl_moveZ(0, true);  // move Z up absolute
     grbl_addStr('M5');
     grbl_moveXY(0,0, false);
   end;
@@ -458,20 +524,20 @@ end;
 procedure TForm1.BtnRunJobClick(Sender: TObject);
 begin
   Memo1.lines.clear;
-  Form4.CheckLiveRender.checked:= false;
   CancelWait:= false;
   CancelGrbl:= false;
   CancelJob:= false;
+  CancelSim:= false;
   RunJob;
 end;
 
 procedure TForm1.BtnRunGcodeClick(Sender: TObject);
 begin
   Memo1.lines.clear;
-  Form4.CheckLiveRender.checked:= false;
   CancelWait:= false;
   CancelGrbl:= false;
   CancelJob:= false;
+  CancelSim:= false;
   RunGcode;
 end;
 
@@ -486,10 +552,11 @@ begin
   CancelWait:= true;
   CancelGrbl:= true;
   CancelJob:= true;
+  CancelSim:= true;
   while CancelGrbl or CancelJob do   // CancelGrbl wird im Timer gelöscht
     Application.ProcessMessages;
     // E-Stop ausführen
-  if ftdi_isopen and (not Form1.CheckBoxSim.checked) then begin
+  if grbl_is_connected and (not Form1.CheckBoxSim.checked) then begin
     my_response:= grbl_sendStr(#24, true); // Ctrl-X Reset sofort senden
     grbl_receiveStr(100);
     Form1.Memo1.lines.add('// CTRL-X RESET: ' + my_response);
@@ -518,6 +585,7 @@ begin
   CancelWait:= false;
   CancelGrbl:= true;
   CancelJob:= true;
+  CancelSim:= true;
   // neue Z-Höhe wird in Timer bei CancelGrbl gesetzt
   Form1.Memo1.lines.add('// MACHINE STOPPED AT Z = ' + FormatFloat('0.00', job.z_penlift) + ' mm');
 end;
@@ -526,6 +594,7 @@ procedure TForm1.BtnZeroXClick(Sender: TObject);
 begin
   CancelWait:= false;
   CancelGrbl:= false;
+  CancelSim:= false;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET X ZERO');
@@ -537,6 +606,7 @@ procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
   CancelWait:= false;
   CancelGrbl:= false;
+  CancelSim:= false;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Y ZERO');
@@ -548,6 +618,7 @@ procedure TForm1.BtnZeroZClick(Sender: TObject);
 begin
   CancelWait:= false;
   CancelGrbl:= false;
+  CancelSim:= false;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Z ZERO');
