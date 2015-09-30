@@ -393,9 +393,7 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 var
   grbl_ini: TRegistry;
-  my_ftdi_was_open: Boolean;
-  vid, pid: word;
-
+ 
 begin
   TimerGrblCount:= 0;
   grbl_delay_short:= 10; grbl_delay_long:= 20;
@@ -648,23 +646,26 @@ begin
       // Öffnet Device nach Seriennummer
       // Stellt sicher, dass das beim letzten Form1.Close
       // geöffnete Device auch weiterhin verfügbar ist.
-      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text));
-      ftdi.getDeviceInfo(my_device, pid, vid, ftdi_serial, my_description);
+      setDelays;
+      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text) + ' - PLEASE WAIT...');
+      ftdi.getDeviceInfo(my_device, pid, vid, my_description, ftdi_serial);
       DeviceView.Text:= ftdi_serial + ' - ' + my_description;
-      mdelay(250);
+      mdelay(500);
       grbl_is_connected:= GetResponseAndSetButtons;
       BtnRefreshGrblSettingsClick(nil);
+      Memo1.lines.add('// READY');
     end;
-
   if com_was_open then begin
     com_isopen:= COMopen(com_name);
-    Memo1.lines.add('// Open serial port ' + com_name);
+    Memo1.lines.add('// ' + com_name + ' connected - PLEASE WAIT...');
     if com_isopen then begin
+      setDelays;
       COMSetup(trim(deviceselectbox.EditBaudrate.Text));
       DeviceView.Text:= 'Serial port ' + com_name;
-      mdelay(250);  // Arduino Startup Time
+      mdelay(2000);  // Arduino Startup Time
       grbl_is_connected:= GetResponseAndSetButtons;
       BtnRefreshGrblSettingsClick(nil);
+      Memo1.lines.add('// READY');
     end;
   end;
   ftdi_was_open:= false;

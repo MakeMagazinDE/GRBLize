@@ -438,12 +438,10 @@ begin
   end;
 
   SendGrblAndWaitForIdle;
-  if CancelJob then
-    exit;
-  if CheckEndPark.Checked and HomingPerformed then
+  Memo1.lines.add('// JOB END');
+  if CheckEndPark.Checked and (HomingPerformed or CheckboxSim.checked) then
     BtnMoveParkClick(nil)
   else begin
-    Memo1.lines.add('// JOB ENDED, SPINDLE OFF');
     grbl_addStr('M5');
     grbl_moveXY(0,0, false);
   end;
@@ -459,7 +457,6 @@ var
   my_line, old_line: String;
   pos0, pos1: Integer;
   new_z, z_offs: Double;
-  line_count: Integer;
   my_Settings: TFormatSettings;
 
 begin
@@ -476,7 +473,6 @@ begin
   AssignFile(my_ReadFile, OpenFileDialog.FileName);
   CurrentPen:= 0;
   PendingAction:= lift;
-  line_count:= 0;
   Reset(my_ReadFile);
   z_offs:= StrToFloatDef(EditZoffs.Text, 0);
   if z_offs <> 0 then
@@ -490,6 +486,7 @@ begin
 
     pos0:= pos('Z', my_line);
     if pos0 > 0 then begin
+    // Z mit Offset versehen
       if not (pos('G53', my_line) > 0) then begin
         pos1:= pos0+1;
         new_z:= extract_float(my_line, pos1, true); // GCode-Dezimaltrenner
@@ -499,19 +496,14 @@ begin
           + copy(old_line, pos1 - 1, 80);  // bis zum Ende der Zeile
       end;
     end;
-    inc (line_count);
-//    if line_count mod 500 = 0 then
-//      SendGrblAndWaitForIdle;
     grbl_addStr(my_line);
   end;
   CloseFile(my_ReadFile);
 
-  if CancelJob then
-    exit;
-  if CheckEndPark.Checked and HomingPerformed then
+  Memo1.lines.add('// JOB END');
+  if CheckEndPark.Checked and (HomingPerformed or CheckboxSim.checked) then
     BtnMoveParkClick(nil)
   else begin
-    Memo1.lines.add('// JOB ENDED, SPINDLE OFF');
     grbl_moveZ(0, true);  // move Z up absolute
     grbl_addStr('M5');
     grbl_moveXY(0,0, false);

@@ -21,7 +21,7 @@ type
 
    // für Kommunikation nicht über FTDI, sondern über COM-port
   function CheckCom(my_ComNumber: Integer): Integer;   // COM# verfügbar?
-  function COMOpen(const com_name: String): Boolean;
+  function COMOpen(com_name: String): Boolean;
   procedure COMRxClear;
   procedure COMClose;
   function COMSetup(baud_str: String): Boolean;
@@ -161,14 +161,17 @@ begin
 end;
 
 
-function COMOpen(const com_name: String): Boolean;
+function COMOpen(com_name: String): Boolean;
 var
   DeviceName: array[0..15] of Char;
   my_Name: AnsiString;
 begin
 // Wir versuchen, COM1 zu öffnen.
 // Sollte dies fehlschlagen, gibt die Funktion false zurück.
-  my_name:= com_name; // in AnsiSTring kopieren
+  if length(com_name) > 4 then
+    my_name:= AnsiString('\\.\'+com_name)  // COM10 und darüber
+  else
+    my_name:= AnsiString(com_name); // in AnsiSTring kopieren
 
   StrPCopy(DeviceName, my_name);
   ComFile := CreateFile(DeviceName, GENERIC_READ or GENERIC_WRITE,
@@ -448,7 +451,7 @@ begin
     for i:= 0 to 7 do begin  // Anzahl Versuche
       grbl_sendStr(#13,false);
       mdelay(grbl_delay_long);
-      my_str:= grbl_receiveStr(grbl_delay_long);
+      my_str:= grbl_receiveStr(200);
       if (my_str = 'ok') or CancelWait then
         break;
       mdelay(grbl_delay_long); // nochmal versuchen
