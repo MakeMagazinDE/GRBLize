@@ -2,20 +2,27 @@
 
 ###CNC-Steuerung für GRBL-JOG Projekt
 
-Erstellt mit Delphi 2005 PE. Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)**. 
+Erstellt mit Delphi XE8 Starter. Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)**. 
 
-Ausführbare Datei (.EXE, Win32) im Verzeichnis **[/bin](https://github.com/heise/GRBLize/tree/master/bin)**, benötigt "default.job", ggf. die Beispiel-Plot-Dateien und 
-gegebenenfalls ftd2xx.dll, letzteres aber nur, falls nicht ohnehin schon im System vom FTDI-Treiber-Download 
-installiert.
+Ausführbare Datei (.EXE, Win32) im Verzeichnis 
+**[/bin](https://github.com/heise/GRBLize/tree/master/bin)**, benötigt 
+"default.job", ggf. die Beispiel-Plot-Dateien und gegebenenfalls ftd2xx.dll, 
+letzteres aber nur, falls nicht ohnehin schon im System vom FTDI-Treiber-
+Download installiert.
 
-Auf der rechten Spalte der Github-Seite finden Sie den Button "Download ZIP". Dies lädt das komplette Projekt herunter einschl. Sourcen. Nach Entpacken findet sich das Windows-Executable (32 Bit) im Unterverzeichnis /bin.
+Auf der rechten Spalte der Github-Seite finden Sie den Button "Download ZIP". 
+Dies lädt das komplette Projekt herunter einschl. Sourcen. Nach Entpacken findet 
+sich das Windows-Executable (32 Bit) im Unterverzeichnis /bin.
 
 Das Projekt befindet sich noch in Entwicklung, bitte auf evt. Updates prüfen. 
-Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-JOG](https://github.com/heise/GRBL-JOG)**.
+Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-
+JOG](https://github.com/heise/GRBL-JOG)**. Die neueste Version unterstützt jetzt 
+auch GRBL 0.9j sowie GRBL auf Arduino und ähnlichen Boards.
 
 ###Version History
 
-- 0.96d: Latest build, On run, will keep Z up at park position height until first mill to clear work part. 
+- 1.0b: Latest build. Supports serial COM port as well as direct FTDI serial communications. Re-written robust protocol engine. New simulation for G-Codes as a finite elements model in 3 resolutions. Some bugs fixed. Suports GRBL 0.8x and new GRBL 0.9j. New on-screen jog pad for use with other boards than GRBL-JOG. Supports GRBL running on a plain Arduino.
+- 0.96d: On run, will keep Z up at park position height until first mill to clear work part. 
 - 0.96b: bugfix on FTDI class, new "Z Feed Scaling" parameter, multiplies XY feed value for Z to prevent tool damage (<1 = slower). Also useful with c't woodmill (>1 = faster, otherwise Z feed will be too slow).
 - 0.95b: First public beta
 - 0.94a: Internal alpha, some serious bugs
@@ -25,7 +32,7 @@ Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-JOG](h
 Executable for Windows XP/7/8 in folder **[/bin](https://github.com/heise/GRBLize/tree/master/bin)**. No Installation required, but configuration file "default.job" and example plot files 
 must be placed in same folder. Please see article in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)** for usage.
 
-Made with Delphi 2005 PE. Sources to be compiled with Borland Delphi 2005 Personal Edition (and up) for those interested in improving it. GRBLize 
+Version in Master branch made with Delphi 2005 PE. Sources to be compiled with Borland Delphi 2005 Personal Edition (and up) for those interested in improving it. GRBLize 
 uses ftdiclass component from Michael "Zipplet" Nixon, Clipper library by Angus Johnson and GLscene OpenGL component.
 
 Borland Delphi 2005 Personal Edition was downloadable for free some time ago, also included on some computer magazine CDs/DVDs as on c't 13/2005. It should be still available for free on http://delphi.developpez.com/delphi2005/

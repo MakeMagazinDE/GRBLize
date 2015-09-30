@@ -41,18 +41,20 @@ var i : Integer; LV : TListItem;
 begin
 // Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
   setDelays;
-  deviceselectbox.ListView1.Items.clear;
   SetUpFTDI;
   com_isopen:= false;
   ftdi_isopen:= false;
   com_name:='';
-  if ftdi_device_count > 0 then
+  if ftdi_device_count > 0 then begin
+    deviceselectbox.ListView1.Items.clear;
     for i := 0 to ftdi_device_count - 1 do begin
       LV := deviceselectbox.ListView1.Items.Add;
       LV.Caption := 'Device '+IntToStr(i);
       LV.SubItems.Add(ftdi_sernum_arr[i]);
       LV.SubItems.Add(ftdi_desc_arr[i]);
     end;
+    deviceselectbox.ListView1.Items[0].Selected := true;
+  end;
   deviceselectbox.ComboBoxCOMport.Items.clear;
   deviceselectbox.ComboBoxCOMport.Items.add('none (FTDI direct)');
   for i := 0 to 31 do begin
@@ -60,7 +62,6 @@ begin
       deviceselectbox.ComboBoxCOMport.Items.add('COM' + IntToSTr(i) + ':');
     end;
   end;
-  deviceselectbox.ListView1.Items[0].Selected := true;
   deviceselectbox.ComboBoxCOMport.ItemIndex:= 0; // Auswahl erzwingen
   deviceselectbox.ShowModal;
   if (deviceselectbox.ModalResult=MrOK) then begin
