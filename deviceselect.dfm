@@ -136,11 +136,14 @@ object deviceselectbox: Tdeviceselectbox
       Top = 214
       Width = 57
       Height = 21
+      BevelInner = bvNone
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
       Font.Height = -11
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
+      MaxLength = 6
+      NumbersOnly = True
       ParentFont = False
       TabOrder = 4
       Text = '115200'

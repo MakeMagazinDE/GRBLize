@@ -3,7 +3,6 @@
 // ########################## GRBL DEFAULT BUTTONS #############################
 // #############################################################################
 
-
 procedure setDelays;
 begin
   if deviceselectbox.CheckBoxNewGRBL.Checked then begin
@@ -18,18 +17,19 @@ begin
   end;
 end;
 
-procedure setRespondedButtons;
+function GetResponseAndSetButtons: Boolean;
 begin
+  result:= false;
   with Form1 do begin
-    BtnRescan.Visible:= false;
-    BtnClose.Visible:= true;
-    CheckBoxSim.enabled:= true;
-    CheckBoxSim.Checked:= false;
     if grbl_checkResponse then begin
-      grbl_is_connected:= true;
+      BtnRescan.Visible:= false;
+      BtnClose.Visible:= true;
+      CheckBoxSim.enabled:= true;
+      CheckBoxSim.Checked:= false;
       EnableNotHomedButtons;
-      BtnRefreshGrblSettingsClick(nil);
-    end;
+      result:= true;
+    end else
+      BtnCloseClick(nil);
   end;
 end;
 
@@ -37,14 +37,13 @@ procedure TForm1.BtnRescanClick(Sender: TObject);
 // Auswahl des Frosches unter FTDI-Devices
 var i : Integer; LV : TListItem;
   COMAvailableList: Array[0..31] of Integer;
-
 begin
 // Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
-  setDelays;
-  SetUpFTDI;
   com_isopen:= false;
   ftdi_isopen:= false;
+  grbl_is_connected:= false;
   com_name:='';
+  //SetUpFTDI;
   if ftdi_device_count > 0 then begin
     deviceselectbox.ListView1.Items.clear;
     for i := 0 to ftdi_device_count - 1 do begin
@@ -64,28 +63,33 @@ begin
   end;
   deviceselectbox.ComboBoxCOMport.ItemIndex:= 0; // Auswahl erzwingen
   deviceselectbox.ShowModal;
-  if (deviceselectbox.ModalResult=MrOK) then begin
-    if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
-      com_selected_port:= deviceselectbox.ComboBoxCOMport.ItemIndex - 1;
-      com_name:= deviceselectbox.ComboBoxCOMport.Text;
-      com_isopen:= COMopen(com_name);
-      Memo1.lines.add('// Open serial port ' + com_name);
-      if com_isopen then begin
-        COMSetup(trim(deviceselectbox.EditBaudrate.Text));
-        DeviceView.Text:= 'Serial port ' + com_name;
-        setRespondedButtons;
-      end;
-    end else begin
-      com_selected_port:= -1;
-      com_isopen:= false;
-      if (ftdi_device_count > 0) then begin
-        ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
-        Memo1.lines.add('// ' + InitFTDI(ftdi_selected_device, deviceselectbox.EditBaudrate.Text));
-        if ftdi_isopen then begin
-          ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
-          DeviceView.Text:= ftdi_serial + ' - ' + ftdi_desc_arr[ftdi_selected_device];
-          setRespondedButtons;
-        end;
+  setDelays;
+  if not (deviceselectbox.ModalResult=MrOK) then
+    exit;
+  if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
+    com_selected_port:= deviceselectbox.ComboBoxCOMport.ItemIndex - 1;
+    com_name:= deviceselectbox.ComboBoxCOMport.Text;
+    com_isopen:= COMopen(com_name);
+    Memo1.lines.add('// Open serial port ' + com_name);
+    if com_isopen then begin
+      COMSetup(trim(deviceselectbox.EditBaudrate.Text));
+      DeviceView.Text:= 'Serial port ' + com_name;
+      mdelay(250);  // Arduino Startup Time
+      grbl_is_connected:= GetResponseAndSetButtons;
+      BtnRefreshGrblSettingsClick(nil);
+    end;
+  end else begin
+    com_selected_port:= -1;
+    com_isopen:= false;
+    if (ftdi_device_count > 0) then begin
+      ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
+      Memo1.lines.add('// ' + InitFTDI(ftdi_selected_device, deviceselectbox.EditBaudrate.Text));
+      if ftdi_isopen then begin
+        ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
+        DeviceView.Text:= ftdi_serial + ' - ' + ftdi_desc_arr[ftdi_selected_device];
+        mdelay(250);  // Arduino Startup Time
+        grbl_is_connected:= GetResponseAndSetButtons;
+        BtnRefreshGrblSettingsClick(nil);
       end;
     end;
   end;

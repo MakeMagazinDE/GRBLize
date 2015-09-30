@@ -423,20 +423,6 @@ end;
 // #############################################################################
 // #############################################################################
 
-function grbl_checkResponse: Boolean;
-begin
-  grbl_sendlist.Clear;
-  result:= false;
-  if ftdi_isopen or com_isopen then
-    if grbl_resync then
-      result:= true
-    else begin
-      showmessage('No response or GRBL Resync failed on Send Settings.'
-        + #13+ 'Check if GRBL version matches setting in GRBL Defaults page.');
-      Form1.BtnCloseClick(nil);
-    end;
-end;
-
 
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
@@ -471,6 +457,18 @@ begin
     grbl_resync:= (my_str = 'ok');
   end else
     grbl_resync:= false;
+end;
+
+function grbl_checkResponse: Boolean;
+begin
+  grbl_sendlist.Clear;
+  result:= false;
+  if ftdi_isopen or com_isopen then
+    if grbl_resync then
+      result:= true
+    else
+      showmessage('No response or GRBL Resync failed on Send Settings.'
+        + #13+ 'Check if GRBL version matches setting in GRBL Defaults page.');
 end;
 
 procedure grbl_addStr(my_str: String);
@@ -647,7 +645,6 @@ begin
   grbl_oldz:= z;
 end;
 
-
 procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
 // kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
 var i, my_len, my_z_feed: Integer;
@@ -753,7 +750,7 @@ begin
   ftdi:= tftdichip.create;  { Create class instance }
   { Get the device list }
   if not ftdi.createDeviceInfoList(ftdi_device_count, ftdi_device_list) then begin
-    result:= '### Error: Failed to create device info list';
+    result:= 'Failed to create device info list';
     freeandnil(ftdi);
     exit;
   end;
@@ -770,13 +767,15 @@ begin
     {$ENDIF}
     end;
   end else
-    result:= '### Error: No FTDI devices found - simulation only';
+    result:= 'No FTDI devices found';
 end;
 
 procedure SetFTDIbaudRate(my_str: String);
 var
   my_baud: fBaudRate;
 begin
+  if ftdi_isopen then
+    exit;
   ftdi_isopen:= true;
   my_str:= trim(my_str);
   if my_str = '9600' then
@@ -797,6 +796,8 @@ end;
 function InitFTDI(my_device:Integer; baud_str: String):String;
 begin
 // Check if device is present
+  if ftdi_isopen then
+    exit;
   if not ftdi.isPresentBySerial(ftdi_sernum_arr[my_device]) then begin
     result:= 'Device not present';
     ftdi.destroy;
@@ -820,6 +821,8 @@ function InitFTDIbySerial(my_serial, baud_str: String):String;
 var
   my_str: String; my_baud: fBaudRate;
 begin
+  if ftdi_isopen then
+    exit;
   if ftdi_device_count > 0 then begin
     if not ftdi.isPresentBySerial(my_serial) then begin
       result:= 'Device not present';

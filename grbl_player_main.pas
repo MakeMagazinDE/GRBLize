@@ -279,7 +279,7 @@ var
   TimerGrblCount: Integer;
   TimerStatusFinished, TimerBlinkToggle: Boolean;
   MouseJogAction: Boolean;
-
+  open_request, ftdi_was_open, com_was_open: boolean;
 
 implementation
 
@@ -395,8 +395,6 @@ var
   grbl_ini: TRegistry;
   my_ftdi_was_open: Boolean;
   vid, pid: word;
-  my_device: fDevice;
-  my_description: String;
 
 begin
   TimerGrblCount:= 0;
@@ -414,6 +412,7 @@ begin
   BtnRescan.Visible:= true; BtnClose.Visible:= false;
   Form1.Show;
 
+  LEDbusy.Checked:= true;
   if not IsFormOpen('deviceselectbox') then
     deviceselectbox := Tdeviceselectbox.Create(Self);
   deviceselectbox.hide;
@@ -434,14 +433,14 @@ begin
       JobSettingsPath:= grbl_ini.ReadString('SettingsPath')
     else
       JobSettingsPath:= ExtractFilePath(Application.ExeName)+'default.job';
-    if grbl_ini.ValueExists('SettingsDeviceSerial') then
-      ftdi_serial:= grbl_ini.ReadString('SettingsDeviceSerial')
+    if grbl_ini.ValueExists('FTDIdeviceSerial') then
+      ftdi_serial:= grbl_ini.ReadString('FTDIdeviceSerial')
     else
       ftdi_serial:= 'NONE';
-    if grbl_ini.ValueExists('SettingsDeviceOpen') then
-      my_ftdi_was_open:= grbl_ini.ReadBool('SettingsDeviceOpen')
+    if grbl_ini.ValueExists('FTDIdeviceOpen') then
+      ftdi_was_open:= grbl_ini.ReadBool('FTDIdeviceOpen')
     else
-      my_ftdi_was_open:= false;
+      ftdi_was_open:= false;
     if grbl_ini.ValueExists('DrawingFormVisible') then
       WindowMenu1.Items[0].Checked:= grbl_ini.ReadBool('DrawingFormVisible');
     if grbl_ini.ValueExists('CamFormVisible') then
@@ -453,25 +452,17 @@ begin
     if grbl_ini.ValueExists('ComBaudrate') then
       deviceselectbox.EditBaudrate.Text:= grbl_ini.ReadString('ComBaudrate');
     if grbl_ini.ValueExists('ComPort') then
-      deviceselectbox.ComboBoxComPort.Text:= grbl_ini.ReadString('ComPort');
+      com_name:= grbl_ini.ReadString('ComPort')
+    else
+      com_name:= '';
+    deviceselectbox.ComboBoxCOMport.Text:= com_name;
+    if grbl_ini.ValueExists('ComOpen') then
+      com_was_open:= grbl_ini.ReadBool('ComOpen')
+    else
+      com_was_open:= false;
   finally
     grbl_ini.Free;
   end;
-
-  Form1.Memo1.lines.add('// ' + SetUpFTDI);
-  if (ftdi_device_count > 0) and my_ftdi_was_open then
-    if ftdi.isPresentBySerial(ftdi_serial) then begin
-      // Öffnet Device nach Seriennummer
-      // Stellt sicher, dass das beim letzten Form1.Close
-      // geöffnete Device auch weiterhin verfügbar ist.
-      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text));
-      if ftdi_isopen then begin
-        ftdi.getDeviceInfo(my_device, pid, vid, ftdi_serial, my_description);
-        BtnRescan.Visible:= false;
-        BtnClose.Visible:= true;
-        DeviceView.Text:= ftdi_serial + ' - ' + my_description;
-      end;
-    end;
 
   if not IsFormOpen('Form4') then
     Form4 := TForm4.Create(Self);
@@ -509,19 +500,21 @@ begin
   else
     Form1.FileNew1Execute(sender);
 
-  TimerDraw.Enabled:= true;
-  grbl_checkResponse;
-  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
   DisableButtons;
   SgGrblSettings.FixedCols:= 1;
   SgAppdefaults.FixedCols:= 1;
-  Form1.BringToFront;
 
   Form4.FormRefresh(nil);
   SetSimPositionMMxyz(0,0, job.z_gauge);
   SetDrawingToolPosMM(0, 0, job.z_gauge);
   SetSimToolMM(ComboBoxGdia.ItemIndex, ComboBoxGTip.ItemIndex, clGray);
+
   SetDelays;
+  BringToFront;
+  Memo1.lines.add('// ' + SetUpFTDI);
+  TimerDraw.Enabled:= true;
+  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
+  TimerBlink.Enabled:= true;
 end;
 
 
@@ -561,12 +554,13 @@ begin
     grbl_ini.WriteBool('SceneFormVisible',Form1.WindowMenu1.Items[2].Checked);
     grbl_ini.WriteBool('NewGRBL',deviceselectbox.CheckBoxNewGRBL.Checked);
     if ftdi_isopen then
-      grbl_ini.WriteString('SettingsDeviceSerial', ftdi_serial)
+      grbl_ini.WriteString('FTDIdeviceSerial', ftdi_serial)
     else
-      grbl_ini.WriteString('SettingsDeviceSerial', 'NONE');
-    grbl_ini.WriteBool('SettingsDeviceOpen',ftdi_isopen);
+      grbl_ini.WriteString('FTDIdeviceSerial', 'NONE');
+    grbl_ini.WriteBool('FTDIdeviceOpen',ftdi_isopen);
     grbl_ini.WriteString('ComBaudrate', deviceselectbox.EditBaudrate.Text);
-    grbl_ini.WriteString('ComPort', deviceselectbox.ComboBoxComPort.Text);
+    grbl_ini.WriteString('ComPort', com_name);
+    grbl_ini.WriteBool('ComOpen', com_isopen);
   finally
     grbl_ini.Free;
   end;
@@ -631,7 +625,12 @@ end;
 // #############################################################################
 
 procedure TForm1.TimerBlinkTimer(Sender: TObject);
+var
+  vid, pid: word;
+  my_device: fDevice;
+  my_description: String;
 begin
+  TimerBlink.Enabled:= false;
   if (not HomingPerformed) and grbl_is_connected then
     if TimerBlinkToggle then
       Form1.BtnHomeCycle.Font.Color:= clPurple
@@ -642,6 +641,36 @@ begin
     grbl_wpos.z:= job.z_gauge;
     PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
   end;
+
+// darf nicht in FormCreate stehen, wird dort durch Application.processmessages in mdelay() gestört
+  if ftdi_was_open and (ftdi_device_count > 0) then
+    if ftdi.isPresentBySerial(ftdi_serial) then begin
+      // Öffnet Device nach Seriennummer
+      // Stellt sicher, dass das beim letzten Form1.Close
+      // geöffnete Device auch weiterhin verfügbar ist.
+      Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text));
+      ftdi.getDeviceInfo(my_device, pid, vid, ftdi_serial, my_description);
+      DeviceView.Text:= ftdi_serial + ' - ' + my_description;
+      mdelay(250);
+      grbl_is_connected:= GetResponseAndSetButtons;
+      BtnRefreshGrblSettingsClick(nil);
+    end;
+
+  if com_was_open then begin
+    com_isopen:= COMopen(com_name);
+    Memo1.lines.add('// Open serial port ' + com_name);
+    if com_isopen then begin
+      COMSetup(trim(deviceselectbox.EditBaudrate.Text));
+      DeviceView.Text:= 'Serial port ' + com_name;
+      mdelay(250);  // Arduino Startup Time
+      grbl_is_connected:= GetResponseAndSetButtons;
+      BtnRefreshGrblSettingsClick(nil);
+    end;
+  end;
+  ftdi_was_open:= false;
+  com_was_open:= false;
+  LEDbusy.Checked:= false;
+  TimerBlink.Enabled:= true;
 end;
 
 procedure TForm1.TimerDrawElapsed(Sender: TObject);

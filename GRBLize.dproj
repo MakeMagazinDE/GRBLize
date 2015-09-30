@@ -62,7 +62,6 @@
         <DCC_ExeOutput>.\$(Platform)\bin</DCC_ExeOutput>
         <Icon_MainIcon>GRBLize_Icon.ico</Icon_MainIcon>
         <DCC_Namespace>Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_UsePackage>bindcompvcl;vclie;vcltouch;bindcompfmx;CustomIPTransport;vclribbon;VclSmp;dsnap;fmx;rtl;dbrtl;fmxase;vcl;tethering;bindcomp;IndyCore;IndySystem;inet;fmxobj;vclx;xmlrtl;svnui;svn;vclimg;GLScene_RunTime_VCL;fmxdae;IndyProtocols;appanalytics;vclactnband;bindengine;vcldb;vcldsnap;$(DCC_UsePackage)</DCC_UsePackage>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
