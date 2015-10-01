@@ -114,10 +114,11 @@ var
 
 procedure UnHilite;
 procedure draw_cnc_all;
-procedure hilite_to_toolcursor;
-procedure hilite_center_to_toolcursor;
+procedure hilite_to(var x,y: Double);
+procedure hilite_center_to(var x,y: Double);
 procedure Uncheck_Popups;
 procedure SetDrawingToolPosMM(x, y, z: Double);
+procedure SetAllPosZupMM(x, y: Double);
 
 
 implementation
@@ -912,6 +913,46 @@ begin
 end;
 
 // #############################################################################
+// #############################################################################
+
+procedure hilite_center_to(var x, y: Double);
+// setzt drawing_ToolPos-Koordinaten in Plotter-Units
+var ZeroOfs, pt: TIntpoint;
+begin
+  if (HiliteBlock >= 0) then begin
+    pt:= final_Array[HiliteBlock].bounds.mid;
+    ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
+    pt.X := pt.X + ZeroOfs.X;
+    pt.Y := pt.Y + ZeroOfs.Y;
+    x:= pt.X / c_hpgl_scale;
+    y:= pt.Y / c_hpgl_scale;
+  end;
+end;
+
+procedure hilite_to(var x,y: Double);
+// setzt drawing_ToolPos-Koordinaten in Plotter-Units
+var ZeroOfs, pt: TIntpoint;
+begin
+  if (HilitePoint >= 0) then begin
+    pt:= final_Array[HiliteBlock].millings[HilitePath, HilitePoint];
+    ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
+    pt.X := pt.X + ZeroOfs.X;
+    pt.Y := pt.Y + ZeroOfs.Y;
+    x:= pt.X / c_hpgl_scale;
+    y:= pt.Y / c_hpgl_scale;
+  end else if (HiliteBlock >= 0) then begin
+    pt:= final_Array[HiliteBlock].bounds.min;
+    ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
+    pt.X := pt.X + ZeroOfs.X;
+    pt.Y := pt.Y + ZeroOfs.Y;
+    x:= pt.X / c_hpgl_scale;
+    y:= pt.Y / c_hpgl_scale;
+  end;
+end;
+
+// #############################################################################
+// #############################################################################
+
 
 procedure Uncheck_PopupPoint;
 var i: Integer;
@@ -1050,48 +1091,26 @@ begin
   end;
 end;
 
-procedure hilite_to_toolcursor;
-// setzt drawing_ToolPos-Koordinaten in Plotter-Units
-var ZeroOfs, pt: TIntpoint;
-begin
-  if (HilitePoint >= 0) then begin
-    pt:= final_Array[HiliteBlock].millings[HilitePath, HilitePoint];
-    ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
-    pt.X := pt.X + ZeroOfs.X;
-    pt.Y := pt.Y + ZeroOfs.Y;
-    drawing_ToolPos.X:= pt.X / c_hpgl_scale;
-    drawing_ToolPos.Y:= pt.Y / c_hpgl_scale;
-  end else if (HiliteBlock >= 0) then begin
-    pt:= final_Array[HiliteBlock].bounds.min;
-    ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
-    pt.X := pt.X + ZeroOfs.X;
-    pt.Y := pt.Y + ZeroOfs.Y;
-    drawing_ToolPos.X:= pt.X / c_hpgl_scale;
-    drawing_ToolPos.Y:= pt.Y / c_hpgl_scale;
-  end;
-end;
 
+// #############################################################################
+// #############################################################################
 
-procedure hilite_center_to_toolcursor;
-// setzt drawing_ToolPos-Koordinaten in Plotter-Units
-var ZeroOfs, pt: TIntpoint;
-begin
-  if (HiliteBlock >= 0) then begin
-    pt:= final_Array[HiliteBlock].bounds.mid;
-    ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
-    pt.X := pt.X + ZeroOfs.X;
-    pt.Y := pt.Y + ZeroOfs.Y;
-    drawing_ToolPos.X:= pt.X / c_hpgl_scale;
-    drawing_ToolPos.Y:= pt.Y / c_hpgl_scale;
-  end;
-end;
 
 procedure SetDrawingToolPosMM(x, y, z: Double);
 begin
-  NeedsRedraw:= Form1.ShowDrawing1.Checked;
   drawing_ToolPos.X:= x;
   drawing_ToolPos.Y:= y;
   drawing_tool_down:= z <= 0;
+  NeedsRedraw:= Form1.ShowDrawing1.Checked;
+end;
+
+procedure SetAllPosZupMM(x, y: Double);
+begin
+  SetSimPositionMMxy(x,y);
+  drawing_ToolPos.X:= x;
+  drawing_ToolPos.Y:= y;
+  drawing_tool_down:= false;
+  NeedsRedraw:= Form1.ShowDrawing1.Checked;
 end;
 
 // #############################################################################
@@ -1100,12 +1119,9 @@ procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO PART ZERO');
-  drawing_ToolPos.X:= 0;
-  drawing_ToolPos.Y:= 0;
   grbl_offsXY(0, 0);
-  NeedsRedraw:= true;
-  SetSimPositionMMxy(0,0);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(0,0);
 end;
 
 procedure TForm2.pu_toolisatpointClick(Sender: TObject);
@@ -1113,13 +1129,10 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO POINT');
-  hilite_to_toolcursor;
-  x:= drawing_ToolPos.X;
-  y:= drawing_ToolPos.Y;
+  hilite_to(x,y);
   grbl_offsXY(x, y);
-  NeedsRedraw:= true;
-  SetSimPositionMMxy(x,y);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
@@ -1127,13 +1140,10 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET TOOL TO CENTER');
-  hilite_center_to_toolcursor;
-  x:= drawing_ToolPos.X;
-  y:= drawing_ToolPos.Y;
+  hilite_center_to(x,y);
   grbl_offsXY(x, y);
-  NeedsRedraw:= true;
-  SetSimPositionMMxy(x,y);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################
@@ -1143,11 +1153,8 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  NeedsRedraw:= true;
-  drawing_ToolPos.X:= -job.cam_x;
-  drawing_ToolPos.Y:= -job.cam_y;
-  SetSimPositionMMxy(-job.cam_x,-job.cam_y);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(-job.cam_x,-job.cam_y);
 end;
 
 procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
@@ -1155,15 +1162,12 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
-  hilite_to_toolcursor;
-  x:= drawing_ToolPos.X - job.cam_x;
-  y:= drawing_ToolPos.Y - job.cam_y;
+  hilite_to(x,y);
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
   grbl_offsXY(x, y);
-  NeedsRedraw:= true;
-  drawing_ToolPos.X:= x;
-  drawing_ToolPos.Y:= y;
-  SetSimPositionMMxy(x,y);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
@@ -1171,15 +1175,12 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
-  hilite_center_to_toolcursor;
-  x:= drawing_ToolPos.X - job.cam_x;
-  y:= drawing_ToolPos.Y - job.cam_y;
+  hilite_center_to(x,y);
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
   grbl_offsXY(x, y);
-  NeedsRedraw:= true;
-  drawing_ToolPos.X:= x;
-  drawing_ToolPos.Y:= y;
-  SetSimPositionMMxy(x,y);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################
@@ -1188,12 +1189,11 @@ procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
-  drawing_ToolPos.X:= 0;
-  drawing_ToolPos.Y:= 0;
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(0,0, false);
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(0, 0);
 end;
 
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
@@ -1201,14 +1201,13 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO POINT');
-  hilite_to_toolcursor;
-  x:= drawing_ToolPos.X;
-  y:= drawing_ToolPos.Y;
+  hilite_to(x, y);
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
@@ -1216,14 +1215,13 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO CENTER');
-  hilite_center_to_toolcursor;
-  x:= drawing_ToolPos.X;
-  y:= drawing_ToolPos.Y;
+  hilite_center_to(x,y);
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################
@@ -1236,6 +1234,7 @@ begin
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   grbl_moveZ(job.cam_z, false);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(-job.cam_x,-job.cam_y);
 end;
 
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
@@ -1243,14 +1242,15 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO POINT');
-  hilite_to_toolcursor;
-  x:= drawing_ToolPos.X - job.cam_x;
-  y:= drawing_ToolPos.Y - job.cam_y;
+  hilite_to(x,y);
+  x:= x - job.cam_x;
+  y:= x - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.cam_z, false);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
@@ -1258,14 +1258,15 @@ var x,y: Double;
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO CENTER');
-  hilite_center_to_toolcursor;
-  x:= drawing_ToolPos.X - job.cam_x;
-  y:= drawing_ToolPos.Y - job.cam_y;
+  hilite_center_to(x, y);
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
   grbl_offsXY(x, y);
   grbl_moveZ(job.cam_z, false);
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################

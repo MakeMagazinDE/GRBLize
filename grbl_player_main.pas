@@ -15,7 +15,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.0a';
+  c_VerStr: String = '1.0c';
 
 type
   TForm1 = class(TForm)

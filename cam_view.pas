@@ -191,16 +191,16 @@ begin
     exit;
 
   if HilitePoint >= 0 then begin
-    hilite_to_toolcursor;
+    hilite_to(x,y);
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
   end else begin
-    hilite_center_to_toolcursor;
+    hilite_center_to(x,y);
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
   end;
-  x:= drawing_ToolPos.X-job.cam_x;
-  y:= drawing_ToolPos.Y-job.cam_y;
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
   grbl_offsXY(x, y);
   SetSimPositionMMxy(x, y);
   NeedsRedraw:= true;
