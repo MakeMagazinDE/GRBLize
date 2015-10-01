@@ -3,7 +3,7 @@
         <ProjectGuid>{D019AC6E-5289-4121-AF90-0E7604D6786D}</ProjectGuid>
         <MainSource>GRBLize.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>

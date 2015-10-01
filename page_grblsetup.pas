@@ -7,8 +7,8 @@ procedure setDelays;
 begin
   if deviceselectbox.CheckBoxNewGRBL.Checked then begin
     // Configure for 115200 baud, 8 bit, 1 stop bit, no parity, no flow control
-    grbl_delay_short:= 4;
-    grbl_delay_long:= 16;
+    grbl_delay_short:= 5;
+    grbl_delay_long:= 20;
     grbl_isnew:= true;
   end else begin
     grbl_delay_short:= 10;
@@ -58,7 +58,7 @@ begin
   deviceselectbox.ComboBoxCOMport.Items.add('none (FTDI direct)');
   for i := 0 to 31 do begin
     if CheckCom(i) = 0 then begin
-      deviceselectbox.ComboBoxCOMport.Items.add('COM' + IntToSTr(i) + ':');
+      deviceselectbox.ComboBoxCOMport.Items.add('COM' + IntToSTr(i));
     end;
   end;
   deviceselectbox.ComboBoxCOMport.ItemIndex:= 0; // Auswahl erzwingen
@@ -69,29 +69,11 @@ begin
   if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
     com_selected_port:= deviceselectbox.ComboBoxCOMport.ItemIndex - 1;
     com_name:= deviceselectbox.ComboBoxCOMport.Text;
-    com_isopen:= COMopen(com_name);
-    Memo1.lines.add('// Open serial port ' + com_name);
-    if com_isopen then begin
-      COMSetup(trim(deviceselectbox.EditBaudrate.Text));
-      DeviceView.Text:= 'Serial port ' + com_name;
-      mdelay(250);  // Arduino Startup Time
-      grbl_is_connected:= GetResponseAndSetButtons;
-      BtnRefreshGrblSettingsClick(nil);
-    end;
-  end else begin
-    com_selected_port:= -1;
-    com_isopen:= false;
-    if (ftdi_device_count > 0) then begin
-      ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
-      Memo1.lines.add('// ' + InitFTDI(ftdi_selected_device, deviceselectbox.EditBaudrate.Text));
-      if ftdi_isopen then begin
-        ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
-        DeviceView.Text:= ftdi_serial + ' - ' + ftdi_desc_arr[ftdi_selected_device];
-        mdelay(250);  // Arduino Startup Time
-        grbl_is_connected:= GetResponseAndSetButtons;
-        BtnRefreshGrblSettingsClick(nil);
-      end;
-    end;
+    com_was_open:= true; // wird dann im TimerBlink geöffnet
+  end else if (ftdi_device_count > 0) then begin
+    ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
+    ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
+    ftdi_was_open:= true; // wird dann im TimerBlink geöffnet
   end;
 end;
 
@@ -112,6 +94,7 @@ begin
   DeviceView.Text:= '(not selected)';
   DisableButtons;
   HomingPerformed:= false;
+  Memo1.lines.add('// COM/USB disconnected');
 end;
 
 // #############################################################################
@@ -195,6 +178,7 @@ begin
     TimerStatus.Enabled:= false;
     mdelay(120);
     with SgGrblSettings do begin
+      Progressbar1.max:= RowCount;
       grbl_checkResponse;
       if (RowCount < 3) then begin
         showmessage('GRBL settings are empty.');
@@ -208,11 +192,12 @@ begin
         my_str0:= Cells[0,i];
         my_str0:= copy(my_str0, 0, pos('=', my_str0));
         my_str1:= Cells[1,i];
-        if my_str1 <> setting_val_extr(Cells[0,i]) then begin
-          grbl_sendStr(my_str0+my_str1+#13, true);
-        end;
+        Progressbar1.Position:= i;
+        grbl_sendStr(my_str0+my_str1+#13, true);
+        mdelay(25);
       end;
     end;
+    Progressbar1.Position:= 0;
     BtnRefreshGrblSettingsClick(Sender);
   end;
 end;
