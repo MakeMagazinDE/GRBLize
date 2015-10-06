@@ -176,6 +176,7 @@ end;
 
 procedure TForm3.BtnCamIsAtZeroClick(Sender: TObject);
 begin
+  ClearCancelFlags;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
@@ -187,6 +188,7 @@ end;
 procedure TForm3.BtnCamAtHiliteClick(Sender: TObject);
 var x,y: Double;
 begin
+  ClearCancelFlags;
   if (HilitePoint < 0) and (HiliteBlock < 0) then
     exit;
 

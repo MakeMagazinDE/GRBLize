@@ -203,7 +203,7 @@ type
       MousePos: TPoint; var Handled: Boolean);
     procedure SgPensMouseWheelDown(Sender: TObject; Shift: TShiftState;
       MousePos: TPoint; var Handled: Boolean);
-    procedure BtnStopClick(Sender: TObject);
+    procedure BtnCancelClick(Sender: TObject);
     procedure RunJob;
     procedure BitBtnClearFilesClick(Sender: TObject);
     procedure FileNew1Execute(Sender: TObject);
@@ -251,6 +251,7 @@ type
 
 
   procedure SendGrblAndWaitForIdle;
+  procedure ClearCancelFlags;
 
   
 type
@@ -752,7 +753,7 @@ begin
       end;
       my_str:= grbl_sendlist.Strings[i];
       if length(my_str) > 1 then
-        if my_str[1] <> '/' then begin
+        if (my_str[1] <> '/') and (my_str[1] <> '(') then begin
           // Befehl ist kein Kommentar, also abschicken
           my_response:= grbl_sendStr(my_str + #13, true);
           Form1.Memo1.lines.add(my_str + ' // ' + my_response);

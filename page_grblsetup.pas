@@ -136,13 +136,14 @@ begin
       grbl_checkResponse;
       Rowcount:= 2;
       grbl_sendStr(#24, false);   // Reset CTRL-X
-      my_str:= grbl_receiveStr(500);
-      my_str:= grbl_receiveStr(500);
+      mdelay(250);
+      my_str:= grbl_receiveStr(500);  // Dummy
+      my_str:= grbl_receiveStr(100);
       Rows[0].text:= my_str;
 
       grbl_sendStr('$$' + #13, false);
       while not CancelGrbl do begin
-        my_str:= grbl_receiveStr(150);
+        my_str:= grbl_receiveStr(200);
         if my_str='ok' then
           break;
         Cells[0,RowCount-1]:= my_str;

@@ -46,11 +46,18 @@ end;
 // ######################## R U N  T A B  B U T T O N S ########################
 // #############################################################################
 
-
-procedure TForm1.BtnHomeCycleClick(Sender: TObject);
+procedure ClearCancelFlags;
 begin
   CancelWait:= false;
   CancelGrbl:= false;
+  CancelJob:= false;
+  CancelSim:= false;
+  Form1.ProgressBar1.position:= 0;
+end;
+
+procedure TForm1.BtnHomeCycleClick(Sender: TObject);
+begin
+  ClearCancelFlags;
   drawing_tool_down:= false;
   DisableButtons;
   Form1.Memo1.lines.add('');
@@ -67,8 +74,7 @@ end;
 
 procedure TForm1.BtnMoveWorkZeroClick(Sender: TObject);
 begin
-  CancelWait:= false;
-  CancelGrbl:= false;
+  ClearCancelFlags;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
@@ -149,6 +155,7 @@ end;
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
+  ClearCancelFlags;
   StartJogAction(Sender, (Sender as TBitBtn).Tag);
 end;
 
@@ -160,8 +167,7 @@ end;
 
 procedure TForm1.BtnMoveParkClick(Sender: TObject);
 begin
-  CancelWait:= false;
-  CancelGrbl:= false;
+  ClearCancelFlags;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TO PARK POSITION');
@@ -174,9 +180,8 @@ end;
 
 procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
 begin
+  ClearCancelFlags;
   drawing_tool_down:= false;
-  CancelWait:= false;
-  CancelGrbl:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE TO TOOL CHANGE POSITION');
   grbl_addStr('M5');
@@ -516,59 +521,52 @@ end;
 procedure TForm1.BtnRunJobClick(Sender: TObject);
 begin
   Memo1.lines.clear;
-  CancelWait:= false;
-  CancelGrbl:= false;
-  CancelJob:= false;
-  CancelSim:= false;
+  ClearCancelFlags;
   RunJob;
+  Form1.ProgressBar1.position:= 0;
 end;
 
 procedure TForm1.BtnRunGcodeClick(Sender: TObject);
 begin
   Memo1.lines.clear;
-  CancelWait:= false;
-  CancelGrbl:= false;
-  CancelJob:= false;
-  CancelSim:= false;
+  ClearCancelFlags;
   RunGcode;
+  Form1.ProgressBar1.position:= 0;
 end;
 
 procedure TForm1.BtnEmergencyStopClick(Sender: TObject);
 var
   my_response: String;
 begin
-  bm_scroll.x:= 0;
-  bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
+  DisableTimerStatus;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// EMERGENCY STOP AND MACHINE RESET');
   CancelWait:= true;
   CancelGrbl:= true;
   CancelJob:= true;
   CancelSim:= true;
-  while CancelGrbl or CancelJob do   // CancelGrbl wird im Timer gelöscht
-    Application.ProcessMessages;
-    // E-Stop ausführen
+  // E-Stop ausführen
   if grbl_is_connected and (not Form1.CheckBoxSim.checked) then begin
-    my_response:= grbl_sendStr(#24, true); // Ctrl-X Reset sofort senden
-    grbl_receiveStr(100);
+    grbl_sendStr(#24, false);   // Reset CTRL-X
+    mdelay(250);
+    my_response:= grbl_receiveStr(500);  // Dummy
+    my_response:= grbl_receiveStr(100);
     Form1.Memo1.lines.add('// CTRL-X RESET: ' + my_response);
+    showmessage('EMERGENCY STOP. Steps missed if running.'
+      + #13 + 'Click <Home Cycle> to release ALARM LOCK.');
     grbl_receiveStr(100);
-    Form1.Memo1.lines.add(' // ' + my_response);
-    SendGrblAndWaitForIdle; // bitte nicht unterbrechen
-    showmessage('EMERGENCY STOP. Steps missed - please run'
-      + #13 + 'Home Cycle to release ALARM LOCK.');
     EnableNotHomedButtons;
   end else
-    Form1.Memo1.lines.add('// CTRL-X RESET: #Device not open');
+    Form1.Memo1.lines.add('// CTRL-X RESET');
   HomingPerformed:= false;
-  SendGrblAndWaitForIdle;
   drawing_tool_down:= false;
+  grbl_checkResponse;
+  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
+  Form1.ProgressBar1.position:= 0;
 end;
 
-procedure TForm1.BtnStopClick(Sender: TObject);
+procedure TForm1.BtnCancelClick(Sender: TObject);
 begin
-  bm_scroll.x:= 0;
-  bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
   drawing_tool_down:= false;
   if Show3DPreview1.Checked then
     Form4.FormRefresh(Sender);
@@ -580,13 +578,12 @@ begin
   CancelSim:= true;
   // neue Z-Höhe wird in Timer bei CancelGrbl gesetzt
   Form1.Memo1.lines.add('// MACHINE STOPPED AT Z = ' + FormatFloat('0.00', job.z_penlift) + ' mm');
+  Form1.ProgressBar1.position:= 0;
 end;
 
 procedure TForm1.BtnZeroXClick(Sender: TObject);
 begin
-  CancelWait:= false;
-  CancelGrbl:= false;
-  CancelSim:= false;
+  ClearCancelFlags;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET X ZERO');
@@ -596,9 +593,7 @@ end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
-  CancelWait:= false;
-  CancelGrbl:= false;
-  CancelSim:= false;
+  ClearCancelFlags;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Y ZERO');
@@ -608,9 +603,7 @@ end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
 begin
-  CancelWait:= false;
-  CancelGrbl:= false;
-  CancelSim:= false;
+  ClearCancelFlags;
   drawing_tool_down:= false;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// SET Z ZERO');
