@@ -15,7 +15,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.0c';
+  c_VerStr: String = '1.1';
 
 type
   TForm1 = class(TForm)
@@ -442,8 +442,10 @@ begin
       ftdi_was_open:= false;
     if grbl_ini.ValueExists('DrawingFormVisible') then
       WindowMenu1.Items[0].Checked:= grbl_ini.ReadBool('DrawingFormVisible');
+
     if grbl_ini.ValueExists('CamFormVisible') then
       WindowMenu1.Items[1].Checked:= grbl_ini.ReadBool('CamFormVisible');
+
     if grbl_ini.ValueExists('SceneFormVisible') then
       WindowMenu1.Items[2].Checked:= grbl_ini.ReadBool('SceneFormVisible');
     if grbl_ini.ValueExists('NewGRBL') then
@@ -533,12 +535,6 @@ procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 var
   grbl_ini:TRegistry;
 begin
-  CancelGrbl:= true;
-  CancelJob:= true;
-  CancelWait:= true;
-
-  TimerDraw.Enabled:= false;
-  TimerStatus.Enabled:= false;
   grbl_ini:= TRegistry.Create;
   try
     grbl_ini.RootKey := HKEY_CURRENT_USER;
@@ -550,6 +546,7 @@ begin
     grbl_ini.WriteString('SettingsPath',JobSettingsPath);
     grbl_ini.WriteBool('DrawingFormVisible',Form1.WindowMenu1.Items[0].Checked);
     grbl_ini.WriteBool('CamFormVisible',Form1.WindowMenu1.Items[1].Checked);
+    grbl_ini.WriteBool('CamOn', CamIsOn);
     grbl_ini.WriteBool('SceneFormVisible',Form1.WindowMenu1.Items[2].Checked);
     grbl_ini.WriteBool('NewGRBL',deviceselectbox.CheckBoxNewGRBL.Checked);
     if ftdi_isopen then
@@ -563,6 +560,12 @@ begin
   finally
     grbl_ini.Free;
   end;
+
+  CancelGrbl:= true;
+  CancelJob:= true;
+  CancelWait:= true;
+  TimerDraw.Enabled:= false;
+  TimerStatus.Enabled:= false;
 
   if com_isopen then
     COMclose;

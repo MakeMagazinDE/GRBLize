@@ -21,21 +21,13 @@ object Form3: TForm3
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object VideoBox: TPaintBox
-    Left = 146
-    Top = 0
-    Width = 640
-    Height = 480
-    Color = clCream
-    ParentColor = False
-  end
   object BtnCamIsAtZero: TSpeedButton
     Left = 8
     Top = 228
     Width = 129
     Height = 25
     Hint = 'Camera center is above workpiece zero; set offsets accordingly'
-    Caption = 'Cam is at Part Zero'
+    Caption = 'Part Zero'
     Font.Charset = ANSI_CHARSET
     Font.Color = 2925325
     Font.Height = -12
@@ -47,9 +39,9 @@ object Form3: TForm3
     OnClick = BtnCamIsAtZeroClick
   end
   object Label1: TLabel
-    Left = 280
-    Top = 224
-    Width = 5
+    Left = 320
+    Top = 210
+    Width = 297
     Height = 19
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -64,7 +56,7 @@ object Form3: TForm3
     Width = 129
     Height = 25
     Hint = 'Camera center is above hilited point; set offsets accordingly'
-    Caption = 'Cam is at Hilite Point'
+    Caption = 'Hilite Point'
     Font.Charset = ANSI_CHARSET
     Font.Color = clFuchsia
     Font.Height = -12
@@ -74,6 +66,54 @@ object Form3: TForm3
     ParentShowHint = False
     ShowHint = True
     OnClick = BtnCamAtHiliteClick
+  end
+  object VideoBox: TPaintBox
+    Left = 143
+    Top = -4
+    Width = 640
+    Height = 480
+    Color = clCream
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 44
+    Top = 209
+    Width = 61
+    Height = 13
+    Caption = 'Cam is at...'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
+  end
+  object SpeedButton1: TSpeedButton
+    Left = 8
+    Top = 315
+    Width = 129
+    Height = 25
+    Caption = 'Part Zero'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clBlue
+    Font.Height = -12
+    Font.Name = 'Arial'
+    Font.Style = [fsBold]
+    ParentFont = False
+    OnClick = SpeedButton1Click
+  end
+  object Label3: TLabel
+    Left = 31
+    Top = 296
+    Width = 83
+    Height = 13
+    Caption = 'Move Cam to...'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
   end
   object RadioGroupCam: TRadioGroup
     Left = 8
@@ -139,7 +179,13 @@ object Form3: TForm3
     OnClick = OverlayColorClick
   end
   object ColorDialog1: TColorDialog
+    Left = 64
+    Top = 424
+  end
+  object Timer1: TTimer
+    Interval = 250
+    OnTimer = Timer1Timer
     Left = 16
-    Top = 296
+    Top = 424
   end
 end

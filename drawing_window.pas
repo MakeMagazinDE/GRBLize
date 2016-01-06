@@ -869,14 +869,20 @@ end;
 
 procedure TForm2.FormCreate(Sender: TObject);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    Top:= grbl_ini.ReadInteger('DrawingForm','Top',130);
-    Left:= grbl_ini.ReadInteger('DrawingForm','Left',130);
-    Width:= grbl_ini.ReadInteger('DrawingForm','Width',800);
-    Height:= grbl_ini.ReadInteger('DrawingForm','Height',600);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr,true);
+    if grbl_ini.ValueExists('DrawingFormTop') then
+      Top:= grbl_ini.ReadInteger('DrawingFormTop');
+    if grbl_ini.ValueExists('DrawingFormLeft') then
+      Left:= grbl_ini.ReadInteger('DrawingFormLeft');
+    if grbl_ini.ValueExists('DrawingFormWidth') then
+      Width:= grbl_ini.ReadInteger('DrawingFormWidth');
+    if grbl_ini.ValueExists('DrawingFormHeight') then
+      Height:= grbl_ini.ReadInteger('DrawingFormHeight');
   finally
     grbl_ini.Free;
   end;
@@ -893,17 +899,20 @@ end;
 
 procedure TForm2.FormClose(Sender: TObject; var Action: TCloseAction);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    grbl_ini.WriteInteger('DrawingForm','Top',Top);
-    grbl_ini.WriteInteger('DrawingForm','Left',Left);
-    grbl_ini.WriteInteger('DrawingForm','Width',Width);
-    grbl_ini.WriteInteger('DrawingForm','Height',Height);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
+    grbl_ini.WriteInteger('DrawingFormTop',Top);
+    grbl_ini.WriteInteger('DrawingFormLeft',Left);
+    grbl_ini.WriteInteger('DrawingFormWidth',Width);
+    grbl_ini.WriteInteger('DrawingFormHeight',Height);
   finally
     grbl_ini.Free;
   end;
+
   Form1.WindowMenu1.Items[0].Checked:= false;
 end;
 

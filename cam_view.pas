@@ -19,12 +19,18 @@ type
     ColorDialog1: TColorDialog;
     Label1: TLabel;
     BtnCamAtHilite: TSpeedButton;
+    Timer1: TTimer;
+    Label2: TLabel;
+    SpeedButton1: TSpeedButton;
+    Label3: TLabel;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnCamAtHiliteClick(Sender: TObject);
     procedure BtnCamIsAtZeroClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure OverlayColorClick(Sender: TObject);
     procedure RadioGroupCamClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
+    procedure SpeedButton1Click(Sender: TObject);
 
   private
     { Private-Deklarationen }
@@ -37,7 +43,7 @@ type
 
 var
   Form3: TForm3;
-  fActivated, fCamPresent : boolean;
+  fActivated, fCamPresent, CamIsOn : boolean;
   overlay_color: Tcolor;
 
 implementation
@@ -50,19 +56,26 @@ procedure TForm3.RadioGroupCamClick(Sender: TObject);
 begin
   case RadioGroupCam.ItemIndex of
     0:
-      if fActivated then begin
-        fActivated := false;
-        fVideoImage.VideoStop;
+      begin
+      Label1.Caption:='  Webcam/Video Device off';
+        if fActivated then begin
+          CamIsOn:= false;
+          fActivated := false;
+          fVideoImage.VideoStop;
+        end;
       end;
     1:
       if fCamPresent then begin
+        Label1.Caption:='    Initializing Webcam...';
+        Application.ProcessMessages;
         if not fActivated then
           fVideoImage.VideoStart(DeviceList[0]);
         fActivated:= true;
+        CamIsOn:= true;
       end else
         RadioGroupCam.ItemIndex:= 0;
   end;
-  Form3.Repaint;
+  Repaint;
 end;
 
 procedure TForm3.OnNewVideoFrame(Sender : TObject; Width, Height: integer; DataPtr: pointer);
@@ -104,16 +117,23 @@ end;
 
 procedure TForm3.FormCreate(Sender: TObject);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
   form_visible: boolean;
 
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    Top:= grbl_ini.ReadInteger('CamForm','Top',110);
-    Left:= grbl_ini.ReadInteger('CamForm','Left',110);
-    form_visible:= grbl_ini.ReadBool('CamForm','Visible',false);
-   finally
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr,true);
+    if grbl_ini.ValueExists('CamFormTop') then
+      Top:= grbl_ini.ReadInteger('CamFormTop');
+    if grbl_ini.ValueExists('CamFormLeft') then
+      Left:= grbl_ini.ReadInteger('CamFormLeft');
+    if grbl_ini.ValueExists('CamOn') then
+      CamIsOn:= grbl_ini.ReadBool('CamOn');
+    if grbl_ini.ValueExists('CamFormVisible') then
+      form_visible:= grbl_ini.ReadBool('CamFormVisible');
+  finally
     grbl_ini.Free;
   end;
 
@@ -144,28 +164,32 @@ begin
     DeviceList.Free;
     RadioGroupCam.ItemIndex:= 0;
     Label1.Caption:='No Webcam/Video Device found';
+    CamIsOn:= false;
   end else begin
     fCamPresent:= true;
     fVideoImage:= TVideoImage.Create;
     fVideoImage.OnNewVideoFrame := OnNewVideoFrame;
     Label1.Caption:='  Webcam/Video Device off';
+    if CamIsOn then
+//      RadioGroupCam.ItemIndex:= 1;
   end;
-  if form_visible then
-//    show;
 end;
 
 procedure TForm3.FormClose(Sender: TObject; var Action: TCloseAction);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    grbl_ini.WriteInteger('CamForm','Top',Top);
-    grbl_ini.WriteInteger('CamForm','Left',Left);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
+    grbl_ini.WriteInteger('CamFormTop',Top);
+    grbl_ini.WriteInteger('CamFormLeft',Left);
+    grbl_ini.WriteBool('CamOn', CamIsOn);
   finally
     grbl_ini.Free;
   end;
-  
+
   if fCamPresent then begin
     if fActivated then
       fVideoImage.VideoStop;
@@ -180,9 +204,9 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SetSimPositionMMxy(-job.cam_x, -job.cam_y);
-  NeedsRedraw:= true;
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(-job.cam_x,-job.cam_y);
+  exit;
 end;
 
 procedure TForm3.BtnCamAtHiliteClick(Sender: TObject);
@@ -193,21 +217,46 @@ begin
     exit;
 
   if HilitePoint >= 0 then begin
-    hilite_to(x,y);
+    ClearCancelFlags;
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
+    hilite_to(x,y);
   end else begin
-    hilite_center_to(x,y);
+    ClearCancelFlags;
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
+    hilite_center_to(x,y);
   end;
   x:= x - job.cam_x;
   y:= y - job.cam_y;
   grbl_offsXY(x, y);
-  SetSimPositionMMxy(x, y);
-  NeedsRedraw:= true;
   SendGrblAndWaitForIdle;
+  SetAllPosZupMM(x,y);
 end;
 
+procedure TForm3.SpeedButton1Click(Sender: TObject);
+begin
+  ClearCancelFlags;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
+  grbl_moveZ(0, true);  // move Z up
+  grbl_moveXY(-job.cam_x,-job.cam_y, false);
+  grbl_moveZ(job.cam_z, false);
+  SendGrblAndWaitForIdle;
+  SetAllPosZupMM(-job.cam_x,-job.cam_y);
+end;
+
+
+procedure TForm3.Timer1Timer(Sender: TObject);
+begin
+  if (HilitePoint < 0) and (HiliteBlock < 0) then
+    BtnCamAtHilite.Enabled:= false
+  else
+    BtnCamAtHilite.Enabled:= true;
+  if HilitePoint >= 0 then
+    BtnCamAtHilite.Caption:= 'Hilite Point'
+  else
+    BtnCamAtHilite.Caption:= 'Object Center';
+end;
 
 end.

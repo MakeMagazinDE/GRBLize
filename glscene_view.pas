@@ -472,12 +472,16 @@ end;
 
 procedure TForm4.FormCreate(Sender: TObject);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    Top:= grbl_ini.ReadInteger('SceneForm','Top',110);
-    Left:= grbl_ini.ReadInteger('SceneForm','Left',110);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
+    if grbl_ini.ValueExists('SceneFormTop') then
+      Top:= grbl_ini.ReadInteger('SceneFormTop');
+    if grbl_ini.ValueExists('SceneFormLeft') then
+      Left:= grbl_ini.ReadInteger('SceneFormLeft');
   finally
     grbl_ini.Free;
   end;
@@ -488,12 +492,16 @@ end;
 
 procedure TForm4.FormClose(Sender: TObject; var Action: TCloseAction);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    grbl_ini.WriteInteger('SceneForm','Top',Top);
-    grbl_ini.WriteInteger('SceneForm','Left',Left);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
+    grbl_ini.WriteInteger('SceneFormTop',Top);
+    grbl_ini.WriteInteger('SceneFormLeft',Left);
+//    grbl_ini.WriteInteger('SceneFormWidth',Width);
+//    grbl_ini.WriteInteger('SceneFormHeight',Height);
   finally
     grbl_ini.Free;
   end;
