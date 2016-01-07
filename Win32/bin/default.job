@@ -1,5 +1,5 @@
 #Files
-E:\Dropbox\GRBLize_XE8\Win32\bin\TestDaten\ct-logo.plt,-1,0°,OFF,0,0,100," "
+E:\Dropbox\GRBLize_XE8\Win32\bin\Testdaten\ct-logo.plt,-1,0°,OFF,0,0,100," "
 " ",-1,0°,OFF,0,0,100," "
 " ",-1,0°,OFF,0,0,100," "
 " ",-1,0°,OFF,0,0,100," "
@@ -8,7 +8,7 @@ E:\Dropbox\GRBLize_XE8\Win32\bin\TestDaten\ct-logo.plt,-1,0°,OFF,0,0,100," "
 " ",-1,0°,OFF,0,0,100," "
 #Pens
 P0,0,OFF,"0,0","0,3",400,"00,0","00,0","100,0",0,"1,0",0,0
-P1,16512,ON,"1,0","0,3",4000,"00,0","00,0","50,0",0,"1,0",0,1
+P1,16512,ON,"3,0","0,3",1000,"00,0","00,0","50,0",1,"1,0",0,0
 P2,255,OFF,"0,0","0,3",400,"00,0","00,0","100,0",0,"1,0",0,0
 P3,33023,OFF,"0,0","0,3",400,"00,0","00,0","100,0",0,"1,0",0,0
 P4,65535,OFF,"0,0","0,3",400,"00,0","00,0","100,0",0,"1,0",0,0
@@ -48,34 +48,10 @@ D20,8421504,OFF,"0,0","2,0",500,"00,0","00,0","100,0",4,"3,0",0,0
 "Z Gauge",10
 "Optimize Drill Path",ON
 "Use Excellon Drill Diameters",ON
-"Tool Change Pause",OFF
-"Tool Change X absolute",10
-"Tool Change Y absolute",100
-"Tool Change Z absolute",-5
-"Park Position on End",ON
-"Park X absolute",200
-"Park Y absolute",100
-"Park Z absolute",-5
-"Cam X Offset",-20
-"Cam Y Offset",40
-"Cam Z Height above Part",20
-"Use Tool Z Probe",OFF
-"Probe X absolute",30
-"Probe Y absolute",30
-"Probe Z absolute",-5
-"Invert Z in G-Code",OFF
-"Scale Z Feed",1
-"Spindle Accel Time (s)",4
-"ATC enable",OFF
-"ATC zero X absolute",50
-"ATC zero Y absolute",20
-"ATC pickup height Z abs",-20
-"ATC row X distance",20
-"ATC row Y distance",0
 #Blocks
-1,1,ON,"1,0",CONTOUR,"56,33/4,53 - 94,22/65,30","75,28/34,90",27
-2,1,ON,"1,0",CONTOUR,"46,95/35,17 - 64,22/65,30","55,58/50,23",6
-3,1,ON,"1,0",CONTOUR,"12,25/4,65 - 51,45/50,05","31,85/27,35",38
+1,1,ON,"3,0",INSIDE,"56,33/4,53 - 94,22/65,30","75,28/34,90",36
+2,1,ON,"3,0",INSIDE,"46,95/35,17 - 64,22/65,30","55,58/50,23",10
+3,1,ON,"3,0",INSIDE,"12,25/4,65 - 51,45/50,05","31,85/27,35",39
 #Comment
 Your Job Description
 
