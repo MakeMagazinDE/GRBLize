@@ -15,22 +15,29 @@ type
     StaticText1: TStaticText;
     StaticText6: TStaticText;
     OverlayColor: TPanel;
-    BtnCamIsAtZero: TSpeedButton;
+    BtnCamAtZero: TSpeedButton;
     ColorDialog1: TColorDialog;
     Label1: TLabel;
-    BtnCamAtHilite: TSpeedButton;
+    BtnCamAtPoint: TSpeedButton;
     Timer1: TTimer;
     Label2: TLabel;
-    SpeedButton1: TSpeedButton;
+    BtnMoveCamZero: TSpeedButton;
     Label3: TLabel;
+    Label4: TLabel;
+    BtnMoveToolZero: TSpeedButton;
+    BtnMoveCamPoint: TSpeedButton;
+    BtnMoveToolPoint: TSpeedButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure BtnCamAtHiliteClick(Sender: TObject);
-    procedure BtnCamIsAtZeroClick(Sender: TObject);
+    procedure BtnCamAtPointClick(Sender: TObject);
+    procedure BtnCamAtZeroClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure OverlayColorClick(Sender: TObject);
     procedure RadioGroupCamClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
-    procedure SpeedButton1Click(Sender: TObject);
+    procedure BtnMoveCamZeroClick(Sender: TObject);
+    procedure BtnMoveCamPointClick(Sender: TObject);
+    procedure BtnMoveToolPointClick(Sender: TObject);
+    procedure BtnMoveToolZeroClick(Sender: TObject);
 
   private
     { Private-Deklarationen }
@@ -84,8 +91,6 @@ var
   bm_center_x, bm_center_y: Integer;
 begin
   // Retreive latest video image
-  if not Form1.WindowMenu1.Items[0].Checked then
-    exit;
   if not fActivated then
     exit;
   fVideoImage.GetBitmap(fVideoBitmap);
@@ -198,32 +203,26 @@ begin
   Form1.WindowMenu1.Items[1].Checked:= false;
 end;
 
-procedure TForm3.BtnCamIsAtZeroClick(Sender: TObject);
+procedure TForm3.BtnCamAtZeroClick(Sender: TObject);
 begin
   ClearCancelFlags;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(-job.cam_x,-job.cam_y);
-  exit;
 end;
 
-procedure TForm3.BtnCamAtHiliteClick(Sender: TObject);
+procedure TForm3.BtnCamAtPointClick(Sender: TObject);
 var x,y: Double;
 begin
   ClearCancelFlags;
   if (HilitePoint < 0) and (HiliteBlock < 0) then
     exit;
-
+  Form1.Memo1.lines.add('');
   if HilitePoint >= 0 then begin
-    ClearCancelFlags;
-    Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
     hilite_to(x,y);
   end else begin
-    ClearCancelFlags;
-    Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
     hilite_center_to(x,y);
   end;
@@ -231,32 +230,92 @@ begin
   y:= y - job.cam_y;
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
-procedure TForm3.SpeedButton1Click(Sender: TObject);
+procedure TForm3.BtnMoveCamPointClick(Sender: TObject);
+var x,y: Double;
+begin
+  ClearCancelFlags;
+  if (HilitePoint < 0) and (HiliteBlock < 0) then
+    exit;
+  Form1.Memo1.lines.add('');
+  if HilitePoint >= 0 then begin
+    Form1.Memo1.lines.add('// MOVE CAM TO POINT');
+    hilite_to(x,y);
+  end else begin
+    Form1.Memo1.lines.add('// MOVE CAM TO CENTER');
+    hilite_center_to(x, y);
+  end;
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
+  grbl_moveZ(0, true);  // move Z up
+  grbl_moveXY(x, y, false);
+  SendGrblAndWaitForIdle;
+  grbl_moveZ(job.cam_z_abs, true);
+  SendGrblAndWaitForIdle;
+end;
+
+procedure TForm3.BtnMoveCamZeroClick(Sender: TObject);
 begin
   ClearCancelFlags;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
-  grbl_moveZ(job.cam_z, false);
+  grbl_moveZ(job.cam_z_abs, true);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(-job.cam_x,-job.cam_y);
 end;
 
+procedure TForm3.BtnMoveToolPointClick(Sender: TObject);
+var x,y: Double;
+begin
+  ClearCancelFlags;
+  Form1.Memo1.lines.add('');
+  if HilitePoint >= 0 then begin
+    Form1.Memo1.lines.add('// MOVE TOOL TO POINT');
+    hilite_to(x,y);
+  end else begin
+    Form1.Memo1.lines.add('// MOVE TOOL TO CENTER');
+    hilite_center_to(x,y);
+  end;
+  grbl_moveZ(0, true);  // move Z up absolute
+  grbl_moveXY(x, y, false);
+  SendGrblAndWaitForIdle;
+  grbl_moveZ(job.z_penlift, false);
+  SendGrblAndWaitForIdle;
+end;
+
+procedure TForm3.BtnMoveToolZeroClick(Sender: TObject);
+begin
+  ClearCancelFlags;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
+  grbl_moveZ(0, true);  // move Z up absolute
+  grbl_moveXY(0,0, false);
+  grbl_moveZ(job.z_penlift, false);
+  SendGrblAndWaitForIdle;
+end;
 
 procedure TForm3.Timer1Timer(Sender: TObject);
 begin
-  if (HilitePoint < 0) and (HiliteBlock < 0) then
-    BtnCamAtHilite.Enabled:= false
-  else
-    BtnCamAtHilite.Enabled:= true;
-  if HilitePoint >= 0 then
-    BtnCamAtHilite.Caption:= 'Hilite Point'
-  else
-    BtnCamAtHilite.Caption:= 'Object Center';
+  if (HilitePoint < 0) and (HiliteBlock < 0) then begin
+    BtnCamAtPoint.Enabled:= false;
+    BtnMoveToolPoint.Enabled:= false;
+    BtnMoveCamPoint.Enabled:= false;
+  end else begin
+    BtnCamAtPoint.Enabled:= true;
+    BtnMoveToolPoint.Enabled:= true;
+    BtnMoveCamPoint.Enabled:= true;
+    if HilitePoint >= 0 then begin
+      BtnCamAtPoint.Caption:= 'Hilite Point';
+      BtnMoveCamPoint.Caption:= 'Hilite Point';
+      BtnMoveToolPoint.Caption:= 'Hilite Point';
+    end else begin
+      BtnCamAtPoint.Caption:= 'Object Center';
+      BtnMoveCamPoint.Caption:= 'Object Center';
+      BtnMoveToolPoint.Caption:= 'Object Center';
+    end;
+  end;
 end;
 
 end.

@@ -531,7 +531,7 @@ object AboutBox: TAboutBox
       Color = clBtnFace
       Lines.Strings = (
         'HPGL/Excellon Converter/Viewer and G-Code Player'
-        'for GRBL-JOGGER step controller'
+        'for GRBL-JOG step controller or GRBL from # 0.9'
         ''
         'Written by Carsten Meyer, cm@ct.de '
         '(c) Heise Zeitschriften, c'#39't Hacks/Make 11/2014'

@@ -65,10 +65,11 @@ begin
   grbl_addStr('$h');
   grbl_offsXY(0,0);
   grbl_offsZ(0);
-  grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
+  grbl_addStr('G92 Z0');
   SendGrblAndWaitForIdle;
   HomingPerformed:= true;
   EnableRunButtons;
+  mdelay(grbl_delay_long);
 end;
 
 
@@ -95,7 +96,7 @@ var dx, dy, dz, x, y, z: Double;
   first_loop_done: Boolean;
   my_delay: Integer;
 begin
-  //DisableTimerStatus;
+  DisableTimerStatus;
   dx:= 0;
   dy:= 0;
   dz:= 0;
@@ -120,35 +121,43 @@ begin
     25: dz:= -10;
   end;
   MouseJogAction := True;
-  x:= grbl_wpos.X; // derzeitige Position
-  y:= grbl_wpos.Y;
-  z:= grbl_wpos.Z;
+  x:= grbl_mpos.X; // derzeitige Position
+  y:= grbl_mpos.Y;
+  z:= grbl_mpos.Z;
   first_loop_done:= false;
   my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
   repeat
     x:= x + dx;
+    if x < 0 then
+      x:= 0;
+    if x > TableX then
+      x:= TableX;
+
     y:= y + dy;
+    if y < 0 then
+      y:= 0;
+    if y > TableY then
+      y:= TableY;
+
     z:= z + dz;
+    if z > 0 then
+      z:= 0;
+
     if dx <> 0 then
-      my_str:= 'G0 X' + FloatToStrDot(x);
+      my_str:= 'G0 G53 X' + FloatToStrDot(x);
     if dy <> 0 then
-      my_str:= 'G0 Y' + FloatToStrDot(y);
+      my_str:= 'G0 G53 Y' + FloatToStrDot(y);
     if dz <> 0 then
-      my_str:= 'G0 Z' + FloatToStrDot(z);
-    if not Form1.CheckBoxSim.checked then begin
-      grbl_sendStr(my_str + #13, true);
-    end;
-    Form1.Memo1.lines.add(my_str + ' // JOG');
+      my_str:= 'G0 G53 Z' + FloatToStrDot(z);
+    if not Form1.CheckBoxSim.checked then
+      Form1.Memo1.lines.add(my_str + ' // ' + grbl_sendStr(my_str + #13, true));
     if not first_loop_done then
       mdelay(300)
     else
       mdelay(my_delay);
     first_loop_done:= true;
-    SetDrawingToolPosMM(x, y, grbl_wpos.Z);
-    SetSimPosColorMM(x, y, grbl_wpos.z, clGray);
   until MouseJogAction = False; // stop when cancelled
-  grbl_wpos.X:= x;
-  grbl_wpos.Y:= y;
+  Form1.TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
 end;
 
 
@@ -465,6 +474,11 @@ var
   my_Settings: TFormatSettings;
 
 begin
+  SendGrblAndWaitForIdle;
+  mdelay(grbl_delay_long);
+  WorkZeroZ:= grbl_mpos.Z;
+  WorkZeroX:= grbl_mpos.X;
+  WorkZeroY:= grbl_mpos.Y;
   if Form4.ComboBoxSimType.ItemIndex = 1 then
     Form4.ComboBoxSimType.ItemIndex:= 2;
   SetSimToolMM(ComboBoxGdia.ItemIndex+1, ComboBoxGTip.ItemIndex, clGray); // Werkzeugform und Farbe
@@ -553,7 +567,7 @@ begin
     my_response:= grbl_receiveStr(100);
     Form1.Memo1.lines.add('// CTRL-X RESET: ' + my_response);
     showmessage('EMERGENCY STOP. Steps missed if running.'
-      + #13 + 'Click <Home Cycle> to release ALARM LOCK.');
+      + #13 + 'Click <Home Cycle> or <Alarm> to release ALARM LOCK.');
     grbl_receiveStr(100);
     EnableNotHomedButtons;
   end else
@@ -589,6 +603,8 @@ begin
   Form1.Memo1.lines.add('// SET X ZERO');
   grbl_addStr('G92 X0');
   SendGrblAndWaitForIdle;
+  mdelay(grbl_delay_long);
+  WorkZeroX:= grbl_mpos.X;
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
@@ -599,6 +615,8 @@ begin
   Form1.Memo1.lines.add('// SET Y ZERO');
   grbl_addStr('G92 Y0');
   SendGrblAndWaitForIdle;
+  mdelay(grbl_delay_long);
+  WorkZeroY:= grbl_mpos.Y;
 end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
@@ -609,4 +627,6 @@ begin
   Form1.Memo1.lines.add('// SET Z ZERO');
   grbl_addStr('G92 Z'+FloatToStrDot(job.z_gauge));
   SendGrblAndWaitForIdle;
+  mdelay(grbl_delay_long);
+  WorkZeroZ:= grbl_mpos.Z;
 end;

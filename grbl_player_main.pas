@@ -15,7 +15,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.1';
+  c_VerStr: String = '1.1b';
 
 type
   TForm1 = class(TForm)
@@ -104,7 +104,7 @@ type
     ShowDrawing1: TMenuItem;
     Show3DPreview1: TMenuItem;
     ShowSpindleCam1: TMenuItem;
-    SgAppdefaults: TStringGrid;
+    SgJobDefaults: TStringGrid;
     MemoComment: TMemo;
     Label3: TLabel;
     TimerStatus: TTimer;
@@ -153,11 +153,25 @@ type
     Label18: TLabel;
     BtnLoadGrblSetup: TSpeedButton;
     BtnSaveGrblSetup: TSpeedButton;
-    EditStatus: TEdit;
     TimerBlink: TTimer;
     EditZoffs: TEdit;
     Label19: TLabel;
+    Memo2: TMemo;
+    LabelWorkX: TLabel;
+    Bevel6: TBevel;
+    LabelWorkY: TLabel;
+    LabelWorkZ: TLabel;
+    Label23: TLabel;
+    Label20: TLabel;
+    Label21: TLabel;
+    Label22: TLabel;
     ProgressBar1: TProgressBar;
+    Bevel7: TBevel;
+    SgAppDefaults: TStringGrid;
+    Label24: TLabel;
+    Label25: TLabel;
+    Label26: TLabel;
+    LabelFaults: TLabel;
     procedure RunGcode;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
@@ -169,14 +183,14 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure SgFilesMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure SgAppdefaultsMouseDown(Sender: TObject; Button: TMouseButton;
+    procedure SgJobDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure ShowSpindleCam1Click(Sender: TObject);
     procedure Show3DPreview1Click(Sender: TObject);
     procedure ShowDrawing1Click(Sender: TObject);
-    procedure SgAppdefaultsExit(Sender: TObject);
-    procedure SgAppdefaultsKeyPress(Sender: TObject; var Key: Char);
-    procedure SgAppdefaultsClick(Sender: TObject);
+    procedure SgJobDefaultsExit(Sender: TObject);
+    procedure SgJobDefaultsKeyPress(Sender: TObject; var Key: Char);
+    procedure SgJobDefaultsClick(Sender: TObject);
     procedure SgPensKeyPress(Sender: TObject; var Key: Char);
     procedure SgFilesKeyPress(Sender: TObject; var Key: Char);
     procedure ComboBox1Exit(Sender: TObject);
@@ -188,7 +202,7 @@ type
     procedure SgGrblSettingsDrawCell(Sender: TObject; ACol,
       ARow: Integer; Rect: TRect; State: TGridDrawState);
     procedure BtnRefreshGrblSettingsClick(Sender: TObject);
-    procedure SgAppdefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
+    procedure SgJobDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
     procedure BtnHomeCycleClick(Sender: TObject);
     procedure BtnZeroZClick(Sender: TObject);
@@ -234,6 +248,14 @@ type
     procedure BtnLoadGrblSetupClick(Sender: TObject);
     procedure BtnSaveGrblSetupClick(Sender: TObject);
     procedure TimerBlinkTimer(Sender: TObject);
+    procedure Panel4Click(Sender: TObject);
+    procedure SgAppDefaultsKeyPress(Sender: TObject; var Key: Char);
+    procedure SgAppDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure SgAppDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
+      Rect: TRect; State: TGridDrawState);
+    procedure SgAppDefaultsClick(Sender: TObject);
+    procedure SgAppDefaultsExit(Sender: TObject);
 
   private
     { Private declarations }
@@ -278,9 +300,14 @@ var
   grbl_mpos, grbl_wpos, old_grbl_wpos: T3dFloat;
   grbl_busy: Boolean;
   TimerGrblCount: Integer;
-  TimerStatusFinished, TimerBlinkToggle: Boolean;
+  TimerStatusFinished, TimerStatusToggle, TimerBlinkToggle: Boolean;
+  TimerStatusResponse: String;
   MouseJogAction: Boolean;
   open_request, ftdi_was_open, com_was_open: boolean;
+  WorkZeroX, WorkZeroY, WorkZeroZ: Double;  // Absolutwerte Werkstück-Null
+  TableX, TableY, TableZ: Double;           // Abmessungen Arbeitsfläche
+  IsIdle: Boolean;                          // GRBL ist in Ruhe
+  ResponseFaultCounter: Integer;
 
 implementation
 
@@ -338,27 +365,7 @@ begin
   end;
 end;
 
-procedure DisableTimerStatus;
-begin
-{
-  if Form1.TimerStatus.enabled then begin
-    TimerStatusFinished:= false;
-    repeat
-      Application.ProcessMessages;
-    until TimerStatusFinished;
-    Form1.TimerStatus.enabled:= false;
-  end else
-    TimerStatusFinished:= true;
-}
-  if Form1.TimerStatus.enabled then begin
-    Form1.TimerStatus.enabled:= false;
-    mdelay(Form1.TimerStatus.Interval + 10);
-  end;
-  while grbl_receiveCount > 0 do begin
-    grbl_receiveStr(grbl_delay_short);   // Dummy lesen
-    mdelay(grbl_delay_short);
-  end;
-end;
+procedure DisableTimerStatus; forward;
 
 // #############################################################################
 // ############################# I N C L U D E S ###############################
@@ -401,10 +408,15 @@ begin
   grbl_receveivelist:= TStringList.create;
   grbl_sendlist:= TStringList.create;
   grbl_is_connected:= false;
-  grbl_delay_short:= 10;
-  grbl_delay_long:= 50;
-  grbl_isnew:= false;
+  grbl_delay_short:= 15;   // Könnte man von Baudrate abhängig machen
+  grbl_delay_long:= 80;
   LEDbusy:= Tled.Create;
+  WorkZeroX:= 0;
+  WorkZeroY:= 0;
+  WorkZeroZ:= 0;
+  TableX:= 1500;
+  TableY:= 1000;
+  TableZ:= 250;
   InitJob;
   UnHilite;
   Caption := c_ProgNameStr;
@@ -448,8 +460,6 @@ begin
 
     if grbl_ini.ValueExists('SceneFormVisible') then
       WindowMenu1.Items[2].Checked:= grbl_ini.ReadBool('SceneFormVisible');
-    if grbl_ini.ValueExists('NewGRBL') then
-      deviceselectbox.CheckBoxNewGRBL.Checked:= grbl_ini.ReadBool('NewGRBL');
     if grbl_ini.ValueExists('ComBaudrate') then
       deviceselectbox.EditBaudrate.Text:= grbl_ini.ReadString('ComBaudrate');
     if grbl_ini.ValueExists('ComPort') then
@@ -496,6 +506,7 @@ begin
   SgFiles.Row:=1;
   SgFiles.Col:=4;
 
+  LoadIniFile;
   if FileExists(JobSettingsPath) then
     OpenJobFile(JobSettingsPath)
   else
@@ -506,16 +517,16 @@ begin
   SgAppdefaults.FixedCols:= 1;
 
   Form4.FormRefresh(nil);
-  SetSimPositionMMxyz(0,0, job.z_gauge);
-  SetDrawingToolPosMM(0, 0, job.z_gauge);
+  SetSimPositionMMxyz(0, 0, 0);
+  SetDrawingToolPosMM(0, 0, 0);
   SetSimToolMM(ComboBoxGdia.ItemIndex, ComboBoxGTip.ItemIndex, clGray);
 
-  SetDelays;
   BringToFront;
   Memo1.lines.add('// ' + SetUpFTDI);
   TimerDraw.Enabled:= true;
   TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
   TimerBlink.Enabled:= true;
+  TimerStatusToggle:= false;
 end;
 
 
@@ -548,7 +559,6 @@ begin
     grbl_ini.WriteBool('CamFormVisible',Form1.WindowMenu1.Items[1].Checked);
     grbl_ini.WriteBool('CamOn', CamIsOn);
     grbl_ini.WriteBool('SceneFormVisible',Form1.WindowMenu1.Items[2].Checked);
-    grbl_ini.WriteBool('NewGRBL',deviceselectbox.CheckBoxNewGRBL.Checked);
     if ftdi_isopen then
       grbl_ini.WriteString('FTDIdeviceSerial', ftdi_serial)
     else
@@ -575,6 +585,7 @@ begin
     freeandnil(ftdi);
   end;
   grbl_is_connected:= false;
+  SaveIniFile;
 
   mdelay(200);
   if IsFormOpen('AboutBox') then
@@ -594,6 +605,12 @@ begin
   SgPens.Col:= 3;
   SgPens.Row:= 1;
   Form4.FormRefresh(sender);
+end;
+
+procedure TForm1.Panel4Click(Sender: TObject);
+begin
+  grbl_sendStr('$X' + #13, false);
+
 end;
 
 // #############################################################################
@@ -632,6 +649,7 @@ var
   my_device: fDevice;
   my_description: String;
 begin
+  LabelFaults.Caption:= 'ResponseFaults: ' + IntToStr(ResponseFaultCounter);
   TimerBlink.Enabled:= false;
   if (not HomingPerformed) and grbl_is_connected then
     if TimerBlinkToggle then
@@ -639,18 +657,12 @@ begin
     else
       Form1.BtnHomeCycle.Font.Color:= clfuchsia;
   TimerBlinkToggle:= not TimerBlinkToggle;
-  if not grbl_is_connected then begin
-    grbl_wpos.z:= job.z_gauge;
-    PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-  end;
-
 // darf nicht in FormCreate stehen, wird dort durch Application.processmessages in mdelay() gestört
   if ftdi_was_open and (ftdi_device_count > 0) then
     if ftdi.isPresentBySerial(ftdi_serial) then begin
       // Öffnet Device nach Seriennummer
       // Stellt sicher, dass das beim letzten Form1.Close
       // geöffnete Device auch weiterhin verfügbar ist.
-      setDelays;
       Memo1.lines.add('// ' + InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text) + ' - PLEASE WAIT...');
       ftdi.getDeviceInfo(my_device, pid, vid, my_description, ftdi_serial);
       DeviceView.Text:= ftdi_serial + ' - ' + my_description;
@@ -663,7 +675,6 @@ begin
     com_isopen:= COMopen(com_name);
     Memo1.lines.add('// ' + com_name + ' connected - PLEASE WAIT...');
     if com_isopen then begin
-      setDelays;
       COMSetup(trim(deviceselectbox.EditBaudrate.Text));
       DeviceView.Text:= 'Serial port ' + com_name;
       mdelay(2000);  // Arduino Startup Time
@@ -690,19 +701,198 @@ begin
   end;
 end;
 
+// #############################################################################
+// #############################################################################
+
+procedure DisableTimerStatus;
+begin
+  if Form1.TimerStatus.enabled then begin
+    TimerStatusFinished:= false;
+    repeat
+      Application.ProcessMessages;
+    until TimerStatusFinished;
+    Form1.TimerStatus.enabled:= false;
+  end else
+    TimerStatusFinished:= true;
+{
+  if Form1.TimerStatus.enabled then begin
+    Form1.TimerStatus.enabled:= false;
+    mdelay(Form1.TimerStatus.Interval + 10);
+  end;
+}
+  if not grbl_is_connected then
+    exit;
+  while grbl_receiveCount > 0 do
+    grbl_receiveStr(grbl_delay_short);   // Dummy lesen
+end;
+
+procedure RequestStatus;
+var my_response: String;
+begin
+  if not grbl_is_connected then
+    exit;
+  while grbl_receiveCount > 0 do
+    my_response:= grbl_receiveStr(grbl_delay_short);  // Dummy lesen
+  grbl_sendStr('?', false);          // neuen Status anfordern
+end;
+
+function GetStatus: String;
+var my_response: String;
+begin
+  result:= '';
+  if not grbl_is_connected then
+    exit;
+  RequestStatus;
+  my_response:= grbl_receiveStr(grbl_delay_long); // ca. 50 Zeichen maximal
+  result:= my_response;
+end;
+
+function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
+// liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
+// setzt pos_changed wenn sich Position änderte
+var
+  my_str: String;
+  my_start_idx: Integer;
+  is_valid: Boolean;
+
+begin
+  result:= false;
+  pos_changed:= false;
+//  update_abs:= false;
+
+//  Form1.EditStatus.Text:= my_response;
+
+  // Format bei GRBL 0.9j: <Idle,MPos:0.000,0.000,0.000,WPos:0.000,0.000,0.000>
+  if (pos('>', my_response) < 1) then begin  // nicht vollständig
+    inc(ResponseFaultCounter);
+    exit;
+  end;
+  if (my_response[1] = '<') then begin
+    my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
+    my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
+    my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
+  end else begin
+    inc(ResponseFaultCounter);
+    exit;
+  end;
+
+  is_valid:= false;
+  with Form1 do begin
+    grbl_receveivelist.clear;
+    grbl_receveivelist.CommaText:= my_response;
+    if grbl_receveivelist.Count < 2 then
+      exit;   // Meldung unvollständig
+    my_Str:= grbl_receveivelist[0];
+    if my_Str = 'Idle' then begin
+      Panel1.Color:= clLime;
+      Panel1.Font.Color:= clwhite;
+      is_valid:= true;
+      IsIdle:= true;
+    end else begin
+      Panel1.Color:= $00004000;
+      Panel1.Font.Color:= clgray;
+      IsIdle:= false;
+    end;
+    if (my_Str = 'Queue') or (my_Str =  'Hold') then begin
+      is_valid:= true;
+      Panel2.Color:= clAqua;
+      Panel2.Font.Color:= clwhite;
+      result:= true;
+      IsIdle:= false;
+    end else begin
+      Panel2.Color:= $00400000;
+      Panel2.Font.Color:= clgray;
+    end;
+
+    if (my_Str = 'Run') or AnsiContainsStr(my_Str,'Jog') then begin
+      is_valid:= true;
+      Panel3.Color:= clFuchsia;
+      Panel3.Font.Color:= clwhite;
+      result:= true;
+      IsIdle:= false;
+    end else begin
+      Panel3.Color:= $00400040;
+      Panel3.Font.Color:= clgray;
+    end;
+
+    if my_Str = 'Alarm' then begin
+      is_valid:= true;
+      Panel4.Color:= clRed;
+      Panel4.Font.Color:= clwhite;
+      IsIdle:= true;
+    end else begin
+      Panel4.Color:= $00000040;
+      Panel4.Font.Color:= clgray;
+    end;
+    // keine gültige Statusmeldung?
+    if not is_valid then begin
+      inc(ResponseFaultCounter);
+      exit;
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('MPos');
+    if my_start_idx >= 0 then begin
+      grbl_mpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      MPosX.Caption:= grbl_receveivelist[my_start_idx+1];
+      grbl_mpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
+      MPosY.Caption:= grbl_receveivelist[my_start_idx+2];
+      grbl_mpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
+      MPosZ.Caption:= grbl_receveivelist[my_start_idx+3];
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('WPos');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
+      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
+      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('JogX');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('JogY');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+    end;
+    my_start_idx:= grbl_receveivelist.IndexOf('JogZ');
+    if my_start_idx >= 0 then begin
+      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
+      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+    end;
+  end;
+  if (old_grbl_wpos.X <> grbl_wpos.X) or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
+    pos_changed:= true;
+    old_grbl_wpos:= grbl_wpos;
+  end;
+end;
+
+
 procedure TForm1.TimerStatusElapsed(Sender: TObject);
-// alle 100 ms aufgerufen. Zeit reicht zum Empfang der Statusmeldung
+// alle 50 ms aufgerufen. Erster Aufruf: GRBL-Status anfordern.
+// Zweite Aufruf: Aufgelaufene Meldung dekodieren. Zeit reicht zum Empfang der Statusmeldung
 var pos_changed: Boolean;
 begin
   pos_changed:= false;
-  getStatus(pos_changed); // dauert maximal ca. 80 ms
-  if pos_changed then begin
+  if not TimerStatusToggle then begin
+    RequestStatus;
+  end else begin
+    DecodeStatus(grbl_receiveStr(grbl_delay_long), pos_changed); // dauert maximal ca. 80 ms
     SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
     SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
-    TimerStatus.Interval:= 100
-  end else
-    TimerStatus.Interval:= 250;
-  TimerStatusFinished:= true;
+    if IsIdle and (not pos_changed) then begin
+      WorkZeroX:= grbl_mpos.x - grbl_wpos.x;
+      WorkZeroY:= grbl_mpos.y - grbl_wpos.y;
+      WorkZeroZ:= grbl_mpos.z - grbl_wpos.z;
+      Form1.LabelWorkX.Caption:= FormatFloat('000.00', WorkZeroX);
+      Form1.LabelWorkY.Caption:= FormatFloat('000.00', WorkZeroY);
+      Form1.LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
+    end;
+    TimerStatusFinished:= true;
+  end;
+  TimerStatusToggle:= not TimerStatusToggle;
 end;
 
 procedure SendGrblAndWaitForIdle;
@@ -750,7 +940,7 @@ begin
     for i:= 0 to my_count-1 do begin
       if i mod 10 = 0 then begin           // alle 10 Zeilen Status anfordern
         Form1.ProgressBar1.position:= i;
-        getStatus(pos_changed);       // ist ein Dummy
+        DecodeStatus(GetStatus, pos_changed);       // ist ein Dummy
         SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
         SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
       end;
@@ -773,7 +963,7 @@ begin
         break;
       end;
     end;
-    while getstatus(pos_changed) do begin // noch beschäftigt?
+    while DecodeStatus(GetStatus, pos_changed) do begin // noch beschäftigt?
       mdelay(grbl_delay_long);
       SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
       SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
@@ -782,7 +972,6 @@ begin
   // falls wg. speed abgeschaltet
   Form4.GLLinesPath.Visible:= Form4.CheckToolpathVisible.Checked;
   Form4.GLDummyCubeTool.visible:= true;
-
 
   Form1.ProgressBar1.position:= 0;
   grbl_sendlist.Clear;

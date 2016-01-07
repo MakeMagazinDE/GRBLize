@@ -23,7 +23,8 @@ uses
   DirectSound in 'DirectX\DirectSound.pas',
   DXTypes in 'DirectX\DXTypes.pas',
   Direct3D9 in 'DirectX\Direct3D9.pas',
-  grbl_player_main in 'grbl_player_main.pas' {Form1};
+  grbl_player_main in 'grbl_player_main.pas' {Form1},
+  VFrames in 'VFrames.pas';
 
 {$R *.res}
 

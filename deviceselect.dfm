@@ -148,23 +148,5 @@ object deviceselectbox: Tdeviceselectbox
       TabOrder = 4
       Text = '115200'
     end
-    object CheckBoxNewGRBL: TCheckBox
-      Left = 225
-      Top = 216
-      Width = 105
-      Height = 17
-      Hint = 'Check if using GRBL version 0.9 and up'
-      ParentCustomHint = False
-      TabStop = False
-      Caption = 'GRBL 0.9 and up'
-      Color = clNone
-      DoubleBuffered = False
-      ParentColor = False
-      ParentDoubleBuffered = False
-      ParentShowHint = False
-      ShowHint = True
-      TabOrder = 5
-      StyleElements = [seFont]
-    end
   end
 end

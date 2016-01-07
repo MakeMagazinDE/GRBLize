@@ -1131,7 +1131,6 @@ begin
   Form1.Memo1.lines.add('// OFFSET TOOL TO PART ZERO');
   grbl_offsXY(0, 0);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(0,0);
 end;
 
 procedure TForm2.pu_toolisatpointClick(Sender: TObject);
@@ -1143,7 +1142,6 @@ begin
   hilite_to(x,y);
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
@@ -1155,7 +1153,6 @@ begin
   hilite_center_to(x,y);
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################
@@ -1167,7 +1164,6 @@ begin
   Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(-job.cam_x,-job.cam_y);
 end;
 
 procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
@@ -1181,7 +1177,6 @@ begin
   y:= y - job.cam_y;
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
@@ -1195,7 +1190,6 @@ begin
   y:= y - job.cam_y;
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################
@@ -1207,9 +1201,9 @@ begin
   Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(0,0, false);
+  SendGrblAndWaitForIdle;
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(0, 0);
 end;
 
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
@@ -1221,10 +1215,9 @@ begin
   hilite_to(x, y);
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
-  grbl_offsXY(x, y);
+  SendGrblAndWaitForIdle;
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
@@ -1236,10 +1229,9 @@ begin
   hilite_center_to(x,y);
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
-  grbl_offsXY(x, y);
+  SendGrblAndWaitForIdle;
   grbl_moveZ(job.z_penlift, false);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
 end;
 
 // #############################################################################
@@ -1251,9 +1243,8 @@ begin
   Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
-  grbl_moveZ(job.cam_z, false);
+  grbl_moveZ(job.cam_z_abs, true);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(-job.cam_x,-job.cam_y);
 end;
 
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
@@ -1264,13 +1255,12 @@ begin
   Form1.Memo1.lines.add('// MOVE CAM TO POINT');
   hilite_to(x,y);
   x:= x - job.cam_x;
-  y:= x - job.cam_y;
+  y:= y - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
-  grbl_offsXY(x, y);
-  grbl_moveZ(job.cam_z, false);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
+  grbl_moveZ(job.cam_z_abs, true);
+  SendGrblAndWaitForIdle;
 end;
 
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
@@ -1284,10 +1274,9 @@ begin
   y:= y - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
-  grbl_offsXY(x, y);
-  grbl_moveZ(job.cam_z, false);
   SendGrblAndWaitForIdle;
-  SetAllPosZupMM(x,y);
+  grbl_moveZ(job.cam_z_abs, true);
+  SendGrblAndWaitForIdle;
 end;
 
 // #############################################################################

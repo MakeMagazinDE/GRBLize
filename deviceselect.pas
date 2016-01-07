@@ -16,7 +16,6 @@ type
     Label2: TLabel;
     Label3: TLabel;
     EditBaudrate: TEdit;
-    CheckBoxNewGRBL: TCheckBox;
     procedure ListView1DblClick(Sender: TObject);
     procedure OKButtonClick(Sender: TObject);
     procedure CancelButtonClick(Sender: TObject);

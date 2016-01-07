@@ -330,7 +330,7 @@ procedure MillArrayWithTool(x, y, z: Double);
 // Tool-Array mit Werkzeugform an Position XY des mill_array anwenden
 var
   ix, iy: Integer;
-  sz, old_z, new_z, height: Double;
+  sz, old_z, new_z: Double;
   ax, ay, px, py: Integer;
 begin
   if not Form1.Show3DPreview1.Checked then

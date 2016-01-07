@@ -108,10 +108,8 @@ begin
     '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %"';
   Form1.SgBlocks.Rows[0].DelimitedText:=
     '#,P/D,Ena,Dia,Shape,Bounds,Center,Points';
-  Form1.SgAppdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
-
+  Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
   with job do begin
-
     for i := 0 to 31 do begin
       pens[i]:= PenInit;
       pens[i].offset.x:= 0;
@@ -148,8 +146,8 @@ begin
       pens[i].speed:= 500;
     end;
   end;
-  with Form1.SgAppdefaults do begin
-    RowCount:= 34;
+  with Form1.SgJobDefaults do begin
+    RowCount:= 10;
     Rows[1].DelimitedText:='"Part Size X",250';
     Rows[2].DelimitedText:='"Part Size Y",150';
     Rows[3].DelimitedText:='"Part Size Z",5';
@@ -159,45 +157,47 @@ begin
     Rows[7].DelimitedText:='"Z Gauge",10';
     Rows[8].DelimitedText:='"Optimize Drill Path",ON';
     Rows[9].DelimitedText:= '"Use Excellon Drill Diameters",ON';
-    Rows[10].DelimitedText:= '"Tool Change Pause",OFF';
-    Rows[11].DelimitedText:='"Tool Change X absolute",10';
-    Rows[12].DelimitedText:='"Tool Change Y absolute",100';
-    Rows[13].DelimitedText:='"Tool Change Z absolute",-5';
-    Rows[14].DelimitedText:='"Park Position on End",ON';
-    Rows[15].DelimitedText:='"Park X absolute",200';
-    Rows[16].DelimitedText:='"Park Y absolute",100';
-    Rows[17].DelimitedText:='"Park Z absolute",-5';
-    Rows[18].DelimitedText:='"Cam X Offset","-20"';
-    Rows[19].DelimitedText:='"Cam Y Offset","40"';
-    Rows[20].DelimitedText:='"Cam Z Height above Part",20';
-    Rows[21].DelimitedText:='"Use Tool Z Probe",OFF';
-    Rows[22].DelimitedText:='"Probe X absolute",30';
-    Rows[23].DelimitedText:='"Probe Y absolute",30';
-    Rows[24].DelimitedText:='"Probe Z absolute",-5';
-    Rows[25].DelimitedText:='"Invert Z in G-Code",OFF';
-    Rows[26].DelimitedText:='"Scale Z Feed",1';
-    Rows[27].DelimitedText:='"Spindle Accel Time (s)",4';
-    Rows[28].DelimitedText:='"ATC enable",OFF';
-    Rows[29].DelimitedText:='"ATC zero X absolute",50';
-    Rows[30].DelimitedText:='"ATC zero Y absolute",20';
-    Rows[31].DelimitedText:='"ATC pickup height Z abs",-20';
-    Rows[32].DelimitedText:='"ATC row X distance",20';
-    Rows[33].DelimitedText:='"ATC row Y distance",0';
   end;
-
   ClearFiles;
 end;
 
+procedure InitAppdefaults;
+begin
+  with Form1.SgAppDefaults do begin
+    RowCount:= 24;
+    Rows[0].DelimitedText:= 'Parameter,Value';
+    Rows[1].DelimitedText:= '"Tool Change Pause",OFF';
+    Rows[2].DelimitedText:='"Tool Change X absolute",10';
+    Rows[3].DelimitedText:='"Tool Change Y absolute",100';
+    Rows[4].DelimitedText:='"Tool Change Z absolute",-5';
+    Rows[5].DelimitedText:='"Park Position on End",ON';
+    Rows[6].DelimitedText:='"Park X absolute",200';
+    Rows[7].DelimitedText:='"Park Y absolute",100';
+    Rows[8].DelimitedText:='"Park Z absolute",-5';
+    Rows[9].DelimitedText:='"Cam X Offset","-20"';
+    Rows[10].DelimitedText:='"Cam Y Offset","40"';
+    Rows[11].DelimitedText:='"Cam Z absolute",0';
+    Rows[12].DelimitedText:='"Use Tool Z Probe",OFF';
+    Rows[13].DelimitedText:='"Probe X absolute",30';
+    Rows[14].DelimitedText:='"Probe Y absolute",30';
+    Rows[15].DelimitedText:='"Probe Z absolute",-5';
+    Rows[16].DelimitedText:='"Invert Z in G-Code",OFF';
+    Rows[17].DelimitedText:='"Spindle Accel Time (s)",4';
+    Rows[18].DelimitedText:='"ATC enable",OFF';
+    Rows[19].DelimitedText:='"ATC zero X absolute",50';
+    Rows[20].DelimitedText:='"ATC zero Y absolute",20';
+    Rows[21].DelimitedText:='"ATC pickup height Z abs",-20';
+    Rows[22].DelimitedText:='"ATC row X distance",20';
+    Rows[23].DelimitedText:='"ATC row Y distance",0';
+  end;
+end;
 
 procedure DefaultsGridListToJob;
 begin
-  with Form1.SgAppdefaults do begin
-    if RowCount < 34 then begin
-      showMessage('Job File invalid. Check number of #Default entries!' +
-        #13 + 'Job will be reset to default values.');
+  with Form1.SgJobDefaults do begin
+    if RowCount < 3 then begin
       InitJob;
-      exit;
-    end;
+     end;
     job.partsize_x:= StrToFloatDef(Cells[1,1], 0);
     job.partsize_y:= StrToFloatDef(Cells[1,2], 0);
     job.partsize_z:= StrToFloatDef(Cells[1,3], 0);
@@ -209,42 +209,44 @@ begin
 
     job.optimize_drills:= Cells[1,8] = 'ON';
     job.use_excellon_dia:= Cells[1,9] = 'ON';
+  end;
 
-    job.toolchange_pause:= Cells[1,10] = 'ON';
+  with Form1.SgAppDefaults do begin
+    if RowCount < 3 then begin
+      InitAppdefaults;
+    end;
+    job.toolchange_pause:= Cells[1,1] = 'ON';
     Form1.CheckPenChangePause.Checked:= job.toolchange_pause;
 
-    job.toolchange_x:= StrToFloatDef(Cells[1,11], 0);
-    job.toolchange_y:= StrToFloatDef(Cells[1,12], 0);
-    job.toolchange_z:= StrToFloatDef(Cells[1,13], 0);
+    job.toolchange_x:= StrToFloatDef(Cells[1,2], 0);
+    job.toolchange_y:= StrToFloatDef(Cells[1,3], 0);
+    job.toolchange_z:= StrToFloatDef(Cells[1,4], 0);
 
-    job.parkposition_on_end:= Cells[1,14] = 'ON';
+    job.parkposition_on_end:= Cells[1,5] = 'ON';
     Form1.CheckEndPark.Checked:= job.parkposition_on_end;
 
-    job.park_x:= StrToFloatDef(Cells[1,15], 0);
-    job.park_y:= StrToFloatDef(Cells[1,16], 0);
-    job.park_z:= StrToFloatDef(Cells[1,17], 0);
+    job.park_x:= StrToFloatDef(Cells[1,6], 0);
+    job.park_y:= StrToFloatDef(Cells[1,7], 0);
+    job.park_z:= StrToFloatDef(Cells[1,8], 0);
 
-    job.cam_x:= StrToFloatDef(Cells[1,18], 0);
-    job.cam_y:= StrToFloatDef(Cells[1,19], 0);
-    job.cam_z:= StrToFloatDef(Cells[1,20], 0);
+    job.cam_x:= StrToFloatDef(Cells[1,9], 0);
+    job.cam_y:= StrToFloatDef(Cells[1,10], 0);
+    job.cam_z_abs:= StrToFloatDef(Cells[1,11], 0);
 
-    job.use_probe:= Cells[1,21] = 'ON';
-    job.probe_x:= StrToFloatDef(Cells[1,22], 0);
-    job.probe_y:= StrToFloatDef(Cells[1,23], 0);
-    job.probe_z:= StrToFloatDef(Cells[1,24], 0);
+    job.use_probe:= Cells[1,12] = 'ON';
+    job.probe_x:= StrToFloatDef(Cells[1,13], 0);
+    job.probe_y:= StrToFloatDef(Cells[1,14], 0);
+    job.probe_z:= StrToFloatDef(Cells[1,15], 0);
 
-    job.invert_z:= Cells[1,25] = 'ON';
-    job.z_feedmult:= StrToFloatDef(Cells[1,26], 1);
-    if job.z_feedmult < 0.1 then
-      job.z_feedmult:= 0.1;
-    job.spindle_wait:= StrToIntDef(Cells[1,27], 3);
-    job.atc_enabled:= Cells[1,28] = 'ON';
+    job.invert_z:= Cells[1,16] = 'ON';
+    job.spindle_wait:= StrToIntDef(Cells[1,17], 3);
+    job.atc_enabled:= Cells[1,18] = 'ON';
     Form1.CheckUseATC.Checked:= job.atc_enabled;
-    job.atc_zero_x:= StrToFloatDef(Cells[1,29], 50);
-    job.atc_zero_y:= StrToFloatDef(Cells[1,30], 20);
-    job.atc_pickup_z:= StrToFloatDef(Cells[1,31], -20);
-    job.atc_delta_x:= StrToFloatDef(Cells[1,32], 20);
-    job.atc_delta_y:= StrToFloatDef(Cells[1,33], 0);
+    job.atc_zero_x:= StrToFloatDef(Cells[1,19], 50);
+    job.atc_zero_y:= StrToFloatDef(Cells[1,20], 20);
+    job.atc_pickup_z:= StrToFloatDef(Cells[1,21], -20);
+    job.atc_delta_x:= StrToFloatDef(Cells[1,22], 20);
+    job.atc_delta_y:= StrToFloatDef(Cells[1,23], 0);
   end;
 end;
 
@@ -331,8 +333,8 @@ begin
           break;
         if sl.strings[i]='#Blocks' then
           break;
-        Form1.SgAppdefaults.Rowcount:= my_row+1;
-        Form1.SgAppdefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
+        Form1.SgJobDefaults.Rowcount:= my_row+1;
+        Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
       end;
 
       Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
@@ -370,6 +372,47 @@ begin
   sl.Free;
 end;
 
+Procedure LoadIniFile;
+var
+// mySaveFile: File of Tjob;
+ sl: TstringList;
+ i, j, s, my_len, my_row: Integer;
+ my_ini_name: String;
+begin
+  sl:= Tstringlist.Create;
+  my_ini_name:= ExtractFilePath(Application.exename) + 'GRBLize.ini';
+  if FileExists(my_ini_name) then begin
+    sl.LoadfromFile(my_ini_name);
+    my_row:= 0;
+    for i := 1 to sl.Count-1 do begin
+      inc(my_row);
+      if sl.strings[i]='#End' then
+        break;
+      Form1.SgAppDefaults.Rowcount:= my_row+1;
+      Form1.SgAppDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
+    end;
+  end else
+    InitAppDefaults;
+  if Form1.SgAppDefaults.Rowcount < 23 then
+    InitAppDefaults;
+  sl.Free;
+  Form1.SgAppDefaults.Rows[0].DelimitedText:= 'Parameter,Value';
+end;
+
+procedure SaveIniFile;
+var
+// mySaveFile: File of Tjob;
+ sl: TstringList;
+ i: Integer;
+begin
+  sl:= Tstringlist.Create;
+  sl.Add('#AppDefaults');
+  for i:= 1 to Form1.SgAppDefaults.Rowcount - 1 do
+    sl.Add(Form1.SgAppDefaults.Rows[i].CommaText);
+  sl.Add('#End');
+  sl.SaveToFile(ExtractFilePath(Application.exename) + 'GRBLize.ini');
+  sl.Free;
+end;
 
 procedure SaveJob;
 var
@@ -386,8 +429,8 @@ begin
   for i:= 1 to Form1.SgPens.Rowcount - 1 do
     sl.Add(Form1.SgPens.Rows[i].CommaText);
   sl.Add('#Defaults');
-  for i:= 1 to Form1.SgAppdefaults.Rowcount - 1 do
-    sl.Add(Form1.SgAppdefaults.Rows[i].CommaText);
+  for i:= 1 to Form1.SgJobDefaults.Rowcount - 1 do
+    sl.Add(Form1.SgJobDefaults.Rows[i].CommaText);
   sl.Add('#Blocks');
   list_blocks;
   if Form1.SgBlocks.Rowcount > 1 then
@@ -435,15 +478,11 @@ begin
     JobSaveAsExecute(Sender);
 end;
 
-
-
 procedure TForm1.FileNew1Execute(Sender: TObject);
 begin
   InitJob;
   DefaultsGridListToJob;
-  if FileExists('default.job') then
-    OpenJobFile('default.job');
-  JobSettingsPath:= 'new.job';
+  JobSettingsPath:= ExtractFilePath(Application.exename) + 'new.job';
   draw_cnc_all;
   Form4.FormRefresh(nil);
 end;
@@ -462,7 +501,7 @@ begin
 end;
 
 
-procedure TForm1.SgAppdefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
+procedure TForm1.SgJobDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
   Rect: TRect; State: TGridDrawState);
 var
   aRect: TRect;
@@ -470,15 +509,12 @@ var
 
 begin
   Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
-  aStr:= SgAppdefaults.Cells[ACol, ARow];
-  if aRow = 0 then with SgAppdefaults,Canvas do begin
+  aStr:= SgJobDefaults.Cells[ACol, ARow];
+  if aRow = 0 then with SgJobDefaults,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
-  end else if (aRow < 8) and (aCol = 0) then with SgAppdefaults,Canvas do begin
-    Font.Color := clred;
-    TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
   end else if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF')) then // ON, OFF
-    with SgAppdefaults,Canvas do begin
+    with SgJobDefaults,Canvas do begin
       FrameRect(Rect);
       inc(Rect.Left);
       inc(Rect.Top);
@@ -499,28 +535,28 @@ begin
     end;
 end;
 
-procedure TForm1.SgAppdefaultsExit(Sender: TObject);
+procedure TForm1.SgJobDefaultsExit(Sender: TObject);
 begin
-  with SgAppdefaults do
+  with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   DefaultsGridListToJob;
   PenGridListToJob;
   OpenFilesInGrid;
 end;
 
-procedure TForm1.SgAppdefaultsKeyPress(Sender: TObject; var Key: Char);
+procedure TForm1.SgJobDefaultsKeyPress(Sender: TObject; var Key: Char);
 begin
   if (Key = #13) or (Key = #10) then begin
-    SgAppdefaultsExit(Sender);;
+    SgJobDefaultsExit(Sender);;
   end;
 end;
 
 
-procedure TForm1.SgAppdefaultsMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TForm1.SgJobDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
-// wird vor SgAppdefaultsClick aufgerufen!
+// wird vor SgJobDefaultsClick aufgerufen!
 begin
-  with SgAppdefaults do begin
+  with SgJobDefaults do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
     if Col = 1 then begin
       if Cells[1, Row] = 'ON' then begin
@@ -537,12 +573,89 @@ begin
   end;
 end;
 
-procedure TForm1.SgAppdefaultsClick(Sender: TObject);
+procedure TForm1.SgJobDefaultsClick(Sender: TObject);
 begin
-  with SgAppdefaults do
+  with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   NeedsRedraw:= true;
   NeedsRelist:= true;
+end;
+
+// #############################################################################
+// GRBLize Defaults auf Defaults-Seite!
+// #############################################################################
+
+procedure TForm1.SgAppDefaultsExit(Sender: TObject);
+begin
+  with SgAppDefaults do
+    Options:= Options - [goEditing, goAlwaysShowEditor];
+  DefaultsGridListToJob;
+end;
+
+
+procedure TForm1.SgAppDefaultsKeyPress(Sender: TObject; var Key: Char);
+begin
+  if (Key = #13) or (Key = #10) then begin
+    SgAppDefaultsExit(Sender);;
+  end;
+end;
+
+procedure TForm1.SgAppDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
+  Rect: TRect; State: TGridDrawState);
+var
+  aRect: TRect;
+  aStr: String;
+
+begin
+  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+  aStr:= SgAppDefaults.Cells[ACol, ARow];
+  if aRow = 0 then with SgAppDefaults,Canvas do begin
+    Font.Style := [fsBold];
+    TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
+  end else if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF')) then // ON, OFF
+    with SgAppDefaults,Canvas do begin
+      FrameRect(Rect);
+      inc(Rect.Left);
+      inc(Rect.Top);
+      Brush.Color := clgray;
+      FrameRect(Rect);
+      Brush.Color := cl3Dlight;
+      InflateRect(Rect, -1, -1);
+      Font.Color := clblack;
+      if aStr = 'ON' then
+        Font.Style := [fsBold]
+      else
+        Font.Style := [];
+      aRect := Rect;
+      FillRect(Rect);
+      aStr:= Cells[ACol, ARow];
+      aRect.Top := aRect.Top + 1; // adjust top to center vertical
+      DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
+    end;
+end;
+
+procedure TForm1.SgAppDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  with SgAppDefaults do begin
+    Options:= Options - [goEditing, goAlwaysShowEditor];
+    if Col = 1 then begin
+      if Cells[1, Row] = 'ON' then begin
+        Cells[1, Row]:= 'OFF';
+        DefaultsGridListToJob;
+      end else if Cells[1, Row] = 'OFF' then begin
+        Cells[1, Row]:= 'ON';
+        DefaultsGridListToJob;
+      end else
+        Options:= Options + [goEditing, goAlwaysShowEditor];
+    end;
+  end;
+end;
+
+procedure TForm1.SgAppDefaultsClick(Sender: TObject);
+begin
+  with SgAppDefaults do
+    Options:= Options - [goEditing, goAlwaysShowEditor];
 end;
 
 // #############################################################################

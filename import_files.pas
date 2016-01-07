@@ -90,10 +90,9 @@ const
     z_penlift: Double;
     z_penup: Double;
     z_gauge: Double;
-    z_feedmult: Double;
     cam_x: Double;
     cam_y: Double;
-    cam_z: Double;
+    cam_z_abs: Double;
     park_x: Double;
     park_y: Double;
     park_z: Double;

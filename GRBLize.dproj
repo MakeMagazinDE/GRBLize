@@ -130,6 +130,7 @@
         <DCCReference Include="grbl_player_main.pas">
             <Form>Form1</Form>
         </DCCReference>
+        <DCCReference Include="VFrames.pas"/>
         <None Include="drill_import.pas">
             <ContainerId>File</ContainerId>
         </None>

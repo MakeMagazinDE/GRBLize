@@ -243,9 +243,10 @@ begin
       f30FrameTick := T1;
     end;
 
-{
-  // führt auf Windows 7 zu unendlich kleinen Frameraten! -cm
 
+
+  // führt auf Windows 7 zu unendlich kleinen Frameraten! -cm
+{
   // Does the application run in unhealthy CPU usage?
   // Check, if no idle event has occured for at least 1 sec.
   // If so, skip current frame and give application time to "breathe".

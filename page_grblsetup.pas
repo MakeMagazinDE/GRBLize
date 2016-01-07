@@ -3,20 +3,6 @@
 // ########################## GRBL DEFAULT BUTTONS #############################
 // #############################################################################
 
-procedure setDelays;
-begin
-  if deviceselectbox.CheckBoxNewGRBL.Checked then begin
-    // Configure for 115200 baud, 8 bit, 1 stop bit, no parity, no flow control
-    grbl_delay_short:= 5;
-    grbl_delay_long:= 20;
-    grbl_isnew:= true;
-  end else begin
-    grbl_delay_short:= 10;
-    grbl_delay_long:= 50;
-    grbl_isnew:= false;
-  end;
-end;
-
 function GetResponseAndSetButtons: Boolean;
 begin
   result:= false;
@@ -63,7 +49,6 @@ begin
   end;
   deviceselectbox.ComboBoxCOMport.ItemIndex:= 0; // Auswahl erzwingen
   deviceselectbox.ShowModal;
-  setDelays;
   if not (deviceselectbox.ModalResult=MrOK) then
     exit;
   if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
@@ -132,22 +117,30 @@ begin
     with Form1.SgGrblSettings do begin
       LEDbusy.Checked:= true;
       DisableTimerStatus;
-      mdelay(120);
+      mdelay(300);
       grbl_checkResponse;
       Rowcount:= 2;
       grbl_sendStr(#24, false);   // Reset CTRL-X
       mdelay(250);
       my_str:= grbl_receiveStr(500);  // Dummy
-      my_str:= grbl_receiveStr(100);
+      my_str:= grbl_receiveStr(200);
       Rows[0].text:= my_str;
 
       grbl_sendStr('$$' + #13, false);
       while not CancelGrbl do begin
-        my_str:= grbl_receiveStr(200);
+        my_str:= grbl_receiveStr(250);
         if my_str='ok' then
           break;
+        if my_str[1]='[' then
+          continue;
         Cells[0,RowCount-1]:= my_str;
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
+        if pos('x max travel',my_str) > 0 then
+          TableX:= StrDotToFloat(Cells[1,RowCount-1]);
+        if pos('y max travel',my_str) > 0 then
+          TableY:= StrDotToFloat(Cells[1,RowCount-1]);
+        if pos('z max travel',my_str) > 0 then
+          TableZ:= StrDotToFloat(Cells[1,RowCount-1]);
         Rowcount:= RowCount+1;
       end;
 
