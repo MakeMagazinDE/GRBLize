@@ -143,81 +143,257 @@ object Form4: TForm4
       Up.Coordinates = {F40435BF9A8C2A32F20435BF00000000}
       Pickable = False
       CubeSize = 1.000000000000000000
-      object GLLightSource1: TGLLightSource
-        Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3E0000803F}
-        ConstAttenuation = 1.000000000000000000
-        Diffuse.Color = {DCD8583FDCD8583FC6BF3F3F0000803F}
-        Position.Coordinates = {0000A0C10000A0C10000F0410000803F}
-        SpotCutOff = 180.000000000000000000
-        SpotDirection.Coordinates = {00000000000000000000000000000000}
-      end
-      object GLDummyCubeTarget: TGLDummyCube
-        Direction.Coordinates = {00000000000000800000803F00000000}
-        Pickable = False
+      object GLDummyCubePartZero: TGLDummyCube
         CubeSize = 1.000000000000000000
-        object GLSphere2: TGLSphere
-          Material.FrontProperties.Ambient.Color = {9190103F8988083FCDCC4C3E4A0C823E}
-          Material.FrontProperties.Diffuse.Color = {9392123F8D8C0C3F000000003333333E}
-          Material.FrontProperties.Emission.Color = {FBFAFA3EEFEEEE3E000000000000803F}
-          Position.Coordinates = {00000000000000000000003F0000803F}
-          Radius = 0.200000002980232200
-        end
-        object GLLineNeedle: TGLLines
-          ObjectsSorting = osRenderBlendedLast
-          Direction.Coordinates = {0000000000000000000080BF00000000}
-          Up.Coordinates = {0000803F000000000000000000000000}
+        object GLLinesPath: TGLLines
           Pickable = False
-          LineColor.Color = {9A99593F9A99593F9A99593F0000803F}
+          LineColor.Color = {F8FEFE3E0000803F000000000000803F}
           LineWidth = 2.000000000000000000
-          NodeColor.Color = {0000000000000000000000000000803F}
+          NodeColor.Color = {000000000000803F000000000000803F}
           Nodes = <
             item
-              Z = -0.400000005960464400
-            end
-            item
-              Z = 4.000000000000000000
             end>
           NodesAspect = lnaInvisible
-          Options = []
+          NodeSize = 0.200000002980232200
+          Options = [loUseNodeColorForLines]
         end
-      end
-      object GLCubeWP: TGLCube
-        Direction.Coordinates = {00000000000080BF0000000000000000}
-        Position.Coordinates = {00004040000000400000003F0000803F}
-        Up.Coordinates = {00000000000000000000803F00000000}
-        Pickable = False
-        Parts = [cpFront, cpBack, cpLeft, cpRight]
-        CubeSize = {0000C0400000803F00008040}
-      end
-      object GLSpaceText1: TGLSpaceText
-        Material.FrontProperties.Ambient.Color = {8D8C8C3E8382823E000000000000803F}
-        Material.FrontProperties.Diffuse.Color = {C9C8C83EB5B4B43E000000000000803F}
-        Material.FrontProperties.Emission.Color = {A1A0203F8D8C0C3F000000000000803F}
-        Direction.Coordinates = {00000000000080BF0000000000000000}
-        Position.Coordinates = {000000000000E0C0666666BF0000803F}
-        RollAngle = 90.000000000000000000
-        Up.Coordinates = {00000000000000000000803F00000000}
-        Extrusion = 0.100000001490116100
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = [fsBold]
-        Lines.Strings = (
-          'Make:')
-        Adjust.Horz = haCenter
-      end
-      object GLArrowLineZ: TGLArrowLine
-        Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
-        Material.FrontProperties.Emission.Color = {AFAEAE3E00000000A1A0A03D0000803F}
-        Direction.Coordinates = {00000000000000800000803F00000000}
-        BottomRadius = 0.100000001490116100
-        Height = 4.000000000000000000
-        TopRadius = 0.100000001490116100
-        TopArrowHeadHeight = 1.000000000000000000
-        TopArrowHeadRadius = 0.200000002980232200
-        BottomArrowHeadHeight = 0.500000000000000000
-        BottomArrowHeadRadius = 0.200000002980232200
+        object GLXYZGridWP: TGLXYZGrid
+          LineColor.Color = {3333333F3333333F3333333F0000803F}
+          XSamplingScale.Max = 10.000000000000000000
+          XSamplingScale.Step = 0.200000002980232200
+          YSamplingScale.Max = 10.000000000000000000
+          YSamplingScale.Step = 0.200000002980232200
+          ZSamplingScale.Max = 10.000000000000000000
+          ZSamplingScale.Step = 0.500000000000000000
+          object GLXYZGridWP10: TGLXYZGrid
+            Position.Coordinates = {0AD7A33B0AD7A33B0AD7A33B0000803F}
+            LineColor.Color = {DCD8583FDCD8583FC6BF3F3F0000803F}
+            XSamplingScale.Max = 10.000000000000000000
+            XSamplingScale.Step = 1.000000000000000000
+            YSamplingScale.Max = 10.000000000000000000
+            YSamplingScale.Step = 1.000000000000000000
+            ZSamplingScale.Max = 10.000000000000000000
+            ZSamplingScale.Step = 0.500000000000000000
+          end
+          object GLSpaceTextX: TGLSpaceText
+            Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+            Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+            Position.Coordinates = {CDCC4C3FCDCCCCBE000000000000803F}
+            Pickable = False
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clInfoBk
+            Font.Height = -11
+            Font.Name = 'Arial'
+            Font.Style = []
+            Lines.Strings = (
+              '10')
+            TextHeight = 0.250000000000000000
+            object GLSpaceTextX200: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {3333974100000000000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '200')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextX50: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {0000804000000000000000000000803F}
+              Pickable = False
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '50')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextX100: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {66660E4100000000000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '100')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextX150: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {66665E4100000000000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '150')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextX250: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {3333BF4100000000000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '250')
+              TextHeight = 0.250000000000000000
+            end
+          end
+          object GLSpaceTextY: TGLSpaceText
+            Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+            Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+            Position.Coordinates = {000000BF6666663F000000000000803F}
+            Pickable = False
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clInfoBk
+            Font.Height = -11
+            Font.Name = 'Arial'
+            Font.Style = []
+            Lines.Strings = (
+              '10')
+            TextHeight = 0.250000000000000000
+            object GLSpaceTextY250: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {9A9919BE0000C041000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '250')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextY50: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {0000000000008040000000000000803F}
+              Pickable = False
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '50')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextY100: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {9A9919BE00001041000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '100')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextY150: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {9A9919BE00006041000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '150')
+              TextHeight = 0.250000000000000000
+            end
+            object GLSpaceTextY200: TGLSpaceText
+              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
+              Position.Coordinates = {9A9919BE00009841000000000000803F}
+              Pickable = False
+              Extrusion = 0.009999999776482582
+              Font.Charset = DEFAULT_CHARSET
+              Font.Color = clInfoBk
+              Font.Height = -11
+              Font.Name = 'Arial'
+              Font.Style = []
+              Lines.Strings = (
+                '200')
+              TextHeight = 0.250000000000000000
+            end
+          end
+        end
+        object GLArrowLineX: TGLArrowLine
+          Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
+          Material.FrontProperties.Emission.Color = {00000000C1C0C03DA3A2A23E0000803F}
+          Direction.Coordinates = {0000803F000000002FBD3BB400000000}
+          Position.Coordinates = {000080BF000080BF0000003F0000803F}
+          BottomRadius = 0.100000001490116100
+          Height = 4.000000000000000000
+          TopRadius = 0.100000001490116100
+          TopArrowHeadHeight = 1.000000000000000000
+          TopArrowHeadRadius = 0.200000002980232200
+          BottomArrowHeadHeight = 0.500000000000000000
+          BottomArrowHeadRadius = 0.200000002980232200
+        end
+        object GLArrowLineY: TGLArrowLine
+          Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
+          Material.FrontProperties.Emission.Color = {00000000AFAEAE3EB1B0B03D0000803F}
+          Direction.Coordinates = {000000800000803FECAD092700000000}
+          PitchAngle = 90.000000000000000000
+          Position.Coordinates = {000080BF000080BF0000003F0000803F}
+          TurnAngle = 90.000000000000000000
+          Up.Coordinates = {0000803F000000000000000000000000}
+          BottomRadius = 0.100000001490116100
+          Height = 4.000000000000000000
+          TopRadius = 0.100000001490116100
+          TopArrowHeadHeight = 1.000000000000000000
+          TopArrowHeadRadius = 0.200000002980232200
+          BottomArrowHeadHeight = 0.500000000000000000
+          BottomArrowHeadRadius = 0.200000002980232200
+        end
+        object GLArrowLineZ: TGLArrowLine
+          Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
+          Material.FrontProperties.Emission.Color = {AFAEAE3E00000000A1A0A03D0000803F}
+          Direction.Coordinates = {00000000000000800000803F00000000}
+          Position.Coordinates = {000080BF000080BF0000003F0000803F}
+          BottomRadius = 0.100000001490116100
+          Height = 4.000000000000000000
+          TopRadius = 0.100000001490116100
+          TopArrowHeadHeight = 1.000000000000000000
+          TopArrowHeadRadius = 0.200000002980232200
+          BottomArrowHeadHeight = 0.500000000000000000
+          BottomArrowHeadRadius = 0.200000002980232200
+        end
         object GLDummyCubeTool: TGLDummyCube
           Direction.Coordinates = {00000000000000800000803F00000000}
           Position.Coordinates = {00000000000000000000A0400000803F}
@@ -5666,251 +5842,81 @@ object Form4: TForm4
             end
           end
         end
-        object GLXYZGridWP: TGLXYZGrid
-          LineColor.Color = {3333333F3333333F3333333F0000803F}
-          XSamplingScale.Max = 10.000000000000000000
-          XSamplingScale.Step = 0.200000002980232200
-          YSamplingScale.Max = 10.000000000000000000
-          YSamplingScale.Step = 0.200000002980232200
-          ZSamplingScale.Max = 10.000000000000000000
-          ZSamplingScale.Step = 0.500000000000000000
-          object GLXYZGridWP10: TGLXYZGrid
-            Position.Coordinates = {0AD7A33B0AD7A33B0AD7A33B0000803F}
-            LineColor.Color = {DCD8583FDCD8583FC6BF3F3F0000803F}
-            XSamplingScale.Max = 10.000000000000000000
-            XSamplingScale.Step = 1.000000000000000000
-            YSamplingScale.Max = 10.000000000000000000
-            YSamplingScale.Step = 1.000000000000000000
-            ZSamplingScale.Max = 10.000000000000000000
-            ZSamplingScale.Step = 0.500000000000000000
-          end
-          object GLSpaceTextX: TGLSpaceText
-            Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-            Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-            Position.Coordinates = {CDCC4C3FCDCCCCBE000000000000803F}
-            Pickable = False
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clInfoBk
-            Font.Height = -11
-            Font.Name = 'Arial'
-            Font.Style = []
-            Lines.Strings = (
-              '10')
-            TextHeight = 0.250000000000000000
-            object GLSpaceTextX200: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {3333974100000000000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '200')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextX50: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {0000804000000000000000000000803F}
-              Pickable = False
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '50')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextX100: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {66660E4100000000000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '100')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextX150: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {66665E4100000000000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '150')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextX250: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {3333BF4100000000000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '250')
-              TextHeight = 0.250000000000000000
-            end
-          end
-          object GLSpaceTextY: TGLSpaceText
-            Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-            Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-            Position.Coordinates = {000000BF6666663F000000000000803F}
-            Pickable = False
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clInfoBk
-            Font.Height = -11
-            Font.Name = 'Arial'
-            Font.Style = []
-            Lines.Strings = (
-              '10')
-            TextHeight = 0.250000000000000000
-            object GLSpaceTextY250: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {9A9919BE0000C041000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '250')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextY50: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {0000000000008040000000000000803F}
-              Pickable = False
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '50')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextY100: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {9A9919BE00001041000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '100')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextY150: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {9A9919BE00006041000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '150')
-              TextHeight = 0.250000000000000000
-            end
-            object GLSpaceTextY200: TGLSpaceText
-              Material.FrontProperties.Ambient.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Material.FrontProperties.Diffuse.Color = {DDDC5C3FDDDC5C3FB5B4343F0000803F}
-              Position.Coordinates = {9A9919BE00009841000000000000803F}
-              Pickable = False
-              Extrusion = 0.009999999776482582
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clInfoBk
-              Font.Height = -11
-              Font.Name = 'Arial'
-              Font.Style = []
-              Lines.Strings = (
-                '200')
-              TextHeight = 0.250000000000000000
-            end
-          end
+      end
+      object GLHeightFieldWP: TGLHeightField
+        Material.Texture.Compression = tcHighSpeed
+        Direction.Coordinates = {00000000000000800000803F00000000}
+        Position.Coordinates = {00000000000000000000803F0000803F}
+        Visible = False
+        Pickable = False
+        XSamplingScale.Step = 0.039999999105930330
+        YSamplingScale.Step = 0.039999999105930330
+        Options = []
+        OnGetHeight = GLHeightFieldWPGetHeight
+      end
+      object GLLightSource1: TGLLightSource
+        Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3E0000803F}
+        ConstAttenuation = 1.000000000000000000
+        Diffuse.Color = {DCD8583FDCD8583FC6BF3F3F0000803F}
+        Position.Coordinates = {0000A0C10000A0C10000F0410000803F}
+        SpotCutOff = 180.000000000000000000
+        SpotDirection.Coordinates = {00000000000000000000000000000000}
+      end
+      object GLDummyCubeTarget: TGLDummyCube
+        Direction.Coordinates = {00000000000000800000803F00000000}
+        Pickable = False
+        CubeSize = 1.000000000000000000
+        object GLSphere2: TGLSphere
+          Material.FrontProperties.Ambient.Color = {9190103F8988083FCDCC4C3E4A0C823E}
+          Material.FrontProperties.Diffuse.Color = {9392123F8D8C0C3F000000003333333E}
+          Material.FrontProperties.Emission.Color = {FBFAFA3EEFEEEE3E000000000000803F}
+          Position.Coordinates = {00000000000000000000003F0000803F}
+          Radius = 0.200000002980232200
         end
-        object GLLinesPath: TGLLines
+        object GLLineNeedle: TGLLines
+          ObjectsSorting = osRenderBlendedLast
+          Direction.Coordinates = {0000000000000000000080BF00000000}
+          Up.Coordinates = {0000803F000000000000000000000000}
           Pickable = False
-          LineColor.Color = {F8FEFE3E0000803F000000000000803F}
+          LineColor.Color = {9A99593F9A99593F9A99593F0000803F}
           LineWidth = 2.000000000000000000
-          NodeColor.Color = {000000000000803F000000000000803F}
+          NodeColor.Color = {0000000000000000000000000000803F}
           Nodes = <
             item
+              Z = -0.400000005960464400
+            end
+            item
+              Z = 4.000000000000000000
             end>
           NodesAspect = lnaInvisible
-          NodeSize = 0.200000002980232200
-          Options = [loUseNodeColorForLines]
-        end
-        object GLArrowLineY: TGLArrowLine
-          Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
-          Material.FrontProperties.Emission.Color = {00000000AFAEAE3EB1B0B03D0000803F}
-          Direction.Coordinates = {000000800000803FECAD092700000000}
-          PitchAngle = 90.000000000000000000
-          TurnAngle = 90.000000000000000000
-          Up.Coordinates = {0000803F000000000000000000000000}
-          BottomRadius = 0.100000001490116100
-          Height = 4.000000000000000000
-          TopRadius = 0.100000001490116100
-          TopArrowHeadHeight = 1.000000000000000000
-          TopArrowHeadRadius = 0.200000002980232200
-          BottomArrowHeadHeight = 0.500000000000000000
-          BottomArrowHeadRadius = 0.200000002980232200
-        end
-        object GLArrowLineX: TGLArrowLine
-          Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
-          Material.FrontProperties.Emission.Color = {00000000C1C0C03DA3A2A23E0000803F}
-          Direction.Coordinates = {0000803F000000002FBD3BB400000000}
-          BottomRadius = 0.100000001490116100
-          Height = 4.000000000000000000
-          TopRadius = 0.100000001490116100
-          TopArrowHeadHeight = 1.000000000000000000
-          TopArrowHeadRadius = 0.200000002980232200
-          BottomArrowHeadHeight = 0.500000000000000000
-          BottomArrowHeadRadius = 0.200000002980232200
-        end
-        object GLHeightFieldWP: TGLHeightField
-          Material.Texture.Compression = tcHighSpeed
-          Direction.Coordinates = {00000000000000800000803F00000000}
-          Position.Coordinates = {00000000000000000000803F0000803F}
-          Visible = False
-          Pickable = False
-          XSamplingScale.Step = 0.039999999105930330
-          YSamplingScale.Step = 0.039999999105930330
           Options = []
-          OnGetHeight = GLHeightFieldWPGetHeight
         end
+      end
+      object GLCubeWP: TGLCube
+        Direction.Coordinates = {00000000000080BF0000000000000000}
+        Position.Coordinates = {00004040000000400000003F0000803F}
+        Up.Coordinates = {00000000000000000000803F00000000}
+        Pickable = False
+        Parts = [cpFront, cpBack, cpLeft, cpRight]
+        CubeSize = {0000C0400000803F00008040}
+      end
+      object GLSpaceText1: TGLSpaceText
+        Material.FrontProperties.Ambient.Color = {8D8C8C3E8382823E000000000000803F}
+        Material.FrontProperties.Diffuse.Color = {C9C8C83EB5B4B43E000000000000803F}
+        Material.FrontProperties.Emission.Color = {A1A0203F8D8C0C3F000000000000803F}
+        Direction.Coordinates = {00000000000080BF0000000000000000}
+        Position.Coordinates = {000000000000E0C0666666BF0000803F}
+        RollAngle = 90.000000000000000000
+        Up.Coordinates = {00000000000000000000803F00000000}
+        Extrusion = 0.100000001490116100
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Arial'
+        Font.Style = [fsBold]
+        Lines.Strings = (
+          'Make:')
+        Adjust.Horz = haCenter
       end
       object GLExtrusionSolid1: TGLExtrusionSolid
         Material.BackProperties.Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3EAAF1523E}
@@ -5946,12 +5952,6 @@ object Form4: TForm4
         Direction.Coordinates = {00000000000000800000803F00000000}
         Position.Coordinates = {0000000000000000000000BF0000803F}
         CubeSize = {0000B041000040410000803F}
-      end
-      object GLDummyCube2: TGLDummyCube
-        Direction.Coordinates = {000000000000803F0000000000000000}
-        Position.Coordinates = {0000000000000000000040C00000803F}
-        Up.Coordinates = {0000000000000000000080BF00000000}
-        CubeSize = 1.000000000000000000
       end
     end
     object GLCamera1: TGLCamera

@@ -42,7 +42,6 @@ type
     GLSpaceText1: TGLSpaceText;
     GLXYZGridTable: TGLXYZGrid;
     GLDummyCubeCenter: TGLDummyCube;
-    GLDummyCube2: TGLDummyCube;
     GLCylinderToolshaft: TGLCylinder;
     GLAnnulus1: TGLAnnulus;
     Timer1: TTimer;
@@ -83,6 +82,7 @@ type
     CheckLiveRender: TCheckBox;
     GLSmoothNavigator1: TGLSmoothNavigator;
     GLSmoothUserInterface1: TGLSmoothUserInterface;
+    GLDummyCubePartZero: TGLDummyCube;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure GLSceneViewer1MouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -214,29 +214,25 @@ end;
 procedure SetSimPositionMMxy(x, y:Double);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
+  sim_x:= x; sim_y:= y;
   if not Form1.Show3DPreview1.Checked then
     exit;
-  sim_x:= x; sim_y:= y;
   SetToolPosition(x/c_GLscale, y/c_GLscale, sim_z/c_GLscale, clblack);
-  Form4.GLLinesPath.Nodes.Clear;
 end;
 
 procedure SetSimPositionMMxyz(x, y, z:Double);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
+  sim_x:= x; sim_y:= y; sim_z:= z;
   if not Form1.Show3DPreview1.Checked then
     exit;
-  sim_x:= x; sim_y:= y; sim_z:= z;
   SetToolPosition(x/c_GLscale, y/c_GLscale, sim_z/c_GLscale, clblack);
   Form4.GLSpaceTextToolZ.Text:= FormatFloat('00.0 mm', sim_z);
-  Form4.GLLinesPath.Nodes.Clear;
 end;
 
 procedure SetTool(glr: Double; tooltip: integer; tool_color: TColor);
 // Werkzeugdurchmesser und -spitze setzen, auf GL skalierte Werte
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
   with Form4 do begin
     GLCylinderToolshaft.TopRadius:= glr;
     GLCylinderToolshaft.BottomRadius:= glr;
@@ -306,12 +302,11 @@ end;
 procedure SetSimToolMM(d: Double; tooltip: integer; tool_color: TColor);
 // Werkzeugdurchmesser und -spitze setzen, Werte in Millimetern
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
   sim_dia:= d;
   sim_tooltip:= tooltip;
   sim_color:= tool_color;
-  SetTool(d/2/c_GLscale, tooltip, tool_color);
+  if Form1.Show3DPreview1.Checked then
+    SetTool(d/2/c_GLscale, tooltip, tool_color);
 end;
 
 procedure Finalize3Dview;
@@ -524,9 +519,9 @@ begin
 
   //GLDummyCube3.DeleteChildren;
   GLLinesPath.Nodes.Clear;
-  GLArrowLineZ.Position.Z:= job.partsize_z / c_GLscale;
-  GLArrowLineZ.Position.X:= -job.partsize_x / (c_GLscale*2);
-  GLArrowLineZ.Position.Y:= -job.partsize_y / (c_GLscale*2);
+  GLDummyCubePartZero.Position.X:= -job.partsize_x / (c_GLscale*2);
+  GLDummyCubePartZero.Position.Y:=  -job.partsize_y / (c_GLscale*2);
+  GLDummyCubePartZero.Position.Z:= job.partsize_z / c_GLscale;
 
   // Tisch ist zentriert in Bildmitte
   GLCubeTable.CubeWidth:= job.partsize_x / c_GLscale + 2;
@@ -591,6 +586,9 @@ begin
   gl_mult_scale:= c_GLscale * gl_arr_scale;
   GLHeightFieldWP.XSamplingScale.Step:= 1/gl_mult_scale;
   GLHeightFieldWP.YSamplingScale.Step:= 1/gl_mult_scale;
+  SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+  SetSimPositionMMxyz(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z);
+  SetSimToolMM(Form1.ComboBoxGdia.ItemIndex +1, sim_tooltip, clGray);
 end;
 
 procedure TForm4.FormRefresh(Sender: TObject);
@@ -751,7 +749,7 @@ end;
 
 procedure TForm4.CheckWorkGridClick(Sender: TObject);
 begin
-  GLsceneViewer1.Invalidate;
+//  GLsceneViewer1.Invalidate;
   GLSpaceTextToolZ.Visible:= CheckWorkGrid.Checked;
   GLLinesCallout.Visible:= CheckWorkGrid.Checked;
   GLXYZgridWP.Visible:= CheckWorkGrid.Checked;

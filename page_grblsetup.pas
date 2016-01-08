@@ -131,7 +131,7 @@ begin
         my_str:= grbl_receiveStr(250);
         if my_str='ok' then
           break;
-        if my_str[1]='[' then
+        if pos('[',my_str) > 0 then
           continue;
         Cells[0,RowCount-1]:= my_str;
         Cells[1,RowCount-1]:= setting_val_extr(my_str);

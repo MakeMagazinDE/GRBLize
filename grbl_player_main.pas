@@ -367,6 +367,34 @@ end;
 
 procedure DisableTimerStatus; forward;
 
+procedure ResetCoordinates;
+// willkürliche Ausgangswerte, auch für Simulation
+begin
+  grbl_mpos.x:= 0;
+  grbl_mpos.y:= 0;
+  grbl_wpos.x:= 0;
+  grbl_wpos.y:= 0;
+  grbl_mpos.z:= 0;
+  grbl_wpos.z:= job.z_penlift;
+  WorkZeroX:= grbl_mpos.x - grbl_wpos.x;
+  WorkZeroY:= grbl_mpos.y - grbl_wpos.y;
+  WorkZeroZ:= grbl_mpos.z - grbl_wpos.z;
+  with Form1 do begin
+    MPosX.Caption:= '000,00';
+    MPosY.Caption:= '000,00';
+    PosX.Caption:=  '000,00';
+    PosY.Caption:=  '000,00';
+    MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
+    PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+    LabelWorkX.Caption:= FormatFloat('000.00', WorkZeroX);
+    LabelWorkY.Caption:= FormatFloat('000.00', WorkZeroY);
+    LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
+  end;
+  SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+  SetSimPositionMMxyz(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z);
+  SetSimToolMM(Form1.ComboBoxGdia.ItemIndex +1, sim_tooltip, clGray);
+end;
+
 // #############################################################################
 // ############################# I N C L U D E S ###############################
 // #############################################################################
@@ -527,6 +555,7 @@ begin
   TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
   TimerBlink.Enabled:= true;
   TimerStatusToggle:= false;
+  ResetCoordinates;
 end;
 
 
@@ -759,7 +788,6 @@ begin
   result:= false;
   pos_changed:= false;
 //  update_abs:= false;
-
 //  Form1.EditStatus.Text:= my_response;
 
   // Format bei GRBL 0.9j: <Idle,MPos:0.000,0.000,0.000,WPos:0.000,0.000,0.000>
@@ -908,6 +936,7 @@ begin
     exit;
   LEDbusy.Checked:= true;
   if Form1.CheckBoxSim.checked then begin
+    ResetCoordinates;
     sim_active:= true;          // für Cadencer-Prozess
     sim_render_finel:= false;   // wird bei bedarf (z<0) in InterpretGcodeLine gesetzt
     for i:= 0 to my_count-1 do begin   // Alle Gcodes simulieren
@@ -935,12 +964,12 @@ begin
       Finalize3Dview;
     sim_active:= false;
   end else if grbl_is_connected then begin
-    DisableTimerStatus;
+    DisableTimerStatus;  // keine automatischen Upates
     my_count:= grbl_sendlist.Count;
     for i:= 0 to my_count-1 do begin
       if i mod 10 = 0 then begin           // alle 10 Zeilen Status anfordern
         Form1.ProgressBar1.position:= i;
-        DecodeStatus(GetStatus, pos_changed);       // ist ein Dummy
+        DecodeStatus(GetStatus, pos_changed);  // pos_changed ist ein Dummy
         SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
         SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
       end;

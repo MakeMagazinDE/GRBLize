@@ -193,7 +193,7 @@ begin
     inc(idx);
     sim_x:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
     if pos('G53', my_str) > 0 then begin
-      sim_x:= -20;
+      sim_x:= 0;
     end;
   end;
   idx:= pos('Y', my_str);
@@ -201,7 +201,7 @@ begin
     inc(idx);
     sim_y:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
     if pos('G53', my_str) > 0 then begin
-      sim_y:= -20;
+      sim_y:= 0;
     end;
   end;
   idx:= pos('Z', my_str);
@@ -209,7 +209,7 @@ begin
     inc(idx);
     sim_z:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
     if pos('G53', my_str) > 0 then begin
-      sim_z:= 50;
+      sim_z:= job.z_penlift;
     end;
     if sim_z < 0 then
       sim_render_finel:= true;
