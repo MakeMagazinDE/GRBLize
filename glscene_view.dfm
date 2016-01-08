@@ -145,6 +145,17 @@ object Form4: TForm4
       CubeSize = 1.000000000000000000
       object GLDummyCubePartZero: TGLDummyCube
         CubeSize = 1.000000000000000000
+        object GLHeightFieldWP: TGLHeightField
+          Material.Texture.Compression = tcHighSpeed
+          Direction.Coordinates = {00000000000000800000803F00000000}
+          Position.Coordinates = {00000000000000000000803F0000803F}
+          Visible = False
+          Pickable = False
+          XSamplingScale.Step = 0.039999999105930330
+          YSamplingScale.Step = 0.039999999105930330
+          Options = []
+          OnGetHeight = GLHeightFieldWPGetHeight
+        end
         object GLLinesPath: TGLLines
           Pickable = False
           LineColor.Color = {F8FEFE3E0000803F000000000000803F}
@@ -5842,17 +5853,6 @@ object Form4: TForm4
             end
           end
         end
-      end
-      object GLHeightFieldWP: TGLHeightField
-        Material.Texture.Compression = tcHighSpeed
-        Direction.Coordinates = {00000000000000800000803F00000000}
-        Position.Coordinates = {00000000000000000000803F0000803F}
-        Visible = False
-        Pickable = False
-        XSamplingScale.Step = 0.039999999105930330
-        YSamplingScale.Step = 0.039999999105930330
-        Options = []
-        OnGetHeight = GLHeightFieldWPGetHeight
       end
       object GLLightSource1: TGLLightSource
         Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3E0000803F}
