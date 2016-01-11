@@ -823,8 +823,10 @@ begin
     po2:= po1;
     Canvas.Pen.Color:= clwhite;
     if length(final_Array) > 0 then
-      for j:= 0 to length(final_Array) - 1 do
+      for j:= 0 to length(final_Array) - 1 do begin
         draw_final_entry(final_Array[j], HiliteBlock = j, po1);
+//       Application.ProcessMessages;     // sehr langsam!
+      end;
     draw_move(po1, po2, clgray, true, false);
 
     Canvas.Pen.Color:= clgray;
@@ -992,7 +994,10 @@ begin
     bm_scroll.y:= bm_scroll.y + Y - mouse_start.y;
     mouse_start.x:= X;
     mouse_start.y:= Y;
-    draw_cnc_all;
+    set_drawing_scales;
+    draw_grid(Form2.DrawingBitmap);
+    NeedsRedraw:= true;
+    Application.ProcessMessages;
   end;
 end;
 
@@ -1007,8 +1012,7 @@ begin
     mouse_start.x:= X;
     mouse_start.y:= Y;
     search_entry_in_drawing(x,y);
-    draw_cnc_all;
-    exit;
+    NeedsRedraw:= true;
   end;
   if (ssRight in Shift) then begin
     // if HiliteBlock < 0 then
@@ -1035,10 +1039,9 @@ end;
 procedure TForm2.DrawingBoxMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  draw_cnc_all;
+//  draw_cnc_all;
   Cursor := crCross;
   NeedsRedraw:= true;
-  NeedsRelist:= true;
   TrackBarZoom.SetFocus;
 end;
 
@@ -1079,7 +1082,7 @@ begin
     PopupMenuPoint.Items[0].Checked:= not PopupMenuPoint.Items[0].Checked;
     final_array[HiliteBlock].enable:= PopupMenuPoint.Items[0].Checked;
     NeedsRedraw:= true;
-    NeedsRelist:= true;
+    list_blocks;
     Form4.FormRefresh(Sender);
   end;
 end;
@@ -1095,7 +1098,6 @@ begin
     final_array[HiliteBlock].shape:= Tshape(my_idx-2);
     item_change(HiliteBlock);
     NeedsRedraw:= true;
-    NeedsRelist:= true;
     Form4.FormRefresh(Sender);
   end;
 end;
@@ -1110,7 +1112,6 @@ begin
   drawing_ToolPos.X:= x;
   drawing_ToolPos.Y:= y;
   drawing_tool_down:= z <= 0;
-  NeedsRedraw:= Form1.ShowDrawing1.Checked;
 end;
 
 procedure SetAllPosZupMM(x, y: Double);
@@ -1119,7 +1120,6 @@ begin
   drawing_ToolPos.X:= x;
   drawing_ToolPos.Y:= y;
   drawing_tool_down:= false;
-  NeedsRedraw:= Form1.ShowDrawing1.Checked;
 end;
 
 // #############################################################################

@@ -680,9 +680,12 @@ var i, my_len, my_z_feed: Integer;
     y:= (millpath[i].y + offset.y) / c_hpgl_scale;
     grbl_moveXY(x,y,false);
     z:= 0;
-    my_z_feed:= job.pens[millpen].speed;
+    my_z_feed:= job.pens[millpen].speed; // Feed des gewählten Pens
+{
     if my_z_feed > job.z_feed then
       my_z_feed:= job.z_feed;
+}
+    Application.ProcessMessages;
     if CancelGrbl then
       exit;
     repeat
@@ -719,9 +722,10 @@ begin
     z:= -job.pens[millpen].z_end;
     if z < my_z_limit then
       z:= my_z_limit;
-
+    Application.ProcessMessages;
     if CancelGrbl then
       exit;
+
     grbl_moveZ(job.z_penup, false);
     x:= (millpath[0].x + offset.x) / c_hpgl_scale;
     y:= (millpath[0].y + offset.y) / c_hpgl_scale;

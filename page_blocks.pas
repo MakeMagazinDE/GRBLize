@@ -67,6 +67,20 @@ begin
     end else if aRow <= length(final_array) then begin
       Font.Color := clblack;
       case aCol of
+        1:
+          begin
+            if length(final_array) > 0 then
+              i:= ord(final_array[aRow-1].pen)
+            else
+              i:= 0;
+            Rect.Left:= Rect.Left + 24;
+//            InflateRect(Rect, -1, -1);
+            Brush.Color := clgray;
+            FrameRect(Rect);
+            InflateRect(Rect, -2, -2);
+            Brush.Color := job.pens[i].color;
+            FillRect(Rect);
+          end;
         2,4:
           begin  // ON, OFF
             FrameRect(Rect);

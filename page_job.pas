@@ -24,7 +24,6 @@ begin
     job.pens[j].tooltip:= StrToIntDef(Cells[12,i],0);
   end;
   NeedsRedraw:= true;
-  NeedsRelist:= true;
 end;
 
 procedure JobToPenGridList;
@@ -96,7 +95,7 @@ begin
   UnHilite;
   setlength(final_array,0);
   NeedsRedraw:= true;
-  NeedsRelist:= true;
+  list_blocks;
 end;
 
 procedure InitJob;
@@ -107,7 +106,7 @@ begin
   Form1.SgFiles.Rows[0].DelimitedText:=
     '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %"';
   Form1.SgBlocks.Rows[0].DelimitedText:=
-    '#,P/D,Ena,Dia,Shape,Bounds,Center,Points';
+    '#,Pen/Drill,Ena,Dia,Shape,Bounds,Center,Points';
   Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
   with job do begin
     for i := 0 to 31 do begin
@@ -190,6 +189,7 @@ begin
     Rows[22].DelimitedText:='"ATC row X distance",20';
     Rows[23].DelimitedText:='"ATC row Y distance",0';
   end;
+  ClearFiles;
 end;
 
 procedure DefaultsGridListToJob;
@@ -287,7 +287,6 @@ begin
     end;
   JobToPenGridList;
   param_change;
-  NeedsRelist:= true;
   NeedsRedraw:= true;
   Form1.SgPens.Repaint;
   Form4.FormRefresh(nil);
@@ -370,6 +369,7 @@ begin
   end else
     InitJob;
   sl.Free;
+  list_blocks;
 end;
 
 Procedure LoadIniFile;
@@ -578,7 +578,7 @@ begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   NeedsRedraw:= true;
-  NeedsRelist:= true;
+  list_blocks;
 end;
 
 // #############################################################################

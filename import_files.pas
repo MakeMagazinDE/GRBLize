@@ -136,7 +136,7 @@ const
       enable: false;
       shape: online;
       color: clblack;
-      diameter: 0.0;
+      diameter: 1.0;
       scale: 100;
       speed: 400;
       z_end: 0.3;
@@ -185,6 +185,9 @@ var
   function find_nearest_point(var search_path: Tpath; last_x, last_y: Integer): Integer;
 
 implementation
+
+uses grbl_player_main;
+
 
 function FloatToStrDot(my_val: Double):String;
 var
@@ -685,6 +688,7 @@ begin
   // Werkzeugkorrektur-Offsets für fertiges BlockArray
   for i:= 0 to high(final_array) do
     compile_milling(final_array[i]);
+  list_blocks;
 end;
 
 procedure item_change(arr_idx: Integer);
@@ -692,6 +696,7 @@ procedure item_change(arr_idx: Integer);
 begin
   if (arr_idx < length(final_array)) and (arr_idx >= 0) then
     compile_milling(final_array[arr_idx]);
+  list_blocks;
 end;
 
 

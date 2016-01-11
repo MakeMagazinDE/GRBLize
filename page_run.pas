@@ -53,6 +53,7 @@ begin
   CancelJob:= false;
   CancelSim:= false;
   Form1.ProgressBar1.position:= 0;
+  Form1.TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
 end;
 
 procedure TForm1.BtnHomeCycleClick(Sender: TObject);
@@ -93,7 +94,7 @@ end;
 procedure StartJogAction(sender: TObject; tag: Integer);
 var dx, dy, dz, x, y, z: Double;
   my_str: string;
-  first_loop_done: Boolean;
+//  first_loop_done: Boolean;
   my_delay: Integer;
 begin
   DisableTimerStatus;
@@ -124,9 +125,11 @@ begin
   x:= grbl_mpos.X; // derzeitige Position
   y:= grbl_mpos.Y;
   z:= grbl_mpos.Z;
-  first_loop_done:= false;
   my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
+{
+  first_loop_done:= false;
   repeat
+}
     x:= x + dx;
     if x < 0 then
       x:= 0;
@@ -151,13 +154,15 @@ begin
       my_str:= 'G0 G53 Z' + FloatToStrDot(z);
     if not Form1.CheckBoxSim.checked then
       Form1.Memo1.lines.add(my_str + ' // ' + grbl_sendStr(my_str + #13, true));
+{
     if not first_loop_done then
       mdelay(300)
     else
       mdelay(my_delay);
     first_loop_done:= true;
   until MouseJogAction = False; // stop when cancelled
-  Form1.TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
+}
+  ClearCancelFlags;
 end;
 
 
@@ -171,6 +176,7 @@ end;
 procedure TForm1.BitBtnJogMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
+  ClearCancelFlags;
   MouseJogAction := False; // cancel notification
 end;
 
@@ -462,6 +468,7 @@ begin
   SendGrblAndWaitForIdle;
   Memo1.lines.add('// FINISHED');
   drawing_tool_down:= false;
+  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
 end;
 
 procedure TForm1.RunGcode;
@@ -530,6 +537,7 @@ begin
   SendGrblAndWaitForIdle;
   Memo1.lines.add('// FINISHED');
   drawing_tool_down:= false;
+  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
 end;
 
 procedure TForm1.BtnRunJobClick(Sender: TObject);
@@ -575,8 +583,7 @@ begin
   HomingPerformed:= false;
   drawing_tool_down:= false;
   grbl_checkResponse;
-  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
-  Form1.ProgressBar1.position:= 0;
+  ClearCancelFlags;
 end;
 
 procedure TForm1.BtnCancelClick(Sender: TObject);
@@ -592,6 +599,7 @@ begin
   CancelSim:= true;
   // neue Z-Höhe wird in Timer bei CancelGrbl gesetzt
   Form1.Memo1.lines.add('// MACHINE STOPPED AT Z = ' + FormatFloat('0.00', job.z_penlift) + ' mm');
+  TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
   Form1.ProgressBar1.position:= 0;
 end;
 

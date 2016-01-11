@@ -138,7 +138,6 @@ type
     BitBtn11: TBitBtn;
     BitBtn12: TBitBtn;
     Bevel5: TBevel;
-    CheckBoxJogpad: TCheckBox;
     TrackBarRepeatRate: TTrackBar;
     Label9: TLabel;
     Label15: TLabel;
@@ -172,6 +171,11 @@ type
     Label25: TLabel;
     Label26: TLabel;
     LabelFaults: TLabel;
+    CheckBoxJogpad: TCheckBox;
+    Label27: TLabel;
+    Label28: TLabel;
+    Bevel8: TBevel;
+    Bevel9: TBevel;
     procedure RunGcode;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
@@ -274,6 +278,7 @@ type
 
   procedure SendGrblAndWaitForIdle;
   procedure ClearCancelFlags;
+  procedure list_Blocks;
 
   
 type
@@ -293,7 +298,6 @@ var
 
   ComPortAvailableList: Array[0..31] of Integer;
   ComPortUsed: Integer;
-  NeedsRelist: boolean;
   Scale: Double;
   JobSettingsPath: String;
   HomingPerformed: Boolean;
@@ -398,7 +402,6 @@ end;
 // #############################################################################
 // ############################# I N C L U D E S ###############################
 // #############################################################################
-
 
 {$I page_blocks.pas}
 {$I page_job.pas}
@@ -720,14 +723,10 @@ end;
 
 procedure TForm1.TimerDrawElapsed(Sender: TObject);
 begin
-  if NeedsRelist and (Form1.PageControl1.TabIndex = 2) then begin
-    list_blocks;
-    NeedsRelist:= false;
-  end;
   if NeedsRedraw and Form1.WindowMenu1.Items[0].Checked then begin
     draw_cnc_all;
-    NeedsRedraw:= false;
   end;
+  NeedsRedraw:= false;
 end;
 
 // #############################################################################
@@ -894,6 +893,7 @@ begin
   if (old_grbl_wpos.X <> grbl_wpos.X) or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
     pos_changed:= true;
     old_grbl_wpos:= grbl_wpos;
+    NeedsRedraw:= true;
   end;
 end;
 
@@ -907,7 +907,10 @@ begin
   if not TimerStatusToggle then begin
     RequestStatus;
   end else begin
-    DecodeStatus(grbl_receiveStr(grbl_delay_long), pos_changed); // dauert maximal ca. 80 ms
+    if grbl_receiveCount > 5 then
+      DecodeStatus(grbl_receiveStr(grbl_delay_long), pos_changed); // dauert maximal ca. 80 ms
+    while grbl_receiveCount > 0 do
+      grbl_receiveStr(grbl_delay_short);   // Dummy lesen
     SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
     SetSimPosColorMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z, sim_color);
     if IsIdle and (not pos_changed) then begin

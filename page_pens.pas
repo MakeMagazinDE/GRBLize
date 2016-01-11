@@ -39,11 +39,13 @@ begin
       end;
     1: // Color
       begin
+        InflateRect(Rect, -1, -1);
         Brush.Color := clgray;
         FrameRect(Rect);
         Brush.Color := job.pens[aRow-1].color;
         InflateRect(Rect, -1, -1);
         FillRect(Rect);
+        Font.Color:=clwhite;
       end;
     2: // Enable
       begin
@@ -157,6 +159,7 @@ begin
       begin
         Options:= Options + [goEditing];
         PenGridListToJob;
+        list_blocks;
       end;
     8:  // Scale
       begin
@@ -223,6 +226,7 @@ begin
         SgPens.Cells[SgPens.Col, SgPens.Row]:= FloatToStr(my_float);
         PenGridListToJob;
         param_change;
+        list_blocks;
       end;
     4: // Z
       begin
@@ -254,6 +258,7 @@ begin
       end;
     else
       param_change;
+      list_blocks;
   end;
 end;
 
