@@ -1,22 +1,45 @@
 // #############################################################################
-// ######################## FTDI OPEN/CLOSE BUTTONS ############################
 // ########################## GRBL DEFAULT BUTTONS #############################
 // #############################################################################
 
-function GetResponseAndSetButtons: Boolean;
+procedure OpenCOMport;
 begin
-  result:= false;
-  with Form1 do begin
-    if grbl_checkResponse then begin
-      BtnRescan.Visible:= false;
-      BtnClose.Visible:= true;
-      CheckBoxSim.enabled:= true;
-      CheckBoxSim.Checked:= false;
-      EnableNotHomedButtons;
-      result:= true;
-    end else
-      BtnCloseClick(nil);
+  com_isopen:= COMopen(com_name);
+  Form1.Memo1.lines.add(com_name + ' connected - please wait...');
+  if com_isopen then begin
+    Form1.CheckBoxSim.Checked:= false;
+    COMSetup(trim(deviceselectbox.EditBaudrate.Text));
+    Form1.DeviceView.Text:= 'Serial port ' + com_name;
+    sleep(2000);  // Arduino Startup Time
+    grbl_is_connected:= grbl_checkResponse;
+    Form1.BtnRefreshGrblSettingsClick(nil);
+    Form1.Memo1.lines.add('Ready - Home Cycle pending');
   end;
+end;
+
+procedure OpenFTDIport;
+var
+  vid, pid: word;
+  my_device: fDevice;
+  my_description: String;
+begin
+// darf nicht in FormCreate stehen, wird dort durch Application.processmessages in mdelay() gestört
+  if (ftdi_device_count > 0) then
+    if ftdi.isPresentBySerial(ftdi_serial) then begin
+      Form1.CheckBoxSim.Checked:= false;
+      // Öffnet Device nach Seriennummer
+      // Stellt sicher, dass das beim letzten Form1.Close
+      // geöffnete Device auch weiterhin verfügbar ist.
+      Form1.Memo1.lines.add(InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text)
+        + ' - please wait...');
+      ftdi.getDeviceInfo(my_device, pid, vid, my_description, ftdi_serial);
+      Form1.DeviceView.Text:= ftdi_serial + ' - ' + my_description;
+      ftdi_isopen:= true;
+      sleep(500);  // Arduino Startup Time
+      grbl_is_connected:= grbl_checkResponse;
+      Form1.BtnRefreshGrblSettingsClick(nil);
+      Form1.Memo1.lines.add('Ready - Home Cycle pending');
+    end;
 end;
 
 procedure TForm1.BtnRescanClick(Sender: TObject);
@@ -28,8 +51,9 @@ begin
   com_isopen:= false;
   ftdi_isopen:= false;
   grbl_is_connected:= false;
+  HomingPerformed:= false;
   com_name:='';
-  //SetUpFTDI;
+  SetUpFTDI;
   if ftdi_device_count > 0 then begin
     deviceselectbox.ListView1.Items.clear;
     for i := 0 to ftdi_device_count - 1 do begin
@@ -54,19 +78,41 @@ begin
   if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
     com_selected_port:= deviceselectbox.ComboBoxCOMport.ItemIndex - 1;
     com_name:= deviceselectbox.ComboBoxCOMport.Text;
-    com_was_open:= true; // wird dann im TimerBlink geöffnet
+    OpenCOMport;
   end else if (ftdi_device_count > 0) then begin
     ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
     ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
-    ftdi_was_open:= true; // wird dann im TimerBlink geöffnet
+    OpenFTDIport;
+    Form1.CheckBoxSim.Checked:= false;
   end;
+  if ftdi_isopen or com_isopen then begin
+    BtnConnect.Enabled:= false;
+    BtnRescan.Enabled:= false;
+  end;
+  ResetToolflags;
+  HomingPerformed:= false;
+end;
+
+procedure TForm1.BtnConnectClick(Sender: TObject);
+begin
+  if ftdi_was_open then
+    OpenFTDIport
+  else if com_was_open then
+    OpenCOMport;
+  if ftdi_isopen or com_isopen then begin
+    BtnConnect.Enabled:= false;
+    BtnRescan.Enabled:= false;
+  end;
+  ResetToolflags;
+  HomingPerformed:= false;
 end;
 
 procedure TForm1.BtnCloseClick(Sender: TObject);
 begin
   CheckBoxSim.enabled:= false;
   CheckBoxSim.Checked:= true;
-  CancelGrbl:= true;
+  ftdi_was_open:= ftdi_isopen;
+  com_was_open:= com_isopen;
   if com_isopen then
     COMClose;
   if ftdi_isopen then
@@ -74,12 +120,15 @@ begin
   ftdi_isopen:= false;
   com_isopen:= false;
   grbl_is_connected:= false;
-  BtnRescan.Visible:= true;
-  BtnClose.Visible:= false;
-  DeviceView.Text:= '(not selected)';
-  DisableButtons;
+  DeviceView.Text:= 'SIMULATION';
   HomingPerformed:= false;
-  Memo1.lines.add('// COM/USB disconnected');
+  Memo1.lines.add('COM/USB disconnected');
+  Form1.CheckBoxSim.Checked:= true;
+  BtnConnect.Enabled:= com_was_open;
+  if com_was_open then
+    BtnConnect.SetFocus;
+  BtnRescan.Enabled:= true;
+  ResetToolFlags;
 end;
 
 // #############################################################################
@@ -111,23 +160,22 @@ procedure TForm1.BtnRefreshGrblSettingsClick(Sender: TObject);
 var
   my_str: String;
 begin
-  CancelGrbl:= false;
-  CancelWait:= false;
   if grbl_is_connected then
     with Form1.SgGrblSettings do begin
       LEDbusy.Checked:= true;
-      DisableTimerStatus;
-      mdelay(300);
       grbl_checkResponse;
+      DisableStatus;
       Rowcount:= 2;
       grbl_sendStr(#24, false);   // Reset CTRL-X
-      mdelay(250);
-      my_str:= grbl_receiveStr(500);  // Dummy
-      my_str:= grbl_receiveStr(200);
+      repeat
+        my_str:= grbl_receiveStr(100);  // Dummy
+        Application.ProcessMessages;
+      until pos('Grbl', my_str) > 0;
+      grbl_wait_for_timeout(100);
       Rows[0].text:= my_str;
 
       grbl_sendStr('$$' + #13, false);
-      while not CancelGrbl do begin
+      while not (BtnCancel.Tag = 1) do begin
         my_str:= grbl_receiveStr(250);
         if my_str='ok' then
           break;
@@ -135,12 +183,6 @@ begin
           continue;
         Cells[0,RowCount-1]:= my_str;
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
-        if pos('x max travel',my_str) > 0 then
-          TableX:= StrDotToFloat(Cells[1,RowCount-1]);
-        if pos('y max travel',my_str) > 0 then
-          TableY:= StrDotToFloat(Cells[1,RowCount-1]);
-        if pos('z max travel',my_str) > 0 then
-          TableZ:= StrDotToFloat(Cells[1,RowCount-1]);
         Rowcount:= RowCount+1;
       end;
 
@@ -149,14 +191,11 @@ begin
       Cells[1,0]:= 'Value';
       FixedCols:= 1;
       FixedRows:= 1;
-      TimerStatus.Enabled:= not Form1.CheckBoxSim.checked;
-      Form1.BtnZeroXClick(nil);
-      Form1.BtnZeroYClick(nil);
-      Form1.BtnZeroZClick(nil);
       bm_scroll.x:= 0;
       bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
-      LEDbusy.Checked:= false;
-   end;
+      EnableStatus;  // automatische Upates freischalten
+    end;
+  LEDbusy.Checked:= false;
 end;
 
 
@@ -165,21 +204,18 @@ var i : Integer;
   my_str0, my_str1: String;
 
 begin
-  CancelGrbl:= false;
-  CancelWait:= false;
   if grbl_is_connected then begin
-    LEDbusy.Checked:= true;    // wird in BtnRefreshGrblSettingsClick zurückgesetzt
-    TimerStatus.Enabled:= false;
-    mdelay(120);
+    LEDbusy.Checked:= true;
+    grbl_checkResponse;
+    DisableStatus;
     with SgGrblSettings do begin
       Progressbar1.max:= RowCount;
-      grbl_checkResponse;
       if (RowCount < 3) then begin
         showmessage('GRBL settings are empty.');
         LEDbusy.Checked:= false;
         exit;
       end else for i:= 1 to Rowcount-1 do begin
-        if CancelGrbl then
+        if (BtnCancel.Tag = 1) then
           break;
         if Cells[0,i] = '' then
           continue;
@@ -193,7 +229,9 @@ begin
     end;
     Progressbar1.Position:= 0;
     BtnRefreshGrblSettingsClick(Sender);
+    EnableStatus;  // automatische Upates freischalten
   end;
+  LEDbusy.Checked:= false;
 end;
 
 procedure LoadStringGrid(aGrid: TStringGrid; const my_fileName: string);

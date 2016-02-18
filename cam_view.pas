@@ -205,9 +205,8 @@ end;
 
 procedure TForm3.BtnCamAtZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
+  Form1.Memo1.lines.add('Offset cam to part zero');
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendGrblAndWaitForIdle;
 end;
@@ -215,15 +214,14 @@ end;
 procedure TForm3.BtnCamAtPointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   if (HilitePoint < 0) and (HiliteBlock < 0) then
     exit;
   Form1.Memo1.lines.add('');
   if HilitePoint >= 0 then begin
-    Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
+    Form1.Memo1.lines.add('Offset cam to point');
     hilite_to(x,y);
   end else begin
-    Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
+    Form1.Memo1.lines.add('Offset cam to center');
     hilite_center_to(x,y);
   end;
   x:= x - job.cam_x;
@@ -235,15 +233,14 @@ end;
 procedure TForm3.BtnMoveCamPointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   if (HilitePoint < 0) and (HiliteBlock < 0) then
     exit;
   Form1.Memo1.lines.add('');
   if HilitePoint >= 0 then begin
-    Form1.Memo1.lines.add('// MOVE CAM TO POINT');
+    Form1.Memo1.lines.add('Move cam to point');
     hilite_to(x,y);
   end else begin
-    Form1.Memo1.lines.add('// MOVE CAM TO CENTER');
+    Form1.Memo1.lines.add('Move cam to center');
     hilite_center_to(x, y);
   end;
   x:= x - job.cam_x;
@@ -257,9 +254,8 @@ end;
 
 procedure TForm3.BtnMoveCamZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
+  Form1.Memo1.lines.add('Move cam to part zero');
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   grbl_moveZ(job.cam_z_abs, true);
@@ -269,13 +265,12 @@ end;
 procedure TForm3.BtnMoveToolPointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
   if HilitePoint >= 0 then begin
-    Form1.Memo1.lines.add('// MOVE TOOL TO POINT');
+    Form1.Memo1.lines.add('Move tool to point');
     hilite_to(x,y);
   end else begin
-    Form1.Memo1.lines.add('// MOVE TOOL TO CENTER');
+    Form1.Memo1.lines.add('Move tool to center');
     hilite_center_to(x,y);
   end;
   grbl_moveZ(0, true);  // move Z up absolute
@@ -287,9 +282,8 @@ end;
 
 procedure TForm3.BtnMoveToolZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
+  Form1.Memo1.lines.add('Move tool to part zero');
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(0,0, false);
   grbl_moveZ(job.z_penlift, false);

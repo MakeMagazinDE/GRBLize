@@ -145,6 +145,30 @@ object Form4: TForm4
       CubeSize = 1.000000000000000000
       object GLDummyCubePartZero: TGLDummyCube
         CubeSize = 1.000000000000000000
+        object GLDummyCubeZprobe: TGLDummyCube
+          Position.Coordinates = {000000C0000000C0000000400000803F}
+          CubeSize = 1.000000000000000000
+          object GLCylinderProbeButton: TGLCylinder
+            Material.FrontProperties.Ambient.Color = {C9C8483FC9C8483FC9C8483F0000803F}
+            Direction.Coordinates = {000000000000803F2EBD3BB300000000}
+            PitchAngle = 90.000000000000000000
+            Position.Coordinates = {0000000000000000CDCCCCBD0000803F}
+            Up.Coordinates = {000000002EBD3BB3000080BF00000000}
+            BottomRadius = 0.500000000000000000
+            Height = 0.100000001490116100
+            TopRadius = 0.500000000000000000
+          end
+          object GLCylinderZprobe: TGLCylinder
+            Material.FrontProperties.Ambient.Color = {C9C8C83EC9C8C83EC9C8C83E0000803F}
+            Direction.Coordinates = {000000000000803F2EBD3BB300000000}
+            PitchAngle = 90.000000000000000000
+            Position.Coordinates = {0000000000000000CDCC8CBF0000803F}
+            Up.Coordinates = {000000002EBD3BB3000080BF00000000}
+            BottomRadius = 1.000000000000000000
+            Height = 2.000000000000000000
+            TopRadius = 1.000000000000000000
+          end
+        end
         object GLHeightFieldWP: TGLHeightField
           Material.Texture.Compression = tcHighSpeed
           Direction.Coordinates = {00000000000000800000803F00000000}
@@ -418,8 +442,8 @@ object Form4: TForm4
               item
               end
               item
-                X = 0.400000005960464400
-                Z = 0.400000005960464400
+                X = 0.400000005960464500
+                Z = 0.400000005960464500
               end>
             NodesAspect = lnaInvisible
             Options = []
@@ -454,7 +478,7 @@ object Form4: TForm4
             Height = 2.000000000000000000
             TopRadius = 0.250000000000000000
           end
-          object GLAnnulus1: TGLAnnulus
+          object GLAnnulusCollet: TGLAnnulus
             Material.FrontProperties.Diffuse.Color = {C9C8C83EC9C8C83EC9C8C83E0000803F}
             Material.Texture.Image.Picture.Data = {
               07544269746D6170BA9C0200424DBA9C02000000000036000000280000001E01
@@ -5819,7 +5843,7 @@ object Form4: TForm4
             Height = 1.100000023841858000
             BottomInnerRadius = 0.200000002980232200
             TopInnerRadius = 0.200000002980232200
-            TopRadius = 0.400000005960464400
+            TopRadius = 0.400000005960464500
           end
           object GLSphereTooltip: TGLSphere
             Direction.Coordinates = {00000000000080BF0000000000000000}
@@ -5853,6 +5877,20 @@ object Form4: TForm4
             end
           end
         end
+        object GLDummyCubeATC: TGLDummyCube
+          Position.Coordinates = {000040C00000803F0000803F0000803F}
+          CubeSize = 1.000000000000000000
+          object GLDummyCubeATCtools: TGLDummyCube
+            CubeSize = 1.000000000000000000
+          end
+          object GLCubeATCbase: TGLCube
+            Direction.Coordinates = {32BD3BB4105CA09B000080BF00000000}
+            Position.Coordinates = {0000000000000000000000BF0000803F}
+            RollAngle = -90.000000000000000000
+            Up.Coordinates = {32BD3BB30000803F34BD3B2800000000}
+            CubeSize = {0000803F0000A0409A99993E}
+          end
+        end
       end
       object GLLightSource1: TGLLightSource
         Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3E0000803F}
@@ -5883,7 +5921,7 @@ object Form4: TForm4
           NodeColor.Color = {0000000000000000000000000000803F}
           Nodes = <
             item
-              Z = -0.400000005960464400
+              Z = -0.400000005960464500
             end
             item
               Z = 4.000000000000000000
@@ -5959,7 +5997,7 @@ object Form4: TForm4
       FocalLength = 50.000000000000000000
       SceneScale = 4.000000000000000000
       TargetObject = GLDummyCubeTarget
-      Position.Coordinates = {000020410000A041000020420000803F}
+      Position.Coordinates = {00000C4200000C4200000C420000803F}
       Direction.Coordinates = {0000000000000080FFFF7F3F00000000}
     end
   end

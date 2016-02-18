@@ -518,7 +518,7 @@ begin
   my_fill_color3:= colorDim(my_pen_color, 90);
 
 
-  my_radius:= round(job.pens[my_final_entry.pen].diameter * Scale) div 2 +1;
+  my_radius:= round(job.pens[my_final_entry.pen].tipdia * Scale) div 2 + 1;
   if my_radius < 1 then
     my_radius:= 1;
   my_offset:= job.pens[my_final_entry.pen].offset;
@@ -606,7 +606,7 @@ begin
 
 
     Canvas.Pen.Width := 1;
-//    if (my_final_entry.shape <> online) then begin
+//    if (my_final_entry.shape <> contour) then begin
       if my_final_entry.enable then
         Canvas.Pen.Style:= psSolid      // psDashDot , psDot
       else
@@ -1116,7 +1116,6 @@ end;
 
 procedure SetAllPosZupMM(x, y: Double);
 begin
-  SetSimPositionMMxy(x,y);
   drawing_ToolPos.X:= x;
   drawing_ToolPos.Y:= y;
   drawing_tool_down:= false;
@@ -1126,9 +1125,8 @@ end;
 
 procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET TOOL TO PART ZERO');
+  Form1.Memo1.lines.add('Offset to tool part zero');
   grbl_offsXY(0, 0);
   SendGrblAndWaitForIdle;
 end;
@@ -1136,9 +1134,8 @@ end;
 procedure TForm2.pu_toolisatpointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET TOOL TO POINT');
+  Form1.Memo1.lines.add('Offset to point');
   hilite_to(x,y);
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
@@ -1147,9 +1144,8 @@ end;
 procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET TOOL TO CENTER');
+  Form1.Memo1.lines.add('Offset tool to center');
   hilite_center_to(x,y);
   grbl_offsXY(x, y);
   SendGrblAndWaitForIdle;
@@ -1159,9 +1155,8 @@ end;
 
 procedure TForm2.pu_camIsAtPartZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET CAM TO PART ZERO');
+  Form1.Memo1.lines.add('Offset cam to part zero');
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendGrblAndWaitForIdle;
 end;
@@ -1169,9 +1164,8 @@ end;
 procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET CAM TO POINT');
+  Form1.Memo1.lines.add('Offset cam to point');
   hilite_to(x,y);
   x:= x - job.cam_x;
   y:= y - job.cam_y;
@@ -1182,9 +1176,8 @@ end;
 procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// OFFSET CAM TO CENTER');
+  Form1.Memo1.lines.add('Offset cam to center');
   hilite_center_to(x,y);
   x:= x - job.cam_x;
   y:= y - job.cam_y;
@@ -1196,9 +1189,8 @@ end;
 
 procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE TOOL TO PART ZERO');
+  Form1.Memo1.lines.add('Move tool to part zero');
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(0,0, false);
   SendGrblAndWaitForIdle;
@@ -1209,9 +1201,8 @@ end;
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE TOOL TO POINT');
+  Form1.Memo1.lines.add('Move tool to point');
   hilite_to(x, y);
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
@@ -1223,9 +1214,8 @@ end;
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE TOOL TO CENTER');
+  Form1.Memo1.lines.add('Move tool to center');
   hilite_center_to(x,y);
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
@@ -1238,9 +1228,8 @@ end;
 
 procedure TForm2.pu_moveCamToPartZeroClick(Sender: TObject);
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE CAM TO PART ZERO');
+  Form1.Memo1.lines.add('Move cam to part zero');
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   grbl_moveZ(job.cam_z_abs, true);
@@ -1250,9 +1239,8 @@ end;
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE CAM TO POINT');
+  Form1.Memo1.lines.add('Move cam to point');
   hilite_to(x,y);
   x:= x - job.cam_x;
   y:= y - job.cam_y;
@@ -1266,9 +1254,8 @@ end;
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
 var x,y: Double;
 begin
-  ClearCancelFlags;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('// MOVE CAM TO CENTER');
+  Form1.Memo1.lines.add('Move cam to center');
   hilite_center_to(x, y);
   x:= x - job.cam_x;
   y:= y - job.cam_y;

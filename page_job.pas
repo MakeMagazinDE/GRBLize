@@ -2,6 +2,202 @@
 // ############################### FILES AND JOBS ##############################
 // #############################################################################
 
+procedure ATCcolors(colors_on: Boolean);
+// Anzeigeroutine für Blink-Timer
+var i: Integer;
+  my_color: TColor;
+begin
+  if ToolInSpindle > 0 then begin
+    Form1.PanelToolInSpindle.color:= atcArray[ToolInSpindle].color;
+    Form1.PanelToolInSpindle.caption:= IntToStr(ToolInSpindle);
+  end else if ToolInSpindle = 0 then begin
+    Form1.PanelToolInSpindle.color:= clgray;
+    Form1.PanelToolInSpindle.caption:= 'D'; // Dummy tool
+  end else if ToolInSpindle < 0 then begin
+    Form1.PanelToolInSpindle.color:= clBtnFace;
+    Form1.PanelToolInSpindle.caption:= 'N'; // None, collet open!
+  end;
+
+  if Form1.CheckUseATC.checked then
+    for i:= 0 to 9 do begin
+      if not atcArray[i].loaded then
+        continue;
+      my_color:= atcArray[i].color;
+      if (not atcArray[i].inslot) and (not colors_on) then
+        my_color:= clBtnFace;
+      case i of
+        0:
+          Form1.PanelATC0.color:= my_color;
+        1:
+          Form1.PanelATC1.color:= my_color;
+        2:
+          Form1.PanelATC2.color:= my_color;
+        3:
+          Form1.PanelATC3.color:= my_color;
+        4:
+          Form1.PanelATC4.color:= my_color;
+        5:
+          Form1.PanelATC5.color:= my_color;
+        6:
+          Form1.PanelATC6.color:= my_color;
+        7:
+          Form1.PanelATC7.color:= my_color;
+        8:
+          Form1.PanelATC8.color:= my_color;
+        9:
+          Form1.PanelATC9.color:= my_color;
+      end;
+    end;
+end;
+
+procedure ATCtoPanel;
+// ATC-Werkzeugbelegung anzeigen
+var i: Integer;
+  my_color, my_font_color: TColor;
+  my_str, my_penstr: String;
+  my_pen: Integer;
+begin
+  for i:= 1 to 9 do begin
+    my_pen:= 0;
+    my_penstr:='-';
+    if atcArray[i].used then begin
+      my_font_color:= clblack;
+      my_str:= 'Empty';
+    end else begin
+      my_font_color:= clgray;
+      my_str:= 'Unused in Job';
+    end;
+    if atcArray[i].enable then begin
+      my_color:= atcArray[i].color;
+      my_pen:= atcArray[i].pen;
+      my_penstr:= IntToStr(my_pen);
+      my_str:= 'HPGL Pen #' + my_penstr + ': '
+      + FloatToStr(atcArray[i].diameter)+' mm ' + ToolTipArray[atcArray[i].tooltip];
+    end else
+      my_color:= clBtnFace;
+    case i of
+      1:
+      begin
+        Form1.PanelATC1.hint:= my_str;
+        Form1.PanelATC1.color:= my_color;
+        Form1.PanelATC1.caption:= my_penstr;
+        Form1.PanelATC1.font.color:= my_font_color;
+      end;
+      2:
+      begin
+        Form1.PanelATC2.hint:= my_str;
+        Form1.PanelATC2.color:= my_color;
+        Form1.PanelATC2.caption:= my_penstr;
+        Form1.PanelATC2.font.color:= my_font_color;
+      end;
+      3:
+      begin
+        Form1.PanelATC3.hint:= my_str;
+        Form1.PanelATC3.color:= my_color;
+        Form1.PanelATC3.caption:= my_penstr;
+        Form1.PanelATC3.font.color:= my_font_color;
+      end;
+      4:
+      begin
+        Form1.PanelATC4.hint:= my_str;
+        Form1.PanelATC4.color:= my_color;
+        Form1.PanelATC4.caption:= my_penstr;
+        Form1.PanelATC4.font.color:= my_font_color;
+      end;
+      5:
+      begin
+        Form1.PanelATC5.hint:= my_str;
+        Form1.PanelATC5.color:= my_color;
+        Form1.PanelATC5.caption:= my_penstr;
+        Form1.PanelATC5.font.color:= my_font_color;
+      end;
+      6:
+      begin
+        Form1.PanelATC6.hint:= my_str;
+        Form1.PanelATC6.color:= my_color;
+        Form1.PanelATC6.caption:= my_penstr;
+        Form1.PanelATC6.font.color:= my_font_color;
+      end;
+      7:
+      begin
+        Form1.PanelATC7.hint:= my_str;
+        Form1.PanelATC7.color:= my_color;
+        Form1.PanelATC7.caption:= my_penstr;
+        Form1.PanelATC7.font.color:= my_font_color;
+      end;
+      8:
+      begin
+        Form1.PanelATC8.hint:= my_str;
+        Form1.PanelATC8.color:= my_color;
+        Form1.PanelATC8.caption:= my_penstr;
+        Form1.PanelATC8.font.color:= my_font_color;
+      end;
+      9:
+      begin
+        Form1.PanelATC9.hint:= my_str;
+        Form1.PanelATC9.color:= my_color;
+        Form1.PanelATC9.caption:= my_penstr;
+        Form1.PanelATC9.font.color:= my_font_color;
+      end;
+    end;
+  end;
+end;
+
+procedure SetATCtoolFromJob(const pen_idx: Integer);
+var atc: Integer;
+begin
+  atc:= job.pens[pen_idx].atc;
+  if atc > 9 then
+    atc:= 0; // invalid or manual
+  atcArray[atc].enable:= job.pens[pen_idx].enable;
+  atcArray[atc].loaded:= (atc > 0) and atcArray[atc].enable;
+  atcArray[atc].inslot:= atcArray[atc].loaded;
+  if (atc > 0) then begin
+    atcArray[atc].diameter:= job.pens[pen_idx].diameter;
+    atcArray[atc].color:= job.pens[pen_idx].color;
+    atcArray[atc].pen:= pen_idx;
+    atcArray[atc].used:= job.pens[pen_idx].used;
+    if job.pens[pen_idx].shape = drillhole then
+      atcArray[atc].tooltip:= 6 // Drill
+    else
+      atcArray[atc].tooltip:= job.pens[pen_idx].tooltip;
+  end else begin
+    atcArray[0].enable:= true;
+    atcArray[0].loaded:= true;
+    atcArray[0].used:= false;
+    atcArray[0].inslot:= false; // ist in der Maschine
+    atcArray[0].diameter:= 3;
+    atcArray[0].color:= clgray;
+    atcArray[0].pen:= 0;
+  end;
+  atcArray[10]:=  atcArray[0];
+  Form4.GLSupdateATC;
+end;
+
+
+procedure CalcTipDia;
+var j: Integer;
+begin
+  for j := 0 to 31 do begin
+    case job.pens[j].tooltip of
+      1:
+        job.pens[j].tipdia:= job.pens[j].z_end * 0.53; // tan(30°) * 2
+      2:
+        job.pens[j].tipdia:= job.pens[j].z_end * 0.82;
+      3:
+        job.pens[j].tipdia:= job.pens[j].z_end * 1.15;
+      4:
+        job.pens[j].tipdia:= job.pens[j].z_end * 2;
+    else
+      job.pens[j].tipdia:= job.pens[j].diameter;
+    end;
+    if job.pens[j].tipdia > job.pens[j].diameter then
+      job.pens[j].tipdia:= job.pens[j].diameter;
+  end;
+
+end;
+
+
 procedure PenGridListToJob;
 var i, j: Integer;
 begin
@@ -12,7 +208,8 @@ begin
     j:= i-1;
     job.pens[j].color:= StrToIntDef(Cells[1,i],0);
     job.pens[j].enable:= (Cells[2,i]) = 'ON';
-    job.pens[j].diameter:= StrToFloatDef(Cells[3,i],0.3);
+
+
     job.pens[j].z_end:= StrToFloatDef(Cells[4,i],0);
     job.pens[j].speed:= StrToIntDef(Cells[5,i],250);
     job.pens[j].offset.x:= round(StrToFloatDef(Cells[6,i],0) * c_hpgl_scale);
@@ -20,10 +217,14 @@ begin
     job.pens[j].scale:= StrToFloatDef(Cells[8,i],100);
     job.pens[j].shape:= Tshape(StrToIntDef(Cells[9,i],0));
     job.pens[j].z_inc:= StrToFloatDef(Cells[10,i],1);
-    job.pens[j].atc:= StrToIntDef(Cells[11,i],0);
     job.pens[j].tooltip:= StrToIntDef(Cells[12,i],0);
+    job.pens[j].atc:= StrToIntDef(Cells[11,i],0);
+    job.pens[j].diameter:= StrToFloatDef(Cells[3,i],1);
+    CalcTipDia;
+    SetATCtoolFromJob(j);
   end;
   NeedsRedraw:= true;
+  ATCtoPanel;
 end;
 
 procedure JobToPenGridList;
@@ -33,14 +234,14 @@ begin
     if i < 10 then
       Cells[0,i+1]:= 'P' + IntToStr(i)
     else
-      Cells[0,i+1]:= 'D' + IntToStr(i-10);
+      Cells[0,i+1]:= 'D' + IntToStr(i);
     Cells[1,i+1]:= IntToStr(job.pens[i].color);
     if job.pens[i].enable then
       Cells[2,i+1]:= 'ON'
     else
       Cells[2,i+1]:= 'OFF';
     // Color und Enable in DrawCell erledigt!
-    Cells[3,i+1]:=  FormatFloat('0.0',job.pens[i].diameter);
+    Cells[3,i+1]:=  FormatFloat('0.00',job.pens[i].diameter);
     Cells[4,i+1]:=  FormatFloat('0.0',job.pens[i].z_end);
     Cells[5,i+1]:=  IntToStr(job.pens[i].speed);
     Cells[6,i+1]:=  FormatFloat('00.0',job.pens[i].offset.x / c_hpgl_scale);
@@ -51,10 +252,12 @@ begin
     Cells[10,i+1]:= FormatFloat('0.0',job.pens[i].z_inc);
     Cells[11,i+1]:= IntToStr(job.pens[i].atc);
     Cells[12,i+1]:= IntToStr(job.pens[i].tooltip);
+    SetATCtoolFromJob(i);
   end;
   Form1.SgPens.Repaint;
   for i:= 0 to c_numOfFiles do
     Form1.SgFiles.Rows[i+1].DelimitedText:= job.fileDelimStrings[i];
+  ATCtoPanel;
 end;
 
 // #############################################################################
@@ -101,6 +304,8 @@ end;
 procedure InitJob;
 var i: Integer;
 begin
+  Form1.PanelATC0.hint:= 'Slot 0 must be empty for swap';
+  Form1.PanelATC0.color:= clBtnFace;
   Form1.SgPens.Rows[0].DelimitedText:=
     'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc",ATC,Tip';
   Form1.SgFiles.Rows[0].DelimitedText:=
@@ -123,26 +328,29 @@ begin
     pens[5].color:=cllime;
     pens[6].color:=$00FF8000;
     pens[7].color:=clfuchsia;
-    pens[8].color:=clgray;
-    pens[9].color:=clsilver;
-    pens[10].color:=clmaroon;
-    pens[11].color:=clolive;
-    pens[12].color:=clnavy;
-    pens[13].color:=clpurple;
-    pens[14].color:=clteal;
-    pens[15].color:=clskyblue;
-    pens[16].color:=clmoneygreen;
-    pens[17].color:=clblue;
-    pens[18].color:=clmedgray;
-    pens[19].color:=clwhite;
+    pens[8].color:=clsilver;
+    pens[9].color:=8580258;
+    pens[10].color:=clsilver;
+    pens[11].color:= 11254230;
+    pens[12].color:=11579647;
+    pens[13].color:=10801663;
+    pens[14].color:=9367540;
+    pens[15].color:=10485663;
+    pens[16].color:=15913395;
+    pens[17].color:=16755455;
+    pens[18].color:=12632256;
+    pens[19].color:=15987699;;
     for i := 20 to 31 do begin
       pens[i].color:=clgray;
     end;
     for i := 10 to 31 do begin
       pens[i].shape:= drillhole;
+      pens[i].tooltip:= 6;
+      pens[i].diameter:= 1.0;
+      pens[i].tipdia:= 1.0;
       pens[i].z_end:= 2.0;
       pens[i].z_inc:= 3.0;
-      pens[i].speed:= 500;
+      pens[i].speed:= 400;
     end;
   end;
   with Form1.SgJobDefaults do begin
@@ -150,10 +358,10 @@ begin
     Rows[1].DelimitedText:='"Part Size X",250';
     Rows[2].DelimitedText:='"Part Size Y",150';
     Rows[3].DelimitedText:='"Part Size Z",5';
-    Rows[4].DelimitedText:='"Z Feed",200';
+    Rows[4].DelimitedText:='"Z Feed for Milling",100';
     Rows[5].DelimitedText:='"Z Lift above Part",10';
     Rows[6].DelimitedText:='"Z Up above Part",5';
-    Rows[7].DelimitedText:='"Z Gauge",10';
+    Rows[7].DelimitedText:='"Z Gauge Height",10';
     Rows[8].DelimitedText:='"Optimize Drill Path",ON';
     Rows[9].DelimitedText:= '"Use Excellon Drill Diameters",ON';
   end;
@@ -163,37 +371,44 @@ end;
 procedure InitAppdefaults;
 begin
   with Form1.SgAppDefaults do begin
-    RowCount:= 24;
+    RowCount:= 25;
     Rows[0].DelimitedText:= 'Parameter,Value';
     Rows[1].DelimitedText:= '"Tool Change Pause",OFF';
     Rows[2].DelimitedText:='"Tool Change X absolute",10';
     Rows[3].DelimitedText:='"Tool Change Y absolute",100';
     Rows[4].DelimitedText:='"Tool Change Z absolute",-5';
     Rows[5].DelimitedText:='"Park Position on End",ON';
-    Rows[6].DelimitedText:='"Park X absolute",200';
+    Rows[6].DelimitedText:='"Park X absolute",100';
     Rows[7].DelimitedText:='"Park Y absolute",100';
-    Rows[8].DelimitedText:='"Park Z absolute",-5';
+    Rows[8].DelimitedText:='"Park Z absolute",0';
     Rows[9].DelimitedText:='"Cam X Offset","-20"';
-    Rows[10].DelimitedText:='"Cam Y Offset","40"';
+    Rows[10].DelimitedText:='"Cam Y Offset","20"';
     Rows[11].DelimitedText:='"Cam Z absolute",0';
-    Rows[12].DelimitedText:='"Use Tool Z Probe",OFF';
-    Rows[13].DelimitedText:='"Probe X absolute",30';
-    Rows[14].DelimitedText:='"Probe Y absolute",30';
-    Rows[15].DelimitedText:='"Probe Z absolute",-5';
-    Rows[16].DelimitedText:='"Invert Z in G-Code",OFF';
-    Rows[17].DelimitedText:='"Spindle Accel Time (s)",4';
-    Rows[18].DelimitedText:='"ATC enable",OFF';
-    Rows[19].DelimitedText:='"ATC zero X absolute",50';
-    Rows[20].DelimitedText:='"ATC zero Y absolute",20';
-    Rows[21].DelimitedText:='"ATC pickup height Z abs",-20';
-    Rows[22].DelimitedText:='"ATC row X distance",20';
-    Rows[23].DelimitedText:='"ATC row Y distance",0';
+    Rows[12].DelimitedText:='"Enable fixed Z Probe",OFF';
+    Rows[13].DelimitedText:='"Fixed Probe X absolute",30';
+    Rows[14].DelimitedText:='"Fixed Probe Y absolute",30';
+    Rows[15].DelimitedText:='"Fixed Probe Z absolute",-5';
+    Rows[16].DelimitedText:='"Enable Part Z Contact",OFF';
+    Rows[17].DelimitedText:='"Part Z Contact Height",25';
+    Rows[18].DelimitedText:='"Invert Z in G-Code",OFF';
+    Rows[19].DelimitedText:='"Spindle Accel Time (s)",4';
+    Rows[20].DelimitedText:='"ATC enable",OFF';
+    Rows[21].DelimitedText:='"ATC zero X absolute",50';
+    Rows[22].DelimitedText:='"ATC zero Y absolute",20';
+    Rows[23].DelimitedText:='"ATC pickup height Z abs",-20';
+    Rows[24].DelimitedText:='"ATC row X distance",20';
+    Rows[25].DelimitedText:='"ATC row Y distance",0';
+    Rows[26].DelimitedText:='"Table max travel X",200';
+    Rows[27].DelimitedText:='"Table max travel Y",200';
+    Rows[28].DelimitedText:='"Table max travel Z",60';
   end;
   ClearFiles;
 end;
 
 procedure DefaultsGridListToJob;
+var r: Integer;
 begin
+  Form1.Memo1.lines.add('Job/application default settings applied');
   with Form1.SgJobDefaults do begin
     if RowCount < 3 then begin
       InitJob;
@@ -216,14 +431,12 @@ begin
       InitAppdefaults;
     end;
     job.toolchange_pause:= Cells[1,1] = 'ON';
-    Form1.CheckPenChangePause.Checked:= job.toolchange_pause;
 
     job.toolchange_x:= StrToFloatDef(Cells[1,2], 0);
     job.toolchange_y:= StrToFloatDef(Cells[1,3], 0);
     job.toolchange_z:= StrToFloatDef(Cells[1,4], 0);
 
     job.parkposition_on_end:= Cells[1,5] = 'ON';
-    Form1.CheckEndPark.Checked:= job.parkposition_on_end;
 
     job.park_x:= StrToFloatDef(Cells[1,6], 0);
     job.park_y:= StrToFloatDef(Cells[1,7], 0);
@@ -233,30 +446,39 @@ begin
     job.cam_y:= StrToFloatDef(Cells[1,10], 0);
     job.cam_z_abs:= StrToFloatDef(Cells[1,11], 0);
 
-    job.use_probe:= Cells[1,12] = 'ON';
+    job.use_fixed_probe:= Cells[1,12] = 'ON';
     job.probe_x:= StrToFloatDef(Cells[1,13], 0);
     job.probe_y:= StrToFloatDef(Cells[1,14], 0);
     job.probe_z:= StrToFloatDef(Cells[1,15], 0);
 
-    job.invert_z:= Cells[1,16] = 'ON';
-    job.spindle_wait:= StrToIntDef(Cells[1,17], 3);
-    job.atc_enabled:= Cells[1,18] = 'ON';
-    Form1.CheckUseATC.Checked:= job.atc_enabled;
-    job.atc_zero_x:= StrToFloatDef(Cells[1,19], 50);
-    job.atc_zero_y:= StrToFloatDef(Cells[1,20], 20);
-    job.atc_pickup_z:= StrToFloatDef(Cells[1,21], -20);
-    job.atc_delta_x:= StrToFloatDef(Cells[1,22], 20);
-    job.atc_delta_y:= StrToFloatDef(Cells[1,23], 0);
+    job.use_part_probe:= Cells[1,16] = 'ON';
+    job.probe_z_gauge:= StrToFloatDef(Cells[1,17], 0);
+
+    job.invert_z:= Cells[1,18] = 'ON';
+    job.spindle_wait:= StrToIntDef(Cells[1,19], 3);
+    job.atc_enabled:= Cells[1,20] = 'ON';
+    job.atc_zero_x:= StrToFloatDef(Cells[1,21], 50);
+    job.atc_zero_y:= StrToFloatDef(Cells[1,22], 20);
+    job.atc_pickup_z:= StrToFloatDef(Cells[1,23], -20);
+    job.atc_delta_x:= StrToFloatDef(Cells[1,24], 20);
+    job.atc_delta_y:= StrToFloatDef(Cells[1,25], 0);
+    job.table_x:= StrToFloatDef(Cells[1,26],200);
+    job.table_y:= StrToFloatDef(Cells[1,27],200);
+    job.table_z:= StrToFloatDef(Cells[1,28],60);
   end;
 end;
-
 
 Procedure OpenFilesInGrid;
 var
   i: Integer; my_path, my_ext: String;
 begin
   PenGridListToJob;
+  DefaultsGridListToJob;
   init_blockArrays;
+  for i:= 0 to 31 do begin
+    job.pens[i].used:= false;
+    job.pens[i].enable:= false;
+  end;
   with Form1.SgFiles do
     for i:= 1 to c_numOfFiles +1 do begin
       if Cells[2, i] = '90°' then
@@ -278,16 +500,23 @@ begin
         continue;
       FileParamArray[i-1].isdrillfile := (my_ext = '.DRL');
       FileParamArray[i-1].enable:= true;
-      if FileParamArray[i-1].isdrillfile then begin
-        drill_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1), job.use_excellon_dia);
-      end else if (my_ext = '.HPGL') or (my_ext = '.PLT') then
+      if FileParamArray[i-1].isdrillfile then
+        drill_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1), job.use_excellon_dia)
+      else if (my_ext = '.HPGL') or (my_ext = '.HPG') or (my_ext = '.PLT') or (my_ext = '.PEN') then
         hpgl_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1))
+      else if (my_ext = '.NC') or (my_ext = '.NCF') or (my_ext = '.NCB')
+        or (my_ext = '.NGC') or (my_ext = '.TAP') or (my_ext = '.CNC') then
+        gcode_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1))
+      else if (my_ext = '.SVG') then
+        svg_fileload(my_path, i-1, StrToIntDef(Cells[1, i], 2))
       else
         ShowMessage('Unknown File Extension:' + ExtractFileName(my_path));
     end;
   JobToPenGridList;
   param_change;
   NeedsRedraw:= true;
+  job.pens[0].used:= false;
+  job.pens[0].enable:= true;
   Form1.SgPens.Repaint;
   Form4.FormRefresh(nil);
 end;
@@ -337,8 +566,6 @@ begin
       end;
 
       Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
-      PenGridListToJob;
-      DefaultsGridListToJob;
       OpenFilesInGrid;
       s:=i+1;
       my_row:= 1;
@@ -369,6 +596,8 @@ begin
   end else
     InitJob;
   sl.Free;
+  ResetToolFlags;
+  PenGridListToJob;
   list_blocks;
 end;
 
@@ -451,7 +680,6 @@ procedure TForm1.JobOpenExecute(Sender: TObject);
 begin
   if OpenJobDialog.Execute then begin
     InitJob;
-    DefaultsGridListToJob;
     OpenJobFile(OpenJobDialog.Filename);
   end;
 end;
@@ -539,8 +767,6 @@ procedure TForm1.SgJobDefaultsExit(Sender: TObject);
 begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
-  DefaultsGridListToJob;
-  PenGridListToJob;
   OpenFilesInGrid;
 end;
 
@@ -561,12 +787,9 @@ begin
     if Col = 1 then begin
       if Cells[1, Row] = 'ON' then begin
         Cells[1, Row]:= 'OFF';
-        DefaultsGridListToJob;
         OpenFilesInGrid;
       end else if Cells[1, Row] = 'OFF' then begin
         Cells[1, Row]:= 'ON';
-        DefaultsGridListToJob;
-        OpenFilesInGrid;
       end else
         Options:= Options + [goEditing, goAlwaysShowEditor];
     end;
@@ -579,6 +802,8 @@ begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
   NeedsRedraw:= true;
   list_blocks;
+  if SgJobDefaults.Row > 7 then
+    OpenFilesInGrid;
 end;
 
 // #############################################################################
@@ -640,16 +865,15 @@ begin
   with SgAppDefaults do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
     if Col = 1 then begin
-      if Cells[1, Row] = 'ON' then begin
-        Cells[1, Row]:= 'OFF';
-        DefaultsGridListToJob;
-      end else if Cells[1, Row] = 'OFF' then begin
+      if Cells[1, Row] = 'ON' then
+         Cells[1, Row]:= 'OFF'
+      else if Cells[1, Row] = 'OFF' then begin
         Cells[1, Row]:= 'ON';
-        DefaultsGridListToJob;
       end else
         Options:= Options + [goEditing, goAlwaysShowEditor];
     end;
   end;
+  DefaultsGridListToJob;
 end;
 
 procedure TForm1.SgAppDefaultsClick(Sender: TObject);
@@ -840,7 +1064,6 @@ begin
       Options:= Options - [goEditing, goAlwaysShowEditor];
       Repaint;
       UnHilite;
-      PenGridListToJob;
       OpenFilesInGrid;
     end;
 end;

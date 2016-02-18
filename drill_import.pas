@@ -199,6 +199,10 @@ begin
       optimize_path(blockArrays[fileID, i].outline_raw);
 end;
 
+// #############################################################################
+// EXCELLON DRILL (DRL) Import
+// #############################################################################
+
 procedure drill_fileload(my_name:String; fileID, penOverride: Integer; useDrillDia: Boolean);
 // Liest File in FileBuffer und liefert Länge zurück
 var
@@ -227,6 +231,14 @@ begin
   // Header mit Tool-Tabelle laden
   while not Eof(my_ReadFile) do begin
     Readln(my_ReadFile,my_line);
+    if length(my_line) > 0 then begin
+      if my_line[1] = ';' then
+        continue;
+      if my_line[1] = '(' then
+        continue;
+      if my_line[1] = '/' then
+        continue;
+    end;
     if AnsiContainsStr(my_line, 'INCH') then
       use_inches_in_drillfile:= true;
     if AnsiContainsStr(my_line, 'METRIC') then
@@ -239,8 +251,10 @@ begin
         my_dia:= StrDotToFloat(my_str);
         if use_inches_in_drillfile then
           my_dia:= my_dia * 25.4;
-        if useDrillDia then
+        if useDrillDia then begin
           job.pens[my_tool].diameter:= my_dia;
+          job.pens[my_tool].tipdia:= my_dia;
+        end;
         job.pens[my_tool].used:= true;
         job.pens[my_tool].shape:= drillhole;
       end;
@@ -261,7 +275,7 @@ begin
   drill_import_line('M30', fileID, penOverride);
   CloseFile(my_ReadFile);
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID);
+  file_rotate_mirror(fileID, false);
   if job.optimize_drills then
     optimize_drillfile(fileID);
   block_scale_file(fileID);

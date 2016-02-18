@@ -97,6 +97,8 @@ type
   procedure grbl_checkXY(var x,y: Double);
   procedure grbl_checkZ(var z: Double);
 
+  procedure grbl_wait_for_timeout(timeout: Integer);
+
 var
 //FTDI-Device
   ftdi: Tftdichip;
@@ -280,7 +282,6 @@ begin
   COMSetTimeout(1);
   Result := '';
   my_str:= '';
-  CancelWait:= false;
   has_timeout:= timeout > 0;
   targettime := GetTickCount + cardinal(timeout);
   repeat
@@ -291,12 +292,10 @@ begin
         my_str:= my_str + my_char;
     end;
     Application.processmessages;
-  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
+  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelJob;
   if has_timeout then
     if (GetTickCount > targettime) then
       my_str:= '#Timeout';
-  if CancelWait then
-    my_str:= '#Cancelled';
   Result:= my_str;
 end;
 
@@ -341,7 +340,6 @@ var
   targettime: cardinal;
   has_timeout: Boolean;
 begin
-  CancelWait:= false;
   my_str:= '';
   has_timeout:= timeout > 0;
   targettime := GetTickCount + cardinal(timeout);
@@ -353,12 +351,10 @@ begin
         my_str:= my_str + my_char;
     end;
     Application.processmessages;
-  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
+  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelJob;
   if has_timeout then
     if (GetTickCount > targettime) then
       my_str:= '#Timeout';
-  if CancelWait then
-    my_str:= '#Cancelled';
   Result:= my_str;
 end;
 
@@ -371,7 +367,6 @@ var
   my_str: AnsiString;
 begin
   my_str:= AnsiString(sendStr);
-  CancelWait:= false;
   Result:= '';
   ftdi.write(@my_str[1], length(my_str), i);
   if my_getok then begin
@@ -429,7 +424,6 @@ end;
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
 begin
-  CancelWait:= false;
   grbl_sendStr('?', false); // Status anfordern
   grbl_statusStr:= grbl_receiveStr(100);
 end;
@@ -440,43 +434,41 @@ function grbl_resync: boolean;
 var my_str: AnsiString;
   i: Integer;
 begin
-  CancelWait:= false;
   my_str:= '';
   if ftdi_isopen or com_isopen then begin
-    while grbl_receiveCount <> 0 do begin
-      mdelay(grbl_delay_long); // falls noch etwas vorliegt
-      grbl_rx_clear;
-    end;
-    for i:= 0 to 7 do begin  // Anzahl Versuche
+    grbl_wait_for_timeout(50);
+    for i:= 0 to 3 do begin  // Anzahl Versuche
       grbl_sendStr(#13,false);
-      mdelay(grbl_delay_long);
-      my_str:= grbl_receiveStr(200);
-      if (my_str = 'ok') or CancelWait then
+      my_str:= uppercase(grbl_receiveStr(50));
+      if (my_str = 'OK') or (pos(my_str,'ALARM') > 0) or (pos(my_str,'ERROR') > 0) then
         break;
-      mdelay(grbl_delay_long); // nochmal versuchen
-      grbl_rx_clear;
     end;
-    grbl_resync:= (my_str = 'ok');
+    grbl_resync:= (my_str = 'OK');
   end else
     grbl_resync:= false;
 end;
 
 function grbl_checkResponse: Boolean;
 begin
+  DisableStatus;
   grbl_sendlist.Clear;
+  grbl_sendStr('$X' + #13, false);
+  grbl_wait_for_timeout(50);
   result:= false;
   if ftdi_isopen or com_isopen then
     if grbl_resync then
       result:= true
     else
-      showmessage('No response or GRBL Resync failed on Send Settings.'
-        + #13+ 'Check if GRBL version matches setting in GRBL Defaults page.');
+      MessageDlg('No response or GRBL Resync failed.'
+        + #13 + 'Check if GRBL version matches setting in GRBL Defaults page'
+        + #13 + 'setting in GRBL Defaults page.', mtWarning, [mbOK], 0);
+  EnableStatus;
 end;
 
 procedure grbl_addStr(my_str: String);
 // Zeile an Sendeliste anh‰ngen, wird in Timer2 behandelt
 begin
-  if (not CancelJob) or (not CancelGrbl) then
+  if (not CancelJob) then
     grbl_sendlist.add(my_str);
 end;
 
@@ -489,8 +481,8 @@ procedure grbl_checkZ(var z: Double);
 begin
   if WorkZeroZ + z > 0 then
     z:= - WorkZeroZ;
-  if WorkZeroZ + z < -TableZ then
-    z:= -WorkZeroZ - TableZ;
+  if WorkZeroZ + z < -job.table_Z then
+    z:= -WorkZeroZ - job.table_Z;
 end;
 
 procedure grbl_checkXY(var x,y: Double);
@@ -498,12 +490,12 @@ procedure grbl_checkXY(var x,y: Double);
 begin
   if WorkZeroX + x < 0 then
     x:= - WorkZeroX;
-  if WorkZeroX + x > TableX then
-    x:= TableX - WorkZeroX;
+  if WorkZeroX + x > job.table_X then
+    x:= job.table_X - WorkZeroX;
   if WorkZeroY + y < 0 then
     y:= - WorkZeroY;
-  if WorkZeroY + Y > TableY then
-    y:= TableY - WorkZeroY;
+  if WorkZeroY + Y > job.table_Y then
+    y:= job.table_Y - WorkZeroY;
 end;
 
 procedure grbl_offsXY(x, y: Double);
@@ -514,6 +506,7 @@ end;
 
 procedure grbl_offsZ(z: Double);
 // GCode-String G92 z mit abschlieﬂendem CR an GRBL senden, auf OK warten
+// Z mit Tool-Offset versehen
 begin
   grbl_addStr('G92 Z'+ FloatToSTrDot(z));
 end;
@@ -550,7 +543,7 @@ begin
 end;
 
 procedure grbl_moveslowZ(z: Double; is_abs: Boolean);
-// GCode-String G0 z mit abschlieﬂendem CR an GRBL senden, auf OK warten
+// GCode-String G1 z mit abschlieﬂendem CR an GRBL senden, auf OK warten
 var my_str: String;
 begin
   if is_abs then
@@ -623,8 +616,8 @@ procedure grbl_millXYZF(x, y, z: Double; f: Integer);
 // F (speed) wird nur gesendet, wenn es sich ge‰ndert hat!
 var my_str: String;
 begin
-  grbl_checkXY(x,y);
   grbl_checkZ(z);
+  grbl_checkXY(x,y);
   my_str:= 'G1 X' + FloatToSTrDot(x) +' Y'+ FloatToSTrDot(y) +' Z' + FloatToSTrDot(z);
   if f <> grbl_oldf then
     my_str:= my_str + ' F' + IntToStr(f);
@@ -640,8 +633,8 @@ procedure grbl_millXYZ(x, y, z: Double);
 // XYZ-Werte werden nur gesendet, wenn sie sich ge‰ndert haben!
 var my_str: String;
 begin
-  grbl_checkXY(x,y);
   grbl_checkZ(z);
+  grbl_checkXY(x,y);
   my_str:= 'G1';
   if x <> grbl_oldx then
     my_str:= my_str + ' X'+ FloatToSTrDot(x);
@@ -673,8 +666,6 @@ var i, my_len, my_z_feed: Integer;
 
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
   for i:= 0 to my_len - 1 do begin
-    if CancelGrbl then
-      exit;
     grbl_moveZ(job.z_penup, false);
     x:= (millpath[i].x + offset.x) / c_hpgl_scale;
     y:= (millpath[i].y + offset.y) / c_hpgl_scale;
@@ -685,16 +676,15 @@ var i, my_len, my_z_feed: Integer;
     if my_z_feed > job.z_feed then
       my_z_feed:= job.z_feed;
 }
-    Application.ProcessMessages;
-    if CancelGrbl then
-      exit;
+    if i mod 25 = 0 then
+      Application.ProcessMessages;
     repeat
       grbl_moveZ(0.5, false); // ann‰hern auf 0,5 mm ¸ber Oberfl‰che
       z:= z - job.pens[millpen].z_inc;
       if z < my_z_end then
         z:= my_z_end;
       grbl_millZF(z, my_z_feed);
-    until (z <= my_z_end) or CancelGrbl;
+    until (z <= my_z_end) or (Form1.BtnCancel.Tag = 1);
   end;
   grbl_moveZ(job.z_penup, false);
 end;
@@ -722,10 +712,8 @@ begin
     z:= -job.pens[millpen].z_end;
     if z < my_z_limit then
       z:= my_z_limit;
-    Application.ProcessMessages;
-    if CancelGrbl then
-      exit;
-
+    if i mod 25 = 0 then
+      Application.ProcessMessages;
     grbl_moveZ(job.z_penup, false);
     x:= (millpath[0].x + offset.x) / c_hpgl_scale;
     y:= (millpath[0].y + offset.y) / c_hpgl_scale;
@@ -737,18 +725,19 @@ begin
       my_z_feed:= job.z_feed;
     grbl_millZF(z, my_z_feed); // langsam eintauchen
     for i:= 1 to my_len - 1 do begin
-      if CancelGrbl then
-        exit;
       x:= (millpath[i].x + offset.x) / c_hpgl_scale;
       y:= (millpath[i].y + offset.y) / c_hpgl_scale;
       grbl_millXYF(x,y, job.pens[millpen].speed);
+      if (Form1.BtnCancel.Tag = 1) then
+        break;
     end;
-    if is_closedpoly and (not CancelGrbl) then begin
+    if is_closedpoly and (not (Form1.BtnCancel.Tag = 1)) then begin
       x:= (millpath[0].x + offset.x) / c_hpgl_scale;
       y:= (millpath[0].y + offset.y) / c_hpgl_scale;
       grbl_millXYF(x,y, job.pens[millpen].speed);
     end;
-  until (my_z_limit <= my_z_end) or CancelGrbl;
+
+  until (my_z_limit <= my_z_end) or (Form1.BtnCancel.Tag = 1);
   grbl_moveZ(job.z_penup, false);
 end;
 
@@ -857,5 +846,12 @@ begin
   end;
 end;
 
+procedure grbl_wait_for_timeout(timeout: Integer);
+begin
+  if grbl_is_connected then
+    repeat
+      Application.ProcessMessages;
+    until grbl_receiveStr(timeout) = '#Timeout';
+end;
 
 end.

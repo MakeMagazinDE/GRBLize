@@ -15,8 +15,9 @@ const
   Thpgl_cmd = (cmd_none, cmd_pa, cmd_pu, cmd_pd, cmd_sp, cmd_in,
               cmd_number, cmd_drill, cmd_exit, cmd_nextline);
   Taction = (none, lift, seek, mill, drill);
-  Tshape = (online, inside, outside, pocket, drillhole);
+  Tshape = (contour, inside, outside, pocket, drillhole);
   Trotate = (deg0, deg90, deg180, deg270);
+  T_parseReturnType = (p_none, p_letters, p_number, p_endofline);
 
   TFloatPoint = record
     X: Double;
@@ -47,6 +48,7 @@ const
     shape: Tshape;
     color: TColor;
     diameter: Double;
+    tipdia: Double;
     offset: TIntPoint;    // in HPGL Plotter units 40/mm
     scale: Double;
     speed: Integer;
@@ -54,6 +56,17 @@ const
     z_inc: Double;
     atc: Integer;
     tooltip: Integer;
+  end;
+
+  Tatc_record = record
+    enable: boolean;
+    loaded: boolean;
+    used: boolean;
+    inslot: boolean; // Flag wird von Wechsler-Routine aktuallisiert
+    color: TColor;
+    diameter: Double;
+    tooltip: Integer;
+    pen: Integer;
   end;
 
   Tblock_record = record
@@ -102,12 +115,14 @@ const
     probe_x: Double;
     probe_y: Double;
     probe_z: Double;
+    probe_z_gauge: Double;
     invert_z: Boolean;
     parkposition_on_end: Boolean;
     toolchange_pause: Boolean;
     use_excellon_dia: Boolean;
     optimize_drills: Boolean;
-    use_probe: Boolean;
+    use_fixed_probe: Boolean;
+    use_part_probe: Boolean;
     spindle_wait: Integer; // Hochlaufzeit
     atc_enabled: Boolean;
     atc_zero_x: Double;
@@ -115,6 +130,9 @@ const
     atc_pickup_z: Double;
     atc_delta_x: Double;
     atc_delta_y: Double;
+    table_x: Double;
+    table_y: Double;
+    table_z: Double;
   end;
 
 const
@@ -124,8 +142,8 @@ const
    ('CONTOUR', 'INSIDE', 'OUTSIDE', 'POCKET', 'DRILL');
   ShapeColorArray: Array [0..4] of Tcolor =
    (clBlack, clBlue, clRed, clFuchsia, clgreen);
-  ToolTipArray: Array [0..5] of String[15] =
-   ('Flat Tip', 'Cone 30°', 'Cone 45°', 'Cone 60°', 'Cone 90°','Ball Tip');
+  ToolTipArray: Array [0..6] of String[15] =
+   ('Flat Tip', 'Cone 30°', 'Cone 45°', 'Cone 60°', 'Cone 90°','Ball Tip','Drill');
   zeroPoint: TIntPoint = (
     X: 0;
     Y: 0;
@@ -134,12 +152,13 @@ const
   PenInit: Tpen_record = (
       used: false;
       enable: false;
-      shape: online;
+      shape: contour;
       color: clblack;
-      diameter: 1.0;
+      diameter: 2.0;
+      tipdia: 2.0;
       scale: 100;
       speed: 400;
-      z_end: 0.3;
+      z_end: 2.0;
       z_inc: 1.0;
     );
 
@@ -160,7 +179,7 @@ var
   blockArrays: Array [0..c_numOfFiles] of Array of Tblock_record;
 
   final_array: Array of Tfinal;
-
+  atcArray: Array[0..31] of Tatc_record;
 
   CurrentPen, PendingPen: Integer;
   LastAction, PendingAction: Taction;
@@ -173,8 +192,12 @@ var
   procedure init_blockArrays;
   function point_in_bounds(my_point: TIntPoint; my_bounds: Tbounds): Boolean;
   function bounds_in_bounds(my_bounds1, my_bounds2: Tbounds): Boolean;
+
   procedure hpgl_fileload(my_name:String; fileID, penOverride: Integer);
+  procedure svg_fileload(my_name:String; fileID, penOverride: Integer);
   procedure drill_fileload(my_name:String; fileID, penOverride: Integer; useDrillDia: Boolean);
+  procedure gcode_fileload(my_name:String; fileID, penOverride: Integer);
+
   procedure param_change;
   procedure item_change(arr_idx: Integer);
 
@@ -183,6 +206,9 @@ var
 
   // sucht in Array my_path nach Punkt mit geringstem Abstand zu last_xy
   function find_nearest_point(var search_path: Tpath; last_x, last_y: Integer): Integer;
+
+  function ParseLine(var position: Integer; var linetoparse: string;
+                     var value: Double; var letters: String): T_parseReturnType;
 
 implementation
 
@@ -205,6 +231,55 @@ begin
   my_Settings.Create;
   my_Settings.DecimalSeparator := '.';
   StrDotToFloat:= StrToFloatDef(my_str,0,my_Settings);
+end;
+
+function ParseLine(var position: Integer; var linetoparse: string;
+  var value: Double; var letters: String): T_parseReturnType;
+// Zerlegt String nach Zahlen und Buchtstaben(ketten),
+// beginnt my_line an Position my_pos nach Buchstaben oder Zahlen anbzusuchen.
+// Wurde eine Zahl gefunden, ist Result = p_number, ansonsten p_letter.
+// Wurde nichts (mehr) gefunden, ist Result = p_endofline.
+// POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
+// T_parseReturnType = (p_none, p_letters, p_number, p_endofline);
+var
+  my_str: String;
+  my_char: char;
+  my_end: integer;
+begin
+  result:= p_endofline;
+  my_end:= length(linetoparse) - 1;
+  value:= 0;
+  letters:= '';
+
+  if (position > my_end) then
+    exit;
+  // Leer- und Steuerzeichen überspringen
+  result:= p_none;
+  repeat
+    my_char := linetoparse[position]; // erstes Zeichen
+    inc(position);
+  until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end + 1);
+  dec(position);   // Zeigt auf erstes relevantes Zeichen oder Ende
+  if (position > my_end) then
+    exit;
+  my_char := linetoparse[position]; // erstes relevantes Zeichen
+
+  my_str:='';
+  if my_char in ['A'..'z'] then begin
+    result:= p_letters;
+    while (linetoparse[position] in ['A'..'z']) and (position <= my_end) do begin
+      my_str:= my_str+ linetoparse[position];
+      inc(position);
+    end;
+    letters:= my_str;
+  end else if my_char in ['0'..'9', '.',  '+', '-'] then begin
+    result:= p_number;
+    while (linetoparse[position] in ['0'..'9', '.',  '+', '-']) and (position <= my_end) do begin
+      my_str:= my_str+ linetoparse[position];
+      inc(position);
+    end;
+    value:= StrDotToFloat(my_str);
+  end;
 end;
 
 // #############################################################################
@@ -275,7 +350,7 @@ end;
 
 // #############################################################################
 
-procedure file_rotate_mirror(fileID: Integer);
+procedure file_rotate_mirror(fileID: Integer; auto_close_polygons: boolean);
 // Jeden Block prüfen, ob geschlossener Pfad; danach outline_raw-Pfade
 // rotieren und spiegeln
 // Verwendet beim Import gesetzte File-Bounds
@@ -300,7 +375,7 @@ begin
     // letzten Eintrag entfernen, falls gleich erstem Punkt, dafür "closed" setzen
     my_first_pt:= blockArrays[fileID,b].outline_raw[0];
     my_last_pt:= blockArrays[fileID,b].outline_raw[my_pathlen-1];
-    if (my_first_pt.X = my_last_pt.X) and (my_first_pt.Y = my_last_pt.Y) then begin
+    if (my_first_pt.X = my_last_pt.X) and (my_first_pt.Y = my_last_pt.Y) and auto_close_polygons then begin
       dec(my_pathlen);
       blockArrays[fileID,b].closed:= true;
       setlength(blockArrays[fileID,b].outline_raw, my_pathlen);
@@ -509,9 +584,11 @@ end;
 procedure add_outline_to_final(my_path: Tpath; my_Idx: Integer);
 var my_len: Integer;
 begin
-  my_len:= length(final_array[my_Idx].outlines);
-  setlength(final_array[my_Idx].outlines, my_len+1);
-  final_array[my_Idx].outlines[my_len]:= my_path;
+  if (length(my_path) > 0) and (my_Idx < length(final_array)) then begin
+    my_len:= length(final_array[my_Idx].outlines);
+    setlength(final_array[my_Idx].outlines, my_len+1);
+    final_array[my_Idx].outlines[my_len]:= my_path;
+  end;
 end;
 
 function add_block_to_final(my_block: Tblock_record): Integer;
@@ -520,19 +597,21 @@ var
   i: Integer;
 begin
   i:= length(final_array);
-  setlength(final_array, i+1);
-  // diese Werte können nachträglich geändert werden:
-  final_array[i].shape:= job.pens[my_block.pen].shape;
-  // diese Werte liegen seit Import fest:
-  final_array[i].enable:= my_block.enable;
-  final_array[i].pen:= my_block.pen;
-  final_array[i].closed:= my_block.closed;
-  final_array[i].bounds:= my_block.bounds;
-  
-  // ersten Outline-Pfad übertragen
-  setlength(final_array[i].outlines, 1);
-  setlength(final_array[i].outlines[0], 1);
-  final_array[i].outlines[0]:= my_block.outline;
+  if my_block.enable then begin
+    setlength(final_array, i+1);
+    // diese Werte können nachträglich geändert werden:
+    final_array[i].shape:= job.pens[my_block.pen].shape;
+    // diese Werte liegen seit Import fest:
+    final_array[i].enable:= my_block.enable;
+    final_array[i].pen:= my_block.pen;
+    final_array[i].closed:= my_block.closed;
+    final_array[i].bounds:= my_block.bounds;
+
+    // ersten Outline-Pfad übertragen
+    setlength(final_array[i].outlines, 1);
+    setlength(final_array[i].outlines[0], 1);
+    final_array[i].outlines[0]:= my_block.outline;
+  end;
   add_block_to_final:= i;
 end;
 
@@ -552,6 +631,7 @@ begin
     if not blockArrays[fileID, p].enable  then
       continue;                               // nicht aktiv
 
+    // Child-Objekte erstellen
     for c:= 0 to length(blockArrays[fileID])-1 do begin  // Child-Loop (c)
       if p = c then
         continue;                               // sind wir selbst
@@ -568,13 +648,13 @@ begin
 
       // ist Outline von Block [k] in Outline von Block [i] enthalten?
       // if PointInPolygon (blockArray[c].bounds.mid, blockArray[p].outline) <> 0 then begin
-        blockArrays[fileID,c].parentID:= p;
-        blockArrays[fileID,c].isChild:= true;
-        // Parent setzen
-        my_len:= length(blockArrays[fileID,p].childList);
-        setlength(blockArrays[fileID,p].childList, my_len+1);
-        blockArrays[fileID,p].childList[my_len]:= c;
-        blockArrays[fileID,p].isParent:= true;
+      blockArrays[fileID,c].parentID:= p;
+      blockArrays[fileID,c].isChild:= true;
+      // Parent setzen
+      my_len:= length(blockArrays[fileID,p].childList);
+      setlength(blockArrays[fileID,p].childList, my_len+1);
+      blockArrays[fileID,p].childList[my_len]:= c;
+      blockArrays[fileID,p].isParent:= true;
      // end;
     end;
   end;
@@ -603,7 +683,7 @@ end;
 
 
 procedure compile_milling(var my_final_entry: Tfinal);
-// Wrapper für ClipperOffset für einazelnen Pen, mehrere Blocks
+// Wrapper für ClipperOffset für einzelnen Pen, mehrere Blocks
 // erstellt milling-Paths-Array mit ggf. mehreren Pfadgruppen
 // Milling-Pfade [0] sind immer outline
 
@@ -614,33 +694,38 @@ var i, j, rp, mp: Integer;
   my_cclw: boolean;
 
 begin
-  if my_final_entry.closed then begin
-    my_cclw:= Orientation(my_final_entry.outlines[0]); // parent CCLW?
-    if not my_cclw then
-      for i:= 0 to length(my_final_entry.outlines)-1 do
+// Offenbar seit Delphi XE8 funktioniert der Offset
+// von innenliegenden Objekten mit Clipper nicht mehr.
+// temporärer Workaround: Einzelne Objekte anlegen, keine Childs.
+
+
+  if (my_final_entry.shape = drillhole) or (my_final_entry.shape = contour) then begin
+      my_final_entry.millings:= my_final_entry.outlines;
+      exit;
+    end;
+
+  my_radius:= job.pens[my_final_entry.pen].tipdia * (c_hpgl_scale div 2);  // = mm * 40plu / 2
+  my_dia:= job.pens[my_final_entry.pen].tipdia/2;
+
+  if (my_final_entry.shape = inside) or (my_final_entry.shape = pocket) then begin
+    my_radius:= -my_radius;
+  end;
+
+  if length(my_final_entry.outlines)> 1 then begin
+    my_cclw:= Orientation(my_final_entry.outlines[0]); // ist Richtung Parent CCLW?
+    for i:= 1 to length(my_final_entry.outlines)-1 do begin
+      // wenn Parent Counterclockwise ist und auch Child, dann Child-Richtung umkehren
+      if Orientation(my_final_entry.outlines[i]) xor (not my_cclw) then
+        // Childs umkehren, damit sie ein "Loch" sind
         my_final_entry.outlines[i]:= ReversePath(my_final_entry.outlines[i]);
+    end;
   end;
 
-  if (my_final_entry.shape = drillhole) or (not my_final_entry.closed) then begin
-    my_final_entry.millings:= my_final_entry.outlines;
-    exit;
-  end;
 
-  my_radius:= job.pens[my_final_entry.pen].diameter * 20;  // = mm * 40plu / 2
-  case my_final_entry.shape of
-    inside, pocket:
-      my_radius:= -my_radius;
-    online, drillhole:
-      begin
-        my_final_entry.millings:= my_final_entry.outlines;
-        exit;
-      end;
-  end;
-  my_dia:= job.pens[my_final_entry.pen].diameter/2;
   with TClipperOffset.Create() do
   try
     Clear;
-    ArcTolerance:= round(my_radius) div 20 + 1;
+    ArcTolerance:= 3;
     if my_final_entry.closed then
       my_poly_end:= etClosedPolygon
     else
@@ -648,7 +733,7 @@ begin
 
     AddPaths(my_final_entry.outlines, jtRound, my_poly_end);
     Execute(result_paths, my_radius);
-    my_final_entry.millings:= CleanPolygons(result_paths, my_dia);
+    my_final_entry.millings:= result_paths;
 
     if my_final_entry.shape = pocket then begin
       my_radius:= my_radius + 5;
