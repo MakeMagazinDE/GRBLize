@@ -278,10 +278,17 @@ begin
       if my_char = 'C' then
       if (my_tool < 32) then begin
         if use_inches_in_drillfile then
+<<<<<<< HEAD
           my_val:= my_val * 25.4;
         if useDrillDia then begin
           job.pens[my_tool].diameter:= my_val;
           job.pens[my_tool].tipdia:= my_val;
+=======
+          my_dia:= my_dia * 25.4;
+        if useDrillDia then begin
+          job.pens[my_tool].diameter:= my_dia;
+          job.pens[my_tool].tipdia:= my_dia;
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
         end;
         job.pens[my_tool].used:= true;
         job.pens[my_tool].shape:= drillhole;

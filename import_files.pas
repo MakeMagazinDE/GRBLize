@@ -17,7 +17,11 @@ const
   Taction = (none, lift, seek, mill, drill);
   Tshape = (contour, inside, outside, pocket, drillhole);
   Trotate = (deg0, deg90, deg180, deg270);
+<<<<<<< HEAD
   T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
+=======
+  T_parseReturnType = (p_none, p_letters, p_number, p_endofline);
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
 
   TFloatPoint = record
     X: Double;
@@ -207,6 +211,7 @@ var
   // sucht in Array my_path nach Punkt mit geringstem Abstand zu last_xy
   function find_nearest_point(var search_path: Tpath; last_x, last_y: Integer): Integer;
 
+<<<<<<< HEAD
 // Zerlegt String nach Zahlen und Buchtstaben(ketten),
 // beginnt my_line an Position my_pos nach Buchstaben oder Zahlen anbzusuchen.
 // Wurde eine Zahl gefunden, ist Result = p_number, ansonsten p_letter.
@@ -223,6 +228,11 @@ var
   function ParseCommand(var position: Integer; var linetoparse: string;
     var value: Double; var letter: char): boolean;
 
+=======
+  function ParseLine(var position: Integer; var linetoparse: string;
+                     var value: Double; var letters: String): T_parseReturnType;
+
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
 implementation
 
 uses grbl_player_main;
@@ -253,6 +263,7 @@ function ParseLine(var position: Integer; var linetoparse: string;
 // Wurde eine Zahl gefunden, ist Result = p_number, ansonsten p_letter.
 // Wurde nichts (mehr) gefunden, ist Result = p_endofline.
 // POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
+<<<<<<< HEAD
 // T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
 var
   my_str: String;
@@ -261,6 +272,16 @@ var
 begin
   result:= p_endofline;
   my_end:= length(linetoparse);
+=======
+// T_parseReturnType = (p_none, p_letters, p_number, p_endofline);
+var
+  my_str: String;
+  my_char: char;
+  my_end: integer;
+begin
+  result:= p_endofline;
+  my_end:= length(linetoparse) - 1;
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
   value:= 0;
   letters:= '';
 
@@ -273,11 +294,17 @@ begin
     inc(position);
   until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end + 1);
   dec(position);   // Zeigt auf erstes relevantes Zeichen oder Ende
+<<<<<<< HEAD
+=======
+  if (position > my_end) then
+    exit;
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
   my_char := linetoparse[position]; // erstes relevantes Zeichen
 
   my_str:='';
   if my_char in ['A'..'z'] then begin
     result:= p_letters;
+<<<<<<< HEAD
     for i:= position to my_end do begin
       if not (linetoparse[i] in ['A'..'z']) then
         break;
@@ -293,10 +320,24 @@ begin
       my_str:= my_str+ linetoparse[i];
     end;
     position:= i;
+=======
+    while (linetoparse[position] in ['A'..'z']) and (position <= my_end) do begin
+      my_str:= my_str+ linetoparse[position];
+      inc(position);
+    end;
+    letters:= my_str;
+  end else if my_char in ['0'..'9', '.',  '+', '-'] then begin
+    result:= p_number;
+    while (linetoparse[position] in ['0'..'9', '.',  '+', '-']) and (position <= my_end) do begin
+      my_str:= my_str+ linetoparse[position];
+      inc(position);
+    end;
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
     value:= StrDotToFloat(my_str);
   end;
 end;
 
+<<<<<<< HEAD
 function ParseCommand(var position: Integer; var linetoparse: string;
   var value: Double; var letter: char): boolean;
 // Dekodiert einen einzelnes Befehlsbuchstaben/Wert-Paar, beginnend an Position
@@ -317,6 +358,8 @@ begin
   end;
 end;
 
+=======
+>>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
 // #############################################################################
 // #############################################################################
 
