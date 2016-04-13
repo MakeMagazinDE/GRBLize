@@ -17,7 +17,7 @@ begin
     for i:= 0 to my_len-1 do begin
       my_entry:= final_array[i];
       my_pathcount:= length(my_entry.millings);
-      if my_pathcount = 0 then
+      if my_pathcount < 1 then
         continue;
       // '#,Pen,Ena,Dia,Shape,Bounds,Center';
       my_row:= Rowcount - 1;
@@ -39,6 +39,10 @@ begin
       y1:= my_entry.bounds.mid.y / c_hpgl_scale;
       Cells[6,my_row]:= FormatFloat('0.00', x1) + '/' + FormatFloat('0.00', y1);
       Cells[7,my_row]:= IntToStr(length(my_entry.millings[0]));
+      if my_entry.closed then
+        Cells[7,my_row]:= '[' + IntToStr(length(my_entry.millings[0])) + ']'
+      else
+        Cells[7,my_row]:= '-' + IntToStr(length(my_entry.millings[0])) + '-';
       Rowcount:= Rowcount + 1;
     end;
     Rowcount:= Rowcount - 1;
@@ -46,7 +50,7 @@ begin
     if (HiliteBlock >= 0) and (HiliteBlock < RowCount) then
       Row:= HiliteBlock + 1
     else
-      Row:= 1;
+      Row:= Rowcount - 1;
   end;
 end;
 
@@ -67,6 +71,20 @@ begin
     end else if aRow <= length(final_array) then begin
       Font.Color := clblack;
       case aCol of
+        1:
+          begin
+            if length(final_array) > 0 then
+              i:= ord(final_array[aRow-1].pen)
+            else
+              i:= 0;
+            Rect.Left:= Rect.Left + 24;
+//            InflateRect(Rect, -1, -1);
+            Brush.Color := clgray;
+            FrameRect(Rect);
+            InflateRect(Rect, -2, -2);
+            Brush.Color := job.pens[i].color;
+            FillRect(Rect);
+          end;
         2,4:
           begin  // ON, OFF
             FrameRect(Rect);
@@ -124,7 +142,7 @@ begin
       Form4.FormRefresh(sender);
     end else if Col = 4 then begin
       if final_array[Row-1].shape = drillhole then
-        final_array[Row-1].shape:= online
+        final_array[Row-1].shape:= contour
       else
         inc(final_array[HiliteBlock].shape);
       Cells[4,Row]:= ShapeArray[ord(final_array[HiliteBlock].shape)];

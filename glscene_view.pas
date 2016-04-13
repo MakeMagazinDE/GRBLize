@@ -42,9 +42,8 @@ type
     GLSpaceText1: TGLSpaceText;
     GLXYZGridTable: TGLXYZGrid;
     GLDummyCubeCenter: TGLDummyCube;
-    GLDummyCube2: TGLDummyCube;
     GLCylinderToolshaft: TGLCylinder;
-    GLAnnulus1: TGLAnnulus;
+    GLAnnulusCollet: TGLAnnulus;
     Timer1: TTimer;
     GLLinesPath: TGLLines;
     Timer2: TTimer;
@@ -83,6 +82,13 @@ type
     CheckLiveRender: TCheckBox;
     GLSmoothNavigator1: TGLSmoothNavigator;
     GLSmoothUserInterface1: TGLSmoothUserInterface;
+    GLDummyCubePartZero: TGLDummyCube;
+    GLDummyCubeATC: TGLDummyCube;
+    GLDummyCubeZprobe: TGLDummyCube;
+    GLCylinderZprobe: TGLCylinder;
+    GLCylinderProbeButton: TGLCylinder;
+    GLCubeATCbase: TGLCube;
+    GLDummyCubeATCtools: TGLDummyCube;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure GLSceneViewer1MouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -103,6 +109,8 @@ type
     procedure FormMouseWheel(Sender: TObject; Shift: TShiftState;
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
     procedure PanelLEDClick(Sender: TObject);
+    procedure GLSupdateATC;
+    procedure GLSsetATCandProbe;
 
   private
     { Private-Deklarationen }
@@ -123,28 +131,36 @@ type
       property Checked: Boolean read IsOn write SetLED;
     end;
 
-procedure SetSimToolMM(d: Double; tooltip: integer; tool_color: TColor);
-procedure Finalize3Dview;
+procedure GLSsetSimToolMM(d: Double; tooltip: integer; tool_color: TColor);
+procedure GLSfinalize3Dview;
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
-procedure SetSimPositionMMxyz(x, y, z:Double);
-procedure SetSimPositionMMxy(x, y:Double);
-procedure SimMillAtPos(x, y, z, dia: Double; new_vec, show_tool: boolean);
-procedure SetSimPosColorMM(x, y, z:Double; tool_color: TColor);
-procedure MakeToolArray(dia: Double);
+procedure GLSsetSimPositionMMxyz(x, y, z:Double);
+procedure GLSsetSimPositionMMxy(x, y:Double);
+procedure GLSsimMillAtPosMM(x, y, z, dia: Double; new_vec, show_tool: boolean);
+procedure GLSmakeToolArray(dia: Double);
+procedure GLSspindle_on_off(on_off: boolean);
 
 
+var
+
+  Form4: TForm4;
+  gl_arr_scale, gl_bresenham_scale: Integer;   // Teilung XY-Array für Simulation
+  gl_mult_scale: Double;
+  gl_initialized: Boolean;
+  gcsim_render_final: Boolean;
+
+const
+  c_GLscale = 10.0;    // Faktor für GLscene
+
+implementation
+
+uses grbl_player_main, grbl_com;
 var
   ShiftState: TShiftState;
   mouseDownX, mouseDownY: Integer;
   mouseMovedX, mouseMovedY: Integer;
-
   LEDbusy3d: TLed;
-  Form4: TForm4;
-  sim_x, sim_y, sim_z, sim_dia: Double;
-  sim_seek, sim_z_abovezero, sim_render_finel: Boolean;
-  sim_tooltip: Integer;
-  sim_color: TColor;
-  sim_feed: Integer;
+  sim_z_abovezero: Boolean;
   ena_solid, ena_finite: Boolean;
   toolpath_array: Array of TIntPoint;
   draw_tool_sema, render_sema: Boolean;
@@ -155,17 +171,7 @@ var
   tool_mid: Double;
   tool_mid_int: Integer;
   tool_running: Boolean;   // für Animation Drehung
-  sim_active: Boolean;
   tool_rpm: Integer;
-  gl_arr_scale, gl_bresenham_scale: Integer;   // Teilung XY-Array für Simulation
-  gl_mult_scale: Double;
-
-const
-  c_GLscale = 10.0;    // Faktor für GLscene
-
-implementation
-
-uses grbl_player_main, grbl_com;
 
 {$R *.dfm}
 
@@ -183,6 +189,14 @@ begin
   Application.ProcessMessages;
 end;
 
+procedure GLSspindle_on_off(on_off: boolean);
+begin
+  tool_running:= on_off;
+  if tool_running then
+    Form4.GLAnnulusCollet.Material.FrontProperties.Emission.Color:= clrgray80
+  else
+    Form4.GLAnnulusCollet.Material.FrontProperties.Emission.Color:= clrblack;
+end;
 
 procedure SetToolPosition(glx, gly, glz:Double; tool_color: TColor);   //Werkzeugspitze
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche auf GL skaliert
@@ -203,7 +217,7 @@ begin
   end;
 end;
 
-procedure SetSimPosColorMM(x, y, z:Double; tool_color: TColor);
+procedure GLSsetSimPosColorMM(x, y, z:Double; tool_color: TColor);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
   if not Form1.Show3DPreview1.Checked then
@@ -211,32 +225,26 @@ begin
   SetToolPosition(x/c_GLscale, y/c_GLscale, z/c_GLscale, tool_color)
 end;
 
-procedure SetSimPositionMMxy(x, y:Double);
+procedure GLSsetSimPositionMMxy(x, y:Double);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
   if not Form1.Show3DPreview1.Checked then
     exit;
-  sim_x:= x; sim_y:= y;
-  SetToolPosition(x/c_GLscale, y/c_GLscale, sim_z/c_GLscale, clblack);
-  Form4.GLLinesPath.Nodes.Clear;
+  SetToolPosition(x/c_GLscale, y/c_GLscale, gcsim_z/c_GLscale, clblack);
 end;
 
-procedure SetSimPositionMMxyz(x, y, z:Double);
+procedure GLSsetSimPositionMMxyz(x, y, z:Double);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
   if not Form1.Show3DPreview1.Checked then
     exit;
-  sim_x:= x; sim_y:= y; sim_z:= z;
-  SetToolPosition(x/c_GLscale, y/c_GLscale, sim_z/c_GLscale, clblack);
-  Form4.GLSpaceTextToolZ.Text:= FormatFloat('00.0 mm', sim_z);
-  Form4.GLLinesPath.Nodes.Clear;
+  SetToolPosition(x/c_GLscale, y/c_GLscale, gcsim_z/c_GLscale, clblack);
+  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', gcsim_z);
 end;
 
 procedure SetTool(glr: Double; tooltip: integer; tool_color: TColor);
 // Werkzeugdurchmesser und -spitze setzen, auf GL skalierte Werte
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
   with Form4 do begin
     GLCylinderToolshaft.TopRadius:= glr;
     GLCylinderToolshaft.BottomRadius:= glr;
@@ -288,6 +296,13 @@ begin
           GLCylinderTooltip.visible:= false;
           GLCylinderTooltip.Height:= glr;
         end;
+      6: // Drill
+        begin
+          GLSphereTooltip.visible:= false;
+          GLCylinderTooltip.visible:= true;
+          GLCylinderTooltip.BottomRadius:= glr / 2;
+          GLCylinderTooltip.Height:= glr*2;
+        end;
     end;
     GLCylinderTooltip.Position.Z:= GLCylinderTooltip.Height / 2;
     GLCylinderToolshaft.Height:= 2-GLCylinderTooltip.Height;
@@ -303,18 +318,17 @@ begin
   end;
 end;
 
-procedure SetSimToolMM(d: Double; tooltip: integer; tool_color: TColor);
+procedure GLSsetSimToolMM(d: Double; tooltip: integer; tool_color: TColor);
 // Werkzeugdurchmesser und -spitze setzen, Werte in Millimetern
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
-  sim_dia:= d;
-  sim_tooltip:= tooltip;
-  sim_color:= tool_color;
-  SetTool(d/2/c_GLscale, tooltip, tool_color);
+  gcsim_dia:= d;
+  gcsim_tooltip:= tooltip;
+  gcsim_color:= tool_color;
+  if Form1.Show3DPreview1.Checked then
+    SetTool(d/2/c_GLscale, tooltip, tool_color);
 end;
 
-procedure Finalize3Dview;
+procedure GLSfinalize3Dview;
 // letzte Aktualisierung
 begin
   render_sema:= ena_finite;
@@ -330,7 +344,7 @@ procedure MillArrayWithTool(x, y, z: Double);
 // Tool-Array mit Werkzeugform an Position XY des mill_array anwenden
 var
   ix, iy: Integer;
-  sz, old_z, new_z, height: Double;
+  sz, old_z, new_z: Double;
   ax, ay, px, py: Integer;
 begin
   if not Form1.Show3DPreview1.Checked then
@@ -359,7 +373,7 @@ end;
 
 
 
-procedure MakeToolArray(dia: Double);
+procedure GLSmakeToolArray(dia: Double);
 // Werkzeug für 3D-Sim erstellen, Grundform ist ein Kreis in einem quadratischen Array
 // Werkkeugspitze ist Null, außerhalb Werkzeug +10
 var
@@ -380,7 +394,7 @@ begin
       if (vz <= tool_mid) then begin // im gewünschten Radius?
         // wir sind innerhalb der Kreisfläche. Jetzt Spitze bestimmen
         h:= 10; // default außerhalb
-        case sim_tooltip of
+        case gcsim_tooltip of
           0: // Flat tip
             h:= 0;   // neue Frästiefe an diesem Punkt des Werkzeugs
           1: // Cone 30°
@@ -404,7 +418,7 @@ end;
 // #############################################################################
 // #############################################################################
 
-procedure SimMillAtPos(x, y, z, dia: Double; new_vec, show_tool: boolean);
+procedure GLSsimMillAtPosMM(x, y, z, dia: Double; new_vec, show_tool: boolean);
 var
   last_node: Integer;
   sx, sy, sz: Double; // auf GL skalierte Werte
@@ -435,7 +449,7 @@ begin
         GLLinesPath.Nodes.AddNode(sx,sy,sz+0.02);
         last_node:= GLLinesPath.Nodes.Count-1;
       end;
-      TGLLinesNode(GLLinesPath.Nodes[last_node]).Color.AsWinColor:= sim_color;
+      TGLLinesNode(GLLinesPath.Nodes[last_node]).Color.AsWinColor:= gcsim_color;
       sim_z_abovezero:= false;
       if ena_finite then
         MillArrayWithTool(x,y,z);
@@ -450,7 +464,7 @@ begin
     end;
   end;
   if show_tool and (draw_tool_sema or new_vec) then //
-    SetToolPosition(sx,sy,sz, sim_color);
+    SetToolPosition(sx,sy,sz, gcsim_color);
   draw_tool_sema:= false;
 end;
 
@@ -472,12 +486,17 @@ end;
 
 procedure TForm4.FormCreate(Sender: TObject);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  gl_initialized:= false;
+  grbl_ini:= TRegistry.Create;
   try
-    Top:= grbl_ini.ReadInteger('SceneForm','Top',110);
-    Left:= grbl_ini.ReadInteger('SceneForm','Left',110);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
+    if grbl_ini.ValueExists('SceneFormTop') then
+      Top:= grbl_ini.ReadInteger('SceneFormTop');
+    if grbl_ini.ValueExists('SceneFormLeft') then
+      Left:= grbl_ini.ReadInteger('SceneFormLeft');
   finally
     grbl_ini.Free;
   end;
@@ -488,12 +507,16 @@ end;
 
 procedure TForm4.FormClose(Sender: TObject; var Action: TCloseAction);
 var
-  grbl_ini:TRegistryIniFile;
+  grbl_ini:TRegistry;
 begin
-  grbl_ini:=TRegistryIniFile.Create('GRBLize');
+  grbl_ini:= TRegistry.Create;
   try
-    grbl_ini.WriteInteger('SceneForm','Top',Top);
-    grbl_ini.WriteInteger('SceneForm','Left',Left);
+    grbl_ini.RootKey := HKEY_CURRENT_USER;
+    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr, true);
+    grbl_ini.WriteInteger('SceneFormTop',Top);
+    grbl_ini.WriteInteger('SceneFormLeft',Left);
+//    grbl_ini.WriteInteger('SceneFormWidth',Width);
+//    grbl_ini.WriteInteger('SceneFormHeight',Height);
   finally
     grbl_ini.Free;
   end;
@@ -509,16 +532,15 @@ begin
   GLSmoothNavigator1.AutoScaleParameters(100);  // Startwert
   GLXYZgridWP.Visible:= CheckWorkGrid.Checked;
 
-  sim_color:= clLime;
-  sim_seek:= false;
-  SetSimToolMM(sim_dia,sim_tooltip, clgray);
-  SetSimPosColorMM(sim_x, sim_y,sim_z, clgray);
+  gcsim_color:= clLime;
+  GLSsetSimToolMM(gcsim_dia,gcsim_tooltip, clgray);
+  GLSsetSimPosColorMM(gcsim_x, gcsim_y, gcsim_z, clgray);
 
   //GLDummyCube3.DeleteChildren;
   GLLinesPath.Nodes.Clear;
-  GLArrowLineZ.Position.Z:= job.partsize_z / c_GLscale;
-  GLArrowLineZ.Position.X:= -job.partsize_x / (c_GLscale*2);
-  GLArrowLineZ.Position.Y:= -job.partsize_y / (c_GLscale*2);
+  GLDummyCubePartZero.Position.X:= -job.partsize_x / (c_GLscale*2);
+  GLDummyCubePartZero.Position.Y:=  -job.partsize_y / (c_GLscale*2);
+  GLDummyCubePartZero.Position.Z:= job.partsize_z / c_GLscale;
 
   // Tisch ist zentriert in Bildmitte
   GLCubeTable.CubeWidth:= job.partsize_x / c_GLscale + 2;
@@ -555,6 +577,7 @@ begin
 
   GLSpaceText1.Position.Y:= -job.partsize_y / (c_GLscale*2) -1.05;
 
+
   // Umrandung für
   GLCubeWP.CubeWidth:= job.partsize_x / c_GLscale;
   GLCubeWP.CubeDepth:= job.partsize_y / c_GLscale;
@@ -583,6 +606,11 @@ begin
   gl_mult_scale:= c_GLscale * gl_arr_scale;
   GLHeightFieldWP.XSamplingScale.Step:= 1/gl_mult_scale;
   GLHeightFieldWP.YSamplingScale.Step:= 1/gl_mult_scale;
+  SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+  GLSsetSimPositionMMxyz(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z);
+  GLSsetSimToolMM(Form1.ComboBoxGdia.ItemIndex +1, gcsim_tooltip, clGray);
+  gl_initialized:= true;
+  GLSsetATCandProbe;
 end;
 
 procedure TForm4.FormRefresh(Sender: TObject);
@@ -607,6 +635,8 @@ var
   ZeroOfs: TIntpoint;
 
 begin
+  if not Form1.Show3DPreview1.Checked then
+    exit;
   ComboBoxSimTypeChange(Sender);
   FormReset;
   my_hpgl_div:= c_hpgl_scale * c_GLscale;
@@ -652,8 +682,7 @@ begin
           end;
         continue;
       end;
-
-      my_radius:= my_dia * (c_hpgl_scale div 2);  // = mm * 40plu / 2 in HPGL-Units
+      my_radius:= job.pens[my_entry.pen].tipdia * (c_hpgl_scale div 2);  // = mm * 40plu / 2 in HPGL-Units
       if z < 0 then
         my_mill_color_corr:=  1 - 0.4 * (1+abs(z))/(1+my_dia*2) // je tiefer und enger, desto duster
       else
@@ -721,7 +750,6 @@ begin
   GLHeightFieldWP.Position.Z:= 0;
   GLHeightFieldWP.XSamplingScale.Max:= job.partsize_x / c_GLscale;
   GLHeightFieldWP.YSamplingScale.Max:= job.partsize_y / c_GLscale;
-
   // Mill-Array erzeugen. Zweidimensionales Array mit Z-Werten für jeden Teilpunkt
   j:= round(job.partsize_x * gl_arr_scale);
   m:= round(job.partsize_y * gl_arr_scale);
@@ -735,7 +763,97 @@ begin
     for p:= 0 to m-1 do
       mill_array[i,p]:= 0.0;
   end;
+  GLSsetATCandProbe;
 end;
+
+procedure TForm4.GLSupdateATC;
+// simulierte Werkzeuge in ATC anlegen und mit ATC-Array updated
+// verwendet eigenen DummyCube
+var i: Integer;
+  my_color: Tcolor;
+  my_disk: TGLDisk;
+  my_cylinder: TGLCylinder;
+  my_spacetext: TGLSpaceText;
+  my_str: String;
+begin
+  if not gl_initialized then
+    exit;
+  if not Form1.Show3DPreview1.Checked then
+    exit;
+  if GLDummyCubeATC.Visible then begin
+    GLDummyCubeATCtools.DeleteChildren;
+    for i:= 0 to 9 do begin // Anzahl Slots
+      if atcArray[i].loaded then begin
+        my_color:= atcArray[i].color;
+      end else begin
+        my_color:= clgray;
+      end;
+      my_disk:= TGLdisk(GLDummyCubeATCtools.AddNewChild(TGLdisk)); // Bohrlochmitte erstellen
+      my_disk.PitchAngle:= 0;
+      my_disk.position.x:= i * job.atc_delta_x / c_GLscale;
+      my_disk.position.y:= i * job.atc_delta_y / c_GLscale;
+      my_disk.position.z:= -0.3;
+      my_disk.OuterRadius:=  0.2;
+      my_disk.Material.FrontProperties.Emission.AsWinColor:= my_color;
+      my_disk.Material.FrontProperties.Ambient.Color:= clrGray25;
+      my_disk.Material.FrontProperties.Diffuse.Color:= clrGray15;
+      if atcArray[i].loaded then begin
+        my_spacetext:= TGLSpaceText(GLDummyCubeATCtools.AddNewChild(TGLSpaceText));
+        my_str:= FormatFloat('0.00', atcArray[i].diameter);
+        my_spacetext.Text:= my_str;
+        my_spacetext.position.x:= i * job.atc_delta_x / c_GLscale - 0.5;
+        my_spacetext.position.y:= i * job.atc_delta_y / c_GLscale - 0.7;
+        my_spacetext.position.z:= -0.3;
+        my_spacetext.Scale.X:= 0.6;
+        my_spacetext.Scale.y:= 0.6;
+        my_spacetext.Extrusion:= 0.02;
+        my_spacetext.Material.FrontProperties.Emission.Color:= clrBlack;
+        my_spacetext.Material.FrontProperties.Ambient.Color:= clrGray25;
+        my_spacetext.Material.FrontProperties.Diffuse.Color:= clrBlack;
+      end;
+      if atcArray[i].inslot then begin
+        my_cylinder:= TGLCylinder(GLDummyCubeATCtools.AddNewChild(TGLCylinder)); // Bohrlochmitte erstellen
+        my_cylinder.PitchAngle:= 90;
+        my_cylinder.position.x:= i * job.atc_delta_x / c_GLscale;
+        my_cylinder.position.y:= i * job.atc_delta_y / c_GLscale;
+        my_cylinder.position.z:= 0;
+        my_cylinder.TopRadius:= atcArray[i].diameter / c_GLscale / 2 + 0.02;
+        my_cylinder.BottomRadius:= atcArray[i].diameter / c_GLscale / 2 + 0.02;
+        my_cylinder.Material.FrontProperties.Emission.AsWinColor:= atcArray[i].color;
+      end;
+    end;
+  end;
+end;
+
+procedure TForm4.GLSsetATCandProbe;
+// simulierte ATC-Basisplatte und Z-Taster erzeugen
+var i:integer;
+  my_disk: TGLDisk;
+begin
+  if not gl_initialized then
+    exit;
+  if not Form1.Show3DPreview1.Checked then
+    exit;
+  GLDummyCubeZprobe.Visible:= Form1.CheckFixedProbeZ.Checked;
+  if GLDummyCubeZprobe.Visible then begin
+    GLDummyCubeZprobe.Position.X:= (job.probe_x - gcsim_offset_x) / c_GLscale;
+    GLDummyCubeZprobe.Position.Y:= (job.probe_y - gcsim_offset_y) / c_GLscale;
+    GLDummyCubeZprobe.Position.Z:= (job.probe_z - gcsim_offset_z) / c_GLscale;
+  end;
+
+  GLDummyCubeATC.Visible:= Form1.CheckUseATC.Checked;
+  if GLDummyCubeATC.Visible then begin
+    GLDummyCubeATC.Position.X:= (job.atc_zero_x - gcsim_offset_x) / c_GLscale;
+    GLDummyCubeATC.Position.Y:= (job.atc_zero_y - gcsim_offset_y) / c_GLscale;
+    GLDummyCubeATC.Position.Z:= (job.atc_pickup_z - gcsim_offset_z) / c_GLscale + 0.5;
+    GLCubeATCbase.Position.X:= 4.5 * job.atc_delta_x / c_GLscale;
+    GLCubeATCbase.Position.Y:= 4.5 * job.atc_delta_y / c_GLscale;
+    GLCubeATCbase.CubeWidth:= 9 * job.atc_delta_x / c_GLscale + 2;
+    GLCubeATCbase.CubeHeight:= 9* job.atc_delta_y / c_GLscale + 2;
+    GLSupdateATC;
+  end;
+end;
+
 
 // #############################################################################
 // User interface - Panel
@@ -743,7 +861,7 @@ end;
 
 procedure TForm4.CheckWorkGridClick(Sender: TObject);
 begin
-  GLsceneViewer1.Invalidate;
+//  GLsceneViewer1.Invalidate;
   GLSpaceTextToolZ.Visible:= CheckWorkGrid.Checked;
   GLLinesCallout.Visible:= CheckWorkGrid.Checked;
   GLXYZgridWP.Visible:= CheckWorkGrid.Checked;
@@ -819,7 +937,8 @@ begin
     LEDbusy3d.Checked:= false;
   render_sema:= false;
   GLSceneViewer1.ResetPerformanceMonitor;
-  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', sim_z);
+  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', gcsim_z);
+  LEDbusy3d.Checked:= false;
 //  GLSceneViewer1.Invalidate;
 end;
 
@@ -827,18 +946,18 @@ procedure TForm4.Timer2Timer(Sender: TObject);
 // alle 50 ms
 begin
   draw_tool_sema:= true;
-  if sim_active then begin
+  if gcsim_active then begin
     // wird bei laufendem Program sonst nicht aufgerufen
     GLCadencer1Progress(Sender, 50, 0);
   end;
   if tool_running then begin
     if tool_rpm < 60 then
       inc(tool_rpm);
-    GLAnnulus1.Turn(tool_rpm);
+    GLAnnulusCollet.Turn(tool_rpm);
   end else
     if tool_rpm > 0 then begin
       dec(tool_rpm);
-      GLAnnulus1.Turn(tool_rpm);
+      GLAnnulusCollet.Turn(tool_rpm);
     end;
 end;
 

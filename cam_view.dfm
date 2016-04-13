@@ -4,7 +4,7 @@ object Form3: TForm3
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
   Caption = 'Camera View'
-  ClientHeight = 472
+  ClientHeight = 474
   ClientWidth = 778
   Color = clBtnFace
   Constraints.MaxHeight = 508
@@ -21,21 +21,13 @@ object Form3: TForm3
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object VideoBox: TPaintBox
-    Left = 146
-    Top = 0
-    Width = 640
-    Height = 480
-    Color = clCream
-    ParentColor = False
-  end
-  object BtnCamIsAtZero: TSpeedButton
+  object BtnCamAtZero: TSpeedButton
     Left = 8
-    Top = 228
+    Top = 212
     Width = 129
     Height = 25
     Hint = 'Camera center is above workpiece zero; set offsets accordingly'
-    Caption = 'Cam is at Part Zero'
+    Caption = 'Part Zero'
     Font.Charset = ANSI_CHARSET
     Font.Color = 2925325
     Font.Height = -12
@@ -44,11 +36,11 @@ object Form3: TForm3
     ParentFont = False
     ParentShowHint = False
     ShowHint = True
-    OnClick = BtnCamIsAtZeroClick
+    OnClick = BtnCamAtZeroClick
   end
   object Label1: TLabel
-    Left = 280
-    Top = 224
+    Left = 320
+    Top = 210
     Width = 5
     Height = 19
     Font.Charset = DEFAULT_CHARSET
@@ -58,13 +50,15 @@ object Form3: TForm3
     Font.Style = [fsBold]
     ParentFont = False
   end
-  object BtnCamAtHilite: TSpeedButton
+  object BtnCamAtPoint: TSpeedButton
     Left = 8
-    Top = 260
+    Top = 243
     Width = 129
     Height = 25
-    Hint = 'Camera center is above hilited point; set offsets accordingly'
-    Caption = 'Cam is at Hilite Point'
+    Hint = 
+      'Camera center is above hilighted point in drawing; set offsets a' +
+      'ccordingly'
+    Caption = 'Hilite Point'
     Font.Charset = ANSI_CHARSET
     Font.Color = clFuchsia
     Font.Height = -12
@@ -73,7 +67,117 @@ object Form3: TForm3
     ParentFont = False
     ParentShowHint = False
     ShowHint = True
-    OnClick = BtnCamAtHiliteClick
+    OnClick = BtnCamAtPointClick
+  end
+  object VideoBox: TPaintBox
+    Left = 143
+    Top = -4
+    Width = 640
+    Height = 480
+    Color = clCream
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 44
+    Top = 193
+    Width = 61
+    Height = 13
+    Caption = 'Cam is at...'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
+  end
+  object BtnMoveCamZero: TSpeedButton
+    Left = 8
+    Top = 307
+    Width = 129
+    Height = 25
+    Caption = 'Part Zero'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clGreen
+    Font.Height = -12
+    Font.Name = 'Arial'
+    Font.Style = [fsBold]
+    ParentFont = False
+    OnClick = BtnMoveCamZeroClick
+  end
+  object Label3: TLabel
+    Left = 33
+    Top = 288
+    Width = 83
+    Height = 13
+    Caption = 'Move Cam to...'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
+  end
+  object Label4: TLabel
+    Left = 34
+    Top = 383
+    Width = 82
+    Height = 13
+    Caption = 'Move Tool to...'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = [fsBold]
+    ParentFont = False
+  end
+  object BtnMoveToolZero: TSpeedButton
+    Left = 8
+    Top = 402
+    Width = 129
+    Height = 25
+    Hint = 'Move tool to part zero'
+    Caption = 'Part Zero'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clOlive
+    Font.Height = -12
+    Font.Name = 'Arial'
+    Font.Style = [fsBold]
+    ParentFont = False
+    OnClick = BtnMoveToolZeroClick
+  end
+  object BtnMoveCamPoint: TSpeedButton
+    Left = 8
+    Top = 338
+    Width = 129
+    Height = 25
+    Hint = 'Move camerato hilighted point in drawing;'
+    Caption = 'Hilite Point'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clPurple
+    Font.Height = -12
+    Font.Name = 'Arial'
+    Font.Style = [fsBold]
+    ParentFont = False
+    ParentShowHint = False
+    ShowHint = True
+    OnClick = BtnMoveCamPointClick
+  end
+  object BtnMoveToolPoint: TSpeedButton
+    Left = 8
+    Top = 433
+    Width = 129
+    Height = 25
+    Hint = 'Move Tool to hilighted point in Drawing'
+    Caption = 'Hilite Point'
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clTeal
+    Font.Height = -12
+    Font.Name = 'Arial'
+    Font.Style = [fsBold]
+    ParentFont = False
+    ParentShowHint = False
+    ShowHint = True
+    OnClick = BtnMoveToolPointClick
   end
   object RadioGroupCam: TRadioGroup
     Left = 8
@@ -139,7 +243,13 @@ object Form3: TForm3
     OnClick = OverlayColorClick
   end
   object ColorDialog1: TColorDialog
-    Left = 16
-    Top = 296
+    Left = 200
+    Top = 424
+  end
+  object Timer1: TTimer
+    Interval = 250
+    OnTimer = Timer1Timer
+    Left = 264
+    Top = 424
   end
 end

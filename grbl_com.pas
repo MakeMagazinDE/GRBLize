@@ -94,8 +94,10 @@ type
   // kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
   procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
 
-  function GetStatus(var pos_changed: Boolean): Boolean;
+  procedure grbl_checkXY(var x,y: Double);
+  procedure grbl_checkZ(var z: Double);
 
+  procedure grbl_wait_for_timeout(timeout: Integer);
 
 var
 //FTDI-Device
@@ -109,7 +111,7 @@ var
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
   grbl_sendlist, grbl_receveivelist: TSTringList;
-  grbl_checksema, grbl_isnew: boolean;
+  grbl_checksema: boolean;
   grbl_delay_short, grbl_delay_long: Word;
   ComFile: THandle;
   grbl_is_connected: boolean;
@@ -280,7 +282,6 @@ begin
   COMSetTimeout(1);
   Result := '';
   my_str:= '';
-  CancelWait:= false;
   has_timeout:= timeout > 0;
   targettime := GetTickCount + cardinal(timeout);
   repeat
@@ -291,12 +292,10 @@ begin
         my_str:= my_str + my_char;
     end;
     Application.processmessages;
-  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
+  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelJob;
   if has_timeout then
     if (GetTickCount > targettime) then
       my_str:= '#Timeout';
-  if CancelWait then
-    my_str:= '#Cancelled';
   Result:= my_str;
 end;
 
@@ -341,7 +340,6 @@ var
   targettime: cardinal;
   has_timeout: Boolean;
 begin
-  CancelWait:= false;
   my_str:= '';
   has_timeout:= timeout > 0;
   targettime := GetTickCount + cardinal(timeout);
@@ -353,12 +351,10 @@ begin
         my_str:= my_str + my_char;
     end;
     Application.processmessages;
-  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelWait;
+  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelJob;
   if has_timeout then
     if (GetTickCount > targettime) then
       my_str:= '#Timeout';
-  if CancelWait then
-    my_str:= '#Cancelled';
   Result:= my_str;
 end;
 
@@ -371,7 +367,6 @@ var
   my_str: AnsiString;
 begin
   my_str:= AnsiString(sendStr);
-  CancelWait:= false;
   Result:= '';
   ftdi.write(@my_str[1], length(my_str), i);
   if my_getok then begin
@@ -385,7 +380,6 @@ end;
 
 function grbl_receiveCount: Integer;
 // gibt Anzahl der Zeichen im Empfangspuffer zurück
-var i: Integer;
 begin
   result:= 0;
   if ftdi_isopen then
@@ -430,7 +424,6 @@ end;
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
 begin
-  CancelWait:= false;
   grbl_sendStr('?', false); // Status anfordern
   grbl_statusStr:= grbl_receiveStr(100);
 end;
@@ -439,45 +432,43 @@ end;
 function grbl_resync: boolean;
 // Resync, sende #13 und warte 50 ms auf OK
 var my_str: AnsiString;
-  i, n: Integer;
+  i: Integer;
 begin
-  CancelWait:= false;
   my_str:= '';
   if ftdi_isopen or com_isopen then begin
-    while grbl_receiveCount <> 0 do begin
-      mdelay(grbl_delay_long); // falls noch etwas vorliegt
-      grbl_rx_clear;
-    end;
-    for i:= 0 to 7 do begin  // Anzahl Versuche
+    grbl_wait_for_timeout(50);
+    for i:= 0 to 3 do begin  // Anzahl Versuche
       grbl_sendStr(#13,false);
-      mdelay(grbl_delay_long);
-      my_str:= grbl_receiveStr(200);
-      if (my_str = 'ok') or CancelWait then
+      my_str:= uppercase(grbl_receiveStr(50));
+      if (my_str = 'OK') or (pos(my_str,'ALARM') > 0) or (pos(my_str,'ERROR') > 0) then
         break;
-      mdelay(grbl_delay_long); // nochmal versuchen
-      grbl_rx_clear;
     end;
-    grbl_resync:= (my_str = 'ok');
+    grbl_resync:= (my_str = 'OK');
   end else
     grbl_resync:= false;
 end;
 
 function grbl_checkResponse: Boolean;
 begin
+  DisableStatus;
   grbl_sendlist.Clear;
+  grbl_sendStr('$X' + #13, false);
+  grbl_wait_for_timeout(50);
   result:= false;
   if ftdi_isopen or com_isopen then
     if grbl_resync then
       result:= true
     else
-      showmessage('No response or GRBL Resync failed on Send Settings.'
-        + #13+ 'Check if GRBL version matches setting in GRBL Defaults page.');
+      MessageDlg('No response or GRBL Resync failed.'
+        + #13 + 'Check if GRBL version matches setting in GRBL Defaults page'
+        + #13 + 'setting in GRBL Defaults page.', mtWarning, [mbOK], 0);
+  EnableStatus;
 end;
 
 procedure grbl_addStr(my_str: String);
 // Zeile an Sendeliste anhängen, wird in Timer2 behandelt
 begin
-  if (not CancelJob) or (not CancelGrbl) then
+  if (not CancelJob) then
     grbl_sendlist.add(my_str);
 end;
 
@@ -488,11 +479,23 @@ end;
 procedure grbl_checkZ(var z: Double);
 // limits z to upper limit
 begin
+  if WorkZeroZ + z > 0 then
+    z:= - WorkZeroZ;
+  if WorkZeroZ + z < -job.table_Z then
+    z:= -WorkZeroZ - job.table_Z;
 end;
 
 procedure grbl_checkXY(var x,y: Double);
 // limits xy to machine limits
 begin
+  if WorkZeroX + x < 0 then
+    x:= - WorkZeroX;
+  if WorkZeroX + x > job.table_X then
+    x:= job.table_X - WorkZeroX;
+  if WorkZeroY + y < 0 then
+    y:= - WorkZeroY;
+  if WorkZeroY + Y > job.table_Y then
+    y:= job.table_Y - WorkZeroY;
 end;
 
 procedure grbl_offsXY(x, y: Double);
@@ -503,6 +506,7 @@ end;
 
 procedure grbl_offsZ(z: Double);
 // GCode-String G92 z mit abschließendem CR an GRBL senden, auf OK warten
+// Z mit Tool-Offset versehen
 begin
   grbl_addStr('G92 Z'+ FloatToSTrDot(z));
 end;
@@ -539,7 +543,7 @@ begin
 end;
 
 procedure grbl_moveslowZ(z: Double; is_abs: Boolean);
-// GCode-String G0 z mit abschließendem CR an GRBL senden, auf OK warten
+// GCode-String G1 z mit abschließendem CR an GRBL senden, auf OK warten
 var my_str: String;
 begin
   if is_abs then
@@ -591,10 +595,6 @@ procedure grbl_millZF(z: Double; f: Integer);
 var my_str: String;
 begin
   grbl_checkZ(z);
-  if (job.z_feedmult < 0.9) or (job.z_feedmult > 1.1) then begin
-    my_str:= 'G1 Z'+ FloatToSTrDot(z) + ' F' + IntToStr(round(f * job.z_feedmult));
-    grbl_addStr(my_str);
-  end;
   my_str:= 'G1 Z'+ FloatToSTrDot(z) + ' F' + IntToStr(f);
   grbl_addStr(my_str);
   grbl_oldf:= f;
@@ -616,8 +616,8 @@ procedure grbl_millXYZF(x, y, z: Double; f: Integer);
 // F (speed) wird nur gesendet, wenn es sich geändert hat!
 var my_str: String;
 begin
-  grbl_checkXY(x,y);
   grbl_checkZ(z);
+  grbl_checkXY(x,y);
   my_str:= 'G1 X' + FloatToSTrDot(x) +' Y'+ FloatToSTrDot(y) +' Z' + FloatToSTrDot(z);
   if f <> grbl_oldf then
     my_str:= my_str + ' F' + IntToStr(f);
@@ -633,8 +633,8 @@ procedure grbl_millXYZ(x, y, z: Double);
 // XYZ-Werte werden nur gesendet, wenn sie sich geändert haben!
 var my_str: String;
 begin
-  grbl_checkXY(x,y);
   grbl_checkZ(z);
+  grbl_checkXY(x,y);
   my_str:= 'G1';
   if x <> grbl_oldx then
     my_str:= my_str + ' X'+ FloatToSTrDot(x);
@@ -666,25 +666,25 @@ var i, my_len, my_z_feed: Integer;
 
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
   for i:= 0 to my_len - 1 do begin
-    if CancelGrbl then
-      exit;
     grbl_moveZ(job.z_penup, false);
     x:= (millpath[i].x + offset.x) / c_hpgl_scale;
     y:= (millpath[i].y + offset.y) / c_hpgl_scale;
     grbl_moveXY(x,y,false);
     z:= 0;
-    my_z_feed:= job.pens[millpen].speed;
+    my_z_feed:= job.pens[millpen].speed; // Feed des gewählten Pens
+{
     if my_z_feed > job.z_feed then
       my_z_feed:= job.z_feed;
-    if CancelGrbl then
-      exit;
+}
+    if i mod 25 = 0 then
+      Application.ProcessMessages;
     repeat
       grbl_moveZ(0.5, false); // annähern auf 0,5 mm über Oberfläche
       z:= z - job.pens[millpen].z_inc;
       if z < my_z_end then
         z:= my_z_end;
       grbl_millZF(z, my_z_feed);
-    until (z <= my_z_end) or CancelGrbl;
+    until (z <= my_z_end) or (Form1.BtnCancel.Tag = 1);
   end;
   grbl_moveZ(job.z_penup, false);
 end;
@@ -712,9 +712,8 @@ begin
     z:= -job.pens[millpen].z_end;
     if z < my_z_limit then
       z:= my_z_limit;
-
-    if CancelGrbl then
-      exit;
+    if i mod 25 = 0 then
+      Application.ProcessMessages;
     grbl_moveZ(job.z_penup, false);
     x:= (millpath[0].x + offset.x) / c_hpgl_scale;
     y:= (millpath[0].y + offset.y) / c_hpgl_scale;
@@ -726,18 +725,19 @@ begin
       my_z_feed:= job.z_feed;
     grbl_millZF(z, my_z_feed); // langsam eintauchen
     for i:= 1 to my_len - 1 do begin
-      if CancelGrbl then
-        exit;
       x:= (millpath[i].x + offset.x) / c_hpgl_scale;
       y:= (millpath[i].y + offset.y) / c_hpgl_scale;
       grbl_millXYF(x,y, job.pens[millpen].speed);
+      if (Form1.BtnCancel.Tag = 1) then
+        break;
     end;
-    if is_closedpoly and (not CancelGrbl) then begin
+    if is_closedpoly and (not (Form1.BtnCancel.Tag = 1)) then begin
       x:= (millpath[0].x + offset.x) / c_hpgl_scale;
       y:= (millpath[0].y + offset.y) / c_hpgl_scale;
       grbl_millXYF(x,y, job.pens[millpen].speed);
     end;
-  until (my_z_limit <= my_z_end) or CancelGrbl;
+
+  until (my_z_limit <= my_z_end) or (Form1.BtnCancel.Tag = 1);
   grbl_moveZ(job.z_penup, false);
 end;
 
@@ -821,8 +821,6 @@ begin
 end;
 
 function InitFTDIbySerial(my_serial, baud_str: String):String;
-var
-  my_str: String; my_baud: fBaudRate;
 begin
   if ftdi_isopen then
     exit;
@@ -848,117 +846,12 @@ begin
   end;
 end;
 
-// #############################################################################
-// #############################################################################
-
-function GetStatus(var pos_changed: Boolean): Boolean;
-// liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
-// setzt pos_changed wenn sich Position änderte
-var
-  my_str, my_response: String;
-  my_start_idx: Integer;
-  is_valid: Boolean;
-
+procedure grbl_wait_for_timeout(timeout: Integer);
 begin
-  result:= false;
-  pos_changed:= false;
-  if not grbl_is_connected then
-    exit;
-
-  while grbl_receiveCount > 0 do begin
-    my_response:= grbl_receiveStr(5);  // Dummy lesen
-    mdelay(grbl_delay_short);
-  end;
-  grbl_sendStr('?', false);          // neuen Status anfordern
-  mdelay(grbl_delay_short);
-  my_response:= grbl_receiveStr(grbl_delay_long); // ca. 50 Zeichen maximal
-  Form1.EditStatus.Text:= my_response;
-
-  // Format bei GRBL-JOG: Idle,MPos,100.00,0.00,0.00,WPos,100.00,0.00,0.00
-  // Format bei GRBL 0.9j: <Idle,MPos:0.000,0.000,0.000,WPos:0.000,0.000,0.000>
-  if grbl_isnew and (pos('>', my_response) < 1) then   // nicht vollständig
-    exit;
-  if grbl_isnew and (my_response[1] = '<') then begin
-    my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
-    my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
-    my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
-  end else
-    exit;
-
-  is_valid:= false;
-  with Form1 do begin
-    grbl_receveivelist.clear;
-    grbl_receveivelist.CommaText:= my_response;
-    if grbl_receveivelist.Count < 2 then
-      exit;
-    my_Str:= grbl_receveivelist[0];
-    if my_Str = 'Idle' then begin
-      Panel1.Color:= clLime;
-      is_valid:= true;
-    end else
-      Panel1.Color:= $00004000;
-    if (my_Str = 'Queue') or (my_Str =  'Hold') then begin
-      is_valid:= true;
-      Panel2.Color:= clAqua;
-      result:= true;
-    end else
-      Panel2.Color:= $00400000;
-
-    if (my_Str = 'Run') or AnsiContainsStr(my_Str,'Jog') then begin
-      is_valid:= true;
-      Panel3.Color:= clFuchsia;
-      result:= true;
-    end else
-      Panel3.Color:= $00400040;
-
-    if my_Str = 'Alarm' then begin
-      is_valid:= true;
-      Panel4.Color:= clRed;
-    end else
-      Panel4.Color:= $00000040;
-
-    // keine gültige Statusmeldung?
-    if not is_valid then
-      exit;
-    my_start_idx:= grbl_receveivelist.IndexOf('MPos');
-    if my_start_idx >= 0 then begin
-      grbl_mpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      MPosX.Caption:= grbl_receveivelist[my_start_idx+1];
-      grbl_mpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
-      MPosY.Caption:= grbl_receveivelist[my_start_idx+2];
-      grbl_mpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-      MPosZ.Caption:= grbl_receveivelist[my_start_idx+3];
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('WPos');
-    if my_start_idx >= 0 then begin
-       grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
-      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('JogX');
-    if my_start_idx >= 0 then begin
-      grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('JogY');
-    if my_start_idx >= 0 then begin
-      grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-    end;
-    my_start_idx:= grbl_receveivelist.IndexOf('JogZ');
-    if my_start_idx >= 0 then begin
-      grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-      PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-    end;
-  end;
-  if (old_grbl_wpos.X <> grbl_wpos.X) or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
-    pos_changed:= true;
-    old_grbl_wpos:= grbl_wpos;
-  end;
+  if grbl_is_connected then
+    repeat
+      Application.ProcessMessages;
+    until grbl_receiveStr(timeout) = '#Timeout';
 end;
-
 
 end.

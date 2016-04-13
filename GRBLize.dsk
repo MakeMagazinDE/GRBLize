@@ -1,74 +1,39 @@
 ﻿[Closed Files]
-File_0=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_grblsetup.pas',0,1,58,1,41,0,0,,
-File_1=TSourceModule,'E:\Dropbox\GRBLize_XE8\deviceselect.pas',0,1,10,100,9,0,0,,
-File_2=TSourceModule,'E:\GIT Heise\GRBLize\page_grblsetup.pas',0,1,58,1,92,0,0,,
-File_3=TSourceModule,'E:\Dropbox\GRBLize_XE8\ftdiclass\FTDItypes.pas',0,1,109,50,133,0,0,,
-File_4=TSourceModule,'E:\GIT Heise\GRBLize\deviceselect.pas',0,1,19,1,1,0,0,,
-File_5=TSourceModule,'E:\Dropbox\GLScene_VCL\Source\GLWin32Context.pas',0,1,159,1,182,0,0,,
-File_6=TSourceModule,'E:\Dropbox\GRBLize_XE8\glscene_view.pas',0,1,415,42,445,0,0,,
-File_7=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_run.pas',0,1,503,1,537,0,0,,
-File_8=TSourceModule,'E:\Dropbox\GRBLize_XE8\import_files.pas',0,1,174,23,190,0,0,,
-File_9=TSourceModule,'E:\Dropbox\GRBLize_XE8\gcode_interpreter.pas',0,1,1,20,210,0,0,,
-File_10=TSourceModule,'E:\Dropbox\GRBLize_XE8\hpgl_import.pas',0,1,1,1,1,0,0,,
-File_11=TSourceModule,'E:\GIT Heise\GRBLize\page_job.pas',0,1,1,34,13,0,0,,
-File_12=TSourceModule,'E:\GIT Heise\GRBLize\ABOUT.PAS',0,1,29,1,30,0,0,,
-File_13=TSourceModule,'E:\Dropbox\GRBLize_XE8\drill_import.pas',0,1,42,48,53,0,0,,
-File_14=TSourceModule,'E:\Dropbox\glscene_vcl\samples\delphi\demos\computing\vertexdatageneration\uDemo.pas',0,1,1,1,1,0,0,,
+File_0=TSourceModule,'E:\Dropbox\GRBLize_XE8\grbl_player_main.pas',0,1,798,1,415,0,0,,
+File_1=TSourceModule,'E:\Dropbox\GRBLize_XE8\grbl_com.pas',0,1,1,66,752,0,0,,
+File_2=TSourceModule,'E:\GIT Heise\GRBLize\drawing_window.pas',0,1,897,63,1052,0,0,,
+File_3=TSourceModule,'E:\GIT Heise\GRBLize\cam_view.pas',0,1,17,37,186,0,0,,
+File_4=TSourceModule,'E:\GIT Heise\GRBLize\grbl_player_main.pas',0,1,247,64,88,0,0,,
+File_5=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_grblsetup.pas',0,1,58,1,41,0,0,,
+File_6=TSourceModule,'E:\Dropbox\GRBLize_XE8\deviceselect.pas',0,1,10,100,9,0,0,,
+File_7=TSourceModule,'E:\GIT Heise\GRBLize\page_grblsetup.pas',0,1,58,1,92,0,0,,
+File_8=TSourceModule,'E:\Dropbox\GRBLize_XE8\ftdiclass\FTDItypes.pas',0,1,109,50,133,0,0,,
+File_9=TSourceModule,'E:\GIT Heise\GRBLize\deviceselect.pas',0,1,19,1,1,0,0,,
+File_10=TSourceModule,'E:\Dropbox\GLScene_VCL\Source\GLWin32Context.pas',0,1,159,1,182,0,0,,
+File_11=TSourceModule,'E:\Dropbox\GRBLize_XE8\glscene_view.pas',0,1,415,42,445,0,0,,
+File_12=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_run.pas',0,1,503,1,537,0,0,,
 
 [Modules]
-Module0=E:\GIT Heise\GRBLize\drawing_window.pas
-Module1=E:\GIT Heise\GRBLize\cam_view.pas
-Module2=E:\GIT Heise\GRBLize\grbl_player_main.pas
-Module3=E:\GIT Heise\GRBLize\grbl_com.pas
-Module4=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
-Module5=E:\Dropbox\GRBLize_XE8\grbl_com.pas
-Module6=default.htm
-Count=7
+Module0=E:\GIT Heise\GRBLize\grbl_com.pas
+Module1=E:\GIT Heise\GRBLize\page_run.pas
+Count=2
 EditWindowCount=1
-
-[E:\GIT Heise\GRBLize\drawing_window.pas]
-ModuleType=TSourceModule
-FormState=1
-FormOnTop=0
-
-[E:\GIT Heise\GRBLize\cam_view.pas]
-ModuleType=TSourceModule
-FormState=1
-FormOnTop=0
-
-[E:\GIT Heise\GRBLize\grbl_player_main.pas]
-ModuleType=TSourceModule
-FormState=1
-FormOnTop=0
 
 [E:\GIT Heise\GRBLize\grbl_com.pas]
 ModuleType=TSourceModule
 FormState=0
 FormOnTop=0
 
-[E:\Dropbox\GRBLize_XE8\grbl_player_main.pas]
-ModuleType=TSourceModule
-FormState=1
-FormOnTop=0
-
-[E:\Dropbox\GRBLize_XE8\grbl_com.pas]
+[E:\GIT Heise\GRBLize\page_run.pas]
 ModuleType=TSourceModule
 FormState=0
 FormOnTop=0
 
-[default.htm]
-ModuleType=TURLModule
-
 [EditWindow0]
-ViewCount=7
-CurrentEditView=E:\GIT Heise\GRBLize\drawing_window.pas
+ViewCount=2
+CurrentEditView=E:\GIT Heise\GRBLize\grbl_com.pas
 View0=0
 View1=1
-View2=2
-View3=3
-View4=4
-View5=5
-View6=6
 PercentageSizes=1
 Create=1
 Visible=1
@@ -97,74 +62,26 @@ BottomMiddlePanelSize=0
 TabDockRightClients=DockSite0=-1
 
 [View0]
-CustomEditViewType=TWelcomePageView
-WelcomePageURL=bds:/default.htm
+CustomEditViewType=TEditView
+Module=E:\GIT Heise\GRBLize\page_run.pas
+CursorX=1
+CursorY=619
+TopLine=162
+LeftCol=1
+Elisions=
+Bookmarks=
+EditViewName=E:\GIT Heise\GRBLize\page_run.pas
 
 [View1]
-CustomEditViewType=TEditView
-Module=E:\Dropbox\GRBLize_XE8\grbl_com.pas
-CursorX=66
-CursorY=752
-TopLine=719
-LeftCol=1
-Elisions=
-Bookmarks=
-EditViewName=E:\Dropbox\GRBLize_XE8\grbl_com.pas
-
-[View2]
-CustomEditViewType=TEditView
-Module=E:\GIT Heise\GRBLize\drawing_window.pas
-CursorX=63
-CursorY=1052
-TopLine=1193
-LeftCol=1
-Elisions=
-Bookmarks=
-EditViewName=E:\GIT Heise\GRBLize\drawing_window.pas
-
-[View3]
-CustomEditViewType=TEditView
-Module=E:\GIT Heise\GRBLize\cam_view.pas
-CursorX=37
-CursorY=186
-TopLine=17
-LeftCol=1
-Elisions=
-Bookmarks=
-EditViewName=E:\GIT Heise\GRBLize\cam_view.pas
-
-[View4]
-CustomEditViewType=TEditView
-Module=E:\GIT Heise\GRBLize\grbl_player_main.pas
-CursorX=1
-CursorY=696
-TopLine=670
-LeftCol=1
-Elisions=
-Bookmarks=
-EditViewName=E:\GIT Heise\GRBLize\grbl_player_main.pas
-
-[View5]
 CustomEditViewType=TEditView
 Module=E:\GIT Heise\GRBLize\grbl_com.pas
 CursorX=14
 CursorY=851
-TopLine=839
+TopLine=483
 LeftCol=1
 Elisions=
 Bookmarks=
 EditViewName=E:\GIT Heise\GRBLize\grbl_com.pas
-
-[View6]
-CustomEditViewType=TEditView
-Module=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
-CursorX=12
-CursorY=460
-TopLine=430
-LeftCol=1
-Elisions=
-Bookmarks=
-EditViewName=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
 
 [Breakpoints]
 Count=0
@@ -320,11 +237,6 @@ LRDockWidth=1894
 Dockable=1
 StayOnTop=0
 SplitPos=111
-
-[PropInspDesignerSelection]
-ArrangeBy=Name
-SelectedItem=,
-ExpandedItems=Anchors=0,BorderIcons=0
 
 [TFileExplorerForm]
 PercentageSizes=1
