@@ -1,0 +1,1 @@
+pcb2gcode --front Z-Taster-top.gbr --zsafe 1 --zchange 30 --zwork -0.2 --offset 1 --mill-feed 200 --optimise=1 --mill-speed 6000 --metric=1 --metricoutput=1
