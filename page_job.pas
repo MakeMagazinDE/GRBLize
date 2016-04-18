@@ -518,10 +518,7 @@ begin
   JobToPenGridList;
   param_change;
   NeedsRedraw:= true;
-<<<<<<< HEAD
 
-=======
->>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
   job.pens[0].used:= false;
   job.pens[0].enable:= true;
   Form1.SgPens.Repaint;

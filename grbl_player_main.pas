@@ -955,11 +955,7 @@ end;
 
 
 procedure TForm1.BtnGerberConvertClick(Sender: TObject);
-<<<<<<< HEAD
 var my_converter_path, my_source_path, my_png_path,
-=======
-var my_converter_path, my_source_path,
->>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
   my_dest_path, my_side, my_arg: String;
   my_offset: Double;
   img: TImage;
@@ -967,12 +963,9 @@ var my_converter_path, my_source_path,
 begin
   Memo2.lines.clear;
   my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\pcb2gcode.exe';
-<<<<<<< HEAD
   my_png_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
   if FileExists(my_png_path) then
     SysUtils.DeleteFile(my_png_path);
-=======
->>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
   if not FileExists(my_converter_path) then begin
     Memo2.lines.add('PCB2GCODE converter not found.');
     exit;
@@ -1005,7 +998,6 @@ begin
     + my_side + '-output ' + my_dest_path;
 //  Memo2.lines.add(my_arg);
   ExecuteFile(my_converter_path, my_arg, ExtractFilePath(my_converter_path), true, false);
-<<<<<<< HEAD
 
   Memo2.lines.add(my_converter_path + #32 + my_arg);
   Memo2.lines.add('');
@@ -1016,16 +1008,6 @@ begin
 
   img := TImage.create(nil);
   img.Picture.LoadFromFile(my_png_path);
-=======
-  Memo2.lines.add('');
-  mdelay(500);
-  Memo2.lines.add('Done.');
-  Memo2.lines.add('Please import created G-Code file in Job page.');
-
-  my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
-  img := TImage.create(nil);
-  img.Picture.LoadFromFile(my_converter_path);
->>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
   // Image ist idR sehr groﬂ, muss skaliert werden
   height:= img.picture.Graphic.Height;
   width:= img.picture.Graphic.Width;
@@ -1041,12 +1023,9 @@ begin
   width:= width div sizefac;
   Paintbox1.Canvas.StretchDraw(rect(0,0,width, height),img.picture.Graphic);
   img.Free;
-<<<<<<< HEAD
   end else begin
     Memo2.lines.add('pcb2gcode failed: No layout image found.');
   end;
-=======
->>>>>>> d0a68bc53539100fb989f9141d716d3dbcc56b42
 end;
 
 //##############################################################################

@@ -4,7 +4,7 @@ Maker Media GmbH und c't, Heise Zeitschriften Verlag
 
 ***
 
-#GRBLize
+#GRBLize V1.1
 
 ###CNC-Steuerung für GRBL-JOG Projekt
 
@@ -23,11 +23,11 @@ sich das Windows-Executable (32 Bit) im Unterverzeichnis /bin.
 Das Projekt befindet sich noch in Entwicklung, bitte auf evt. Updates prüfen. 
 Die passende GRBL-Steuerplatine finden Sie in unserem Github-Repo **[GRBL-
 JOG](https://github.com/heise/GRBL-JOG)**. Die neueste Version unterstützt jetzt 
-GRBL 0.9j (für Platine GRBL-JOG) sowie GRBL 0.9xx auf Arduino und ähnlichen Boards.
+auch GRBL 0.9j sowie GRBL auf Arduino und ähnlichen Boards.
 
 ###Version History
 
-- 1.1: Latest build. Bugfix for camera window. Supports GRBL 0.9xx with different baud rates. Robust protocol. Tested on various machines.
+- 1.1b: Latest build. Interface for pcb2gcode.exe in Utilities/Tools tab. Revised interpreter for excellon files. Added 2D G-Code and simple SVG import to interface with pcb2gcode.
 - 1.0b: Supports serial COM port as well as direct FTDI serial communications. Re-written robust protocol engine. New simulation for G-Codes as a finite elements model in 3 resolutions. Some bugs fixed. Suports GRBL 0.8x and new GRBL 0.9j. New on-screen jog pad for use with other boards than GRBL-JOG. Supports GRBL running on a plain Arduino.
 - 0.96d: On run, will keep Z up at park position height until first mill to clear work part. 
 - 0.96b: bugfix on FTDI class, new "Z Feed Scaling" parameter, multiplies XY feed value for Z to prevent tool damage (<1 = slower). Also useful with c't woodmill (>1 = faster, otherwise Z feed will be too slow).
