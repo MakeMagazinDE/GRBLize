@@ -89,6 +89,7 @@ type
     GLCylinderProbeButton: TGLCylinder;
     GLCubeATCbase: TGLCube;
     GLDummyCubeATCtools: TGLDummyCube;
+    LabelActive: TLabel;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure GLSceneViewer1MouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -162,7 +163,6 @@ var
   LEDbusy3d: TLed;
   sim_z_abovezero: Boolean;
   ena_solid, ena_finite: Boolean;
-  toolpath_array: Array of TIntPoint;
   draw_tool_sema, render_sema: Boolean;
   mill_array: Array of Array of Double; // XY-Array mit Höhenwerten
   mill_array_sizeX, mill_array_sizeY: Integer;
@@ -193,7 +193,7 @@ procedure GLSspindle_on_off(on_off: boolean);
 begin
   tool_running:= on_off;
   if tool_running then
-    Form4.GLAnnulusCollet.Material.FrontProperties.Emission.Color:= clrgray80
+    Form4.GLAnnulusCollet.Material.FrontProperties.Emission.Color:= clrgray20
   else
     Form4.GLAnnulusCollet.Material.FrontProperties.Emission.Color:= clrblack;
 end;
@@ -220,26 +220,20 @@ end;
 procedure GLSsetSimPosColorMM(x, y, z:Double; tool_color: TColor);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
   SetToolPosition(x/c_GLscale, y/c_GLscale, z/c_GLscale, tool_color)
 end;
 
 procedure GLSsetSimPositionMMxy(x, y:Double);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
-  SetToolPosition(x/c_GLscale, y/c_GLscale, gcsim_z/c_GLscale, clblack);
+  SetToolPosition(x/c_GLscale, y/c_GLscale, grbl_wpos.z/c_GLscale, clblack);
 end;
 
 procedure GLSsetSimPositionMMxyz(x, y, z:Double);
 // XYZ-Position Werkzeugspitze relativ zur 0,0 von Werkstückoberfläche in mm
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
-  SetToolPosition(x/c_GLscale, y/c_GLscale, gcsim_z/c_GLscale, clblack);
-  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', gcsim_z);
+  SetToolPosition(x/c_GLscale, y/c_GLscale, z/c_GLscale, clblack);
+  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', z);
 end;
 
 procedure SetTool(glr: Double; tooltip: integer; tool_color: TColor);
@@ -331,6 +325,8 @@ end;
 procedure GLSfinalize3Dview;
 // letzte Aktualisierung
 begin
+  if Form4.LabelActive.Visible or (not Form1.Show3DPreview1.Checked) then
+    exit;
   render_sema:= ena_finite;
   LEDbusy3d.Checked:= render_sema;
 end;
@@ -423,7 +419,7 @@ var
   last_node: Integer;
   sx, sy, sz: Double; // auf GL skalierte Werte
 begin
-  if not Form1.Show3DPreview1.Checked then
+  if Form4.LabelActive.Visible or (not Form1.Show3DPreview1.Checked) then
     exit;
 
   Form4.GLLinesPath.Visible:= show_tool and Form4.CheckToolpathVisible.Checked;
@@ -453,7 +449,7 @@ begin
       sim_z_abovezero:= false;
       if ena_finite then
         MillArrayWithTool(x,y,z);
-      render_sema:= CheckLiveRender.checked and (Form1.TrackbarSimSpeed.Position < 10);
+      render_sema:= CheckLiveRender.checked;
     end else begin
       if not sim_z_abovezero then begin
         GLLinesPath.Nodes.AddNode(sx,sy,sz+0.02);
@@ -534,7 +530,7 @@ begin
 
   gcsim_color:= clLime;
   GLSsetSimToolMM(gcsim_dia,gcsim_tooltip, clgray);
-  GLSsetSimPosColorMM(gcsim_x, gcsim_y, gcsim_z, clgray);
+  GLSsetSimPosColorMM(grbl_wpos.x, grbl_wpos.y, grbl_wpos.z, clgray);
 
   //GLDummyCube3.DeleteChildren;
   GLLinesPath.Nodes.Clear;
@@ -577,7 +573,6 @@ begin
 
   GLSpaceText1.Position.Y:= -job.partsize_y / (c_GLscale*2) -1.05;
 
-
   // Umrandung für
   GLCubeWP.CubeWidth:= job.partsize_x / c_GLscale;
   GLCubeWP.CubeDepth:= job.partsize_y / c_GLscale;
@@ -606,7 +601,6 @@ begin
   gl_mult_scale:= c_GLscale * gl_arr_scale;
   GLHeightFieldWP.XSamplingScale.Step:= 1/gl_mult_scale;
   GLHeightFieldWP.YSamplingScale.Step:= 1/gl_mult_scale;
-  SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
   GLSsetSimPositionMMxyz(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.z);
   GLSsetSimToolMM(Form1.ComboBoxGdia.ItemIndex +1, gcsim_tooltip, clGray);
   gl_initialized:= true;
@@ -635,8 +629,6 @@ var
   ZeroOfs: TIntpoint;
 
 begin
-  if not Form1.Show3DPreview1.Checked then
-    exit;
   ComboBoxSimTypeChange(Sender);
   FormReset;
   my_hpgl_div:= c_hpgl_scale * c_GLscale;
@@ -778,7 +770,7 @@ var i: Integer;
 begin
   if not gl_initialized then
     exit;
-  if not Form1.Show3DPreview1.Checked then
+  if Form4.LabelActive.Visible or (not Form1.Show3DPreview1.Checked) then
     exit;
   if GLDummyCubeATC.Visible then begin
     GLDummyCubeATCtools.DeleteChildren;
@@ -832,20 +824,20 @@ var i:integer;
 begin
   if not gl_initialized then
     exit;
-  if not Form1.Show3DPreview1.Checked then
+  if Form4.LabelActive.Visible or (not Form1.Show3DPreview1.Checked) then
     exit;
   GLDummyCubeZprobe.Visible:= Form1.CheckFixedProbeZ.Checked;
   if GLDummyCubeZprobe.Visible then begin
-    GLDummyCubeZprobe.Position.X:= (job.probe_x - gcsim_offset_x) / c_GLscale;
-    GLDummyCubeZprobe.Position.Y:= (job.probe_y - gcsim_offset_y) / c_GLscale;
-    GLDummyCubeZprobe.Position.Z:= (job.probe_z - gcsim_offset_z) / c_GLscale;
+    GLDummyCubeZprobe.Position.X:= (job.probe_x - WorkZeroX) / c_GLscale;
+    GLDummyCubeZprobe.Position.Y:= (job.probe_y - WorkZeroy) / c_GLscale;
+    GLDummyCubeZprobe.Position.Z:= (job.probe_z - WorkZeroz) / c_GLscale;
   end;
 
   GLDummyCubeATC.Visible:= Form1.CheckUseATC.Checked;
   if GLDummyCubeATC.Visible then begin
-    GLDummyCubeATC.Position.X:= (job.atc_zero_x - gcsim_offset_x) / c_GLscale;
-    GLDummyCubeATC.Position.Y:= (job.atc_zero_y - gcsim_offset_y) / c_GLscale;
-    GLDummyCubeATC.Position.Z:= (job.atc_pickup_z - gcsim_offset_z) / c_GLscale + 0.5;
+    GLDummyCubeATC.Position.X:= (job.atc_zero_x - WorkZerox) / c_GLscale;
+    GLDummyCubeATC.Position.Y:= (job.atc_zero_y - WorkZeroy) / c_GLscale;
+    GLDummyCubeATC.Position.Z:= (job.atc_pickup_z - WorkZeroz) / c_GLscale + 0.5;
     GLCubeATCbase.Position.X:= 4.5 * job.atc_delta_x / c_GLscale;
     GLCubeATCbase.Position.Y:= 4.5 * job.atc_delta_y / c_GLscale;
     GLCubeATCbase.CubeWidth:= 9 * job.atc_delta_x / c_GLscale + 2;
@@ -937,7 +929,7 @@ begin
     LEDbusy3d.Checked:= false;
   render_sema:= false;
   GLSceneViewer1.ResetPerformanceMonitor;
-  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', gcsim_z);
+  Form4.GLSpaceTextToolZ.Text:= 'Z ' + FormatFloat('0.0 mm', grbl_wpos.z);
   LEDbusy3d.Checked:= false;
 //  GLSceneViewer1.Invalidate;
 end;

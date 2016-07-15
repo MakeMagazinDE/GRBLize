@@ -205,10 +205,12 @@ end;
 
 procedure TForm3.BtnCamAtZeroClick(Sender: TObject);
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset cam to part zero');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 procedure TForm3.BtnCamAtPointClick(Sender: TObject);
@@ -227,7 +229,7 @@ begin
   x:= x - job.cam_x;
   y:= y - job.cam_y;
   grbl_offsXY(x, y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
 end;
 
 procedure TForm3.BtnMoveCamPointClick(Sender: TObject);
@@ -247,9 +249,9 @@ begin
   y:= y - job.cam_y;
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
   grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
 end;
 
 procedure TForm3.BtnMoveCamZeroClick(Sender: TObject);
@@ -259,7 +261,7 @@ begin
   grbl_moveZ(0, true);  // move Z up
   grbl_moveXY(-job.cam_x,-job.cam_y, false);
   grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
 end;
 
 procedure TForm3.BtnMoveToolPointClick(Sender: TObject);
@@ -275,9 +277,9 @@ begin
   end;
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
   grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
 end;
 
 procedure TForm3.BtnMoveToolZeroClick(Sender: TObject);
@@ -287,7 +289,7 @@ begin
   grbl_moveZ(0, true);  // move Z up absolute
   grbl_moveXY(0,0, false);
   grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
 end;
 
 procedure TForm3.Timer1Timer(Sender: TObject);

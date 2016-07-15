@@ -2,22 +2,25 @@
 // Excellon Import
 // #############################################################################
 
+//function ParseLine(var position: Integer; var linetoparse: string;
+//  var value: Double; var letters: String): T_parseReturnType;
+// Zerlegt String nach Zahlen und Buchtstaben(ketten),
+// beginnt my_line an Position my_pos nach Buchstaben oder Zahlen abzusuchen.
+// Wurde eine Zahl gefunden, ist Result = p_number, ansonsten p_letter.
+// Wurde nichts (mehr) gefunden, ist Result = p_endofline.
+// POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
+// T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
+{
 function get_drill_val(var my_pos: Integer; var my_line: string;
                        var my_result: LongInt; getInt: Boolean): boolean;
 var
   my_str: String;
   my_char: char;
-  my_double: Double;
+  my_double, my_dec_fac: Double;
 begin
   result:= false;
   if my_pos > length(my_line) then
     exit;
-  while not (my_line[my_pos] in ['0'..'9', '.',  '+', '-']) do begin
-    inc(my_pos);
-    if (my_pos > length(my_line)) then
-      exit;
-  end;
-  my_str:= '';
   while (my_line[my_pos] in ['0'..'9', '.',  '+', '-']) do begin
     my_char:= my_line[my_pos];
     my_str:= my_str+ my_char;
@@ -30,68 +33,89 @@ begin
     if getInt then
       my_result:= StrToIntDef(my_str,0)
     else begin
-      my_double:= StrDotToFloat(my_str);
-      if use_inches_in_drillfile then
-        my_double:= my_double * 25.4;
-      if not AnsiContainsStr(my_str, '.') then
-        my_double:= my_double / 1000;
+      my_double:= StrDotToFloat(my_str); // Default Fließkommawert
+      // Enthält String einen Dezimalpunkt?
+      if use_inches_in_drillfile then begin
+      // Enthält String einen Dezimalpunkt?
+        if not AnsiContainsStr(my_str, '.') then begin
+          my_dec_fac:= power(10,4); // 4 = Anzahl der Nachkommastellen
+          my_double:= my_double * 25.4 / my_dec_fac;
+        end;
+      end else begin
+      // Enthält String einen Dezimalpunkt?
+        if not AnsiContainsStr(my_str, '.') then begin
+          my_dec_fac:= power(10,3); // 3 = Anzahl der Nachkommastellen
+          my_double:= my_double / my_dec_fac;
+        end;
+      end;
       my_result:= round(my_double * int(c_hpgl_scale));
     end;
   end;
 end;
-
-procedure drill_import_line(my_str: String; fileID, penOverride: Integer);
+}
+procedure drill_import_line(my_line: String; fileID, penOverride: Integer);
 // Actions: none, lift, seek, drill, mill
 var
-  my_x, my_y: Integer;
+  my_x, my_y: double;
   my_pos: Integer;
   my_valid: boolean;
   my_char: char;
   my_tool, my_block_Idx: Integer;
+  has_dec_point: boolean;  // Dezimalpunkt in Koordinaten (selten!)
+  num_dec_digits: Integer; // Anzahl Dezimalstellen
+  my_val, my_fac: Double;
 
 begin
   my_pos:= 1;
   repeat
-    if my_pos > length(my_str) then
+    if my_pos > length(my_line) then
       exit;
-    my_char:= my_str[my_pos];
+    my_char:= my_line[my_pos];
     if my_char = ';' then
+      exit;
+    if not ParseCommand(my_pos, my_line, my_val, my_char) then
       exit;
     case my_char of
       'M': // M-Befehl, z.B. M30 = Ende
         exit;
       'T': // Tool change
         begin
-          inc(my_pos);
-          my_valid:= get_drill_val(my_pos, my_str, my_tool, true); // Integerwert
-          if my_valid then begin
-            PendingAction:= lift;
-            if (my_tool < 22) then
-              CurrentPen:= my_tool + 10;
-            if penOverride >= 0 then
-              CurrentPen:= penoverride;
-          end;
+          my_tool:= round(my_val);
+          PendingAction:= lift;
+          if (my_tool < 22) then
+            CurrentPen:= my_tool + 10;
+          if penOverride >= 0 then
+            CurrentPen:= penoverride;
         end;
       'X':
         begin
           if PendingAction = lift then
             new_block(fileID);
           PendingAction:= none;
-          inc(my_pos);
-          my_valid:= get_drill_val(my_pos, my_str, my_x, false);
-          my_pos:= pos('Y', my_str) +1;
-          my_valid:= my_valid and (my_pos > 0);
-          my_valid:= my_valid and get_drill_val(my_pos, my_str, my_y, false);
-          if my_valid then begin
-            LastPoint.X:= my_x;
-            LastPoint.Y:= my_y;
+          if use_inches_in_drillfile then begin
+          // Enthält String einen Dezimalpunkt?
+            my_fac:= 25.4;                   // 4 = Anzahl der Nachkommastellen
+            num_dec_digits:= 4;
+          end else begin
+          // Enthält String einen Dezimalpunkt?
+            my_fac:= 1;
+            num_dec_digits:= 3;             // 3 = Anzahl der Nachkommastellen
+          end;
+
+          if not AnsiContainsStr(my_line, '.') then
+            my_fac:= my_fac / power(10, num_dec_digits);
+          // es folgt immer ein Y-Wert
+          if ParseCommand(my_pos, my_line, my_y, my_char) then
+            my_x:= my_val * my_fac;
+            my_y:= my_y * my_fac;
+            LastPoint.X:= round(my_x * c_hpgl_scale);
+            LastPoint.Y:= round(my_y * c_hpgl_scale);
             my_block_Idx:= length(blockArrays[fileID])-1;
             append_point(fileID, my_block_idx, LastPoint);
             blockArrays[fileID, my_block_idx].pen:= CurrentPen;
+//            blockArrays[fileID, my_block_idx].enable:= true;
           end;
         end;
-    end;
-    inc(my_pos);
   until false;
 end;
 
@@ -129,11 +153,10 @@ procedure optimize_path(var my_path: Tpath);
 var
   i, p, my_len, found_idx: integer;
   optimized_path: Tpath;
-  last_x, last_y, dx, dy,
-  last_dx, last_dy, dv, dvo,
   prefer_x, prefer_y: Integer;
   found_array: Array of Boolean;
-
+  last_x, last_y, dx, dy,
+  last_dx, last_dy, dv, dvo: Double;
 
 begin
   my_len:= length(my_path);
@@ -147,8 +170,8 @@ begin
   // ausgehend vom Nullpunkt
   last_x:= 0;
   last_y:= 0;
-  prefer_x:= 10;
-  prefer_y:= 10;
+  prefer_x:= 5;
+  prefer_y:= 5;
 
   for i:= 0 to my_len-1 do begin
     // alle nicht besuchten Punkte absuchen
@@ -159,8 +182,7 @@ begin
       // finde nächstliegenden Punkt mit Vorzugsrichtung
       dx:= abs(my_path[p].x - last_x); // Abstand zum letzten gefundenen Punkt
       dy:= abs(my_path[p].y - last_y);
-
-      dv:= round(sqrt(sqr(dx div prefer_x) + sqr(dy div prefer_y)));
+      dv:= sqrt(sqr(dx/prefer_x) + sqr(dy/prefer_y));
       // schneller und ausreichend: Absolutwerte addieren
       //dv:= ((dx * prefer_y) + (dy * prefer_x)) div 10;
       if dv <= dvo then begin
@@ -173,8 +195,8 @@ begin
     last_x:= my_path[found_idx].x;
     last_y:= my_path[found_idx].y;
     found_array[found_idx]:= true;
-    optimized_path[i].x:= last_x;
-    optimized_path[i].y:= last_y;
+    optimized_path[i].x:= round(last_x);
+    optimized_path[i].y:= round(last_y);
     // Abstand zum letzten gefundenen Punkt
     if last_dx > last_dy then begin     // bewegt sich in X-Richtung
       prefer_y:= 5;
@@ -207,9 +229,11 @@ procedure drill_fileload(my_name:String; fileID, penOverride: Integer; useDrillD
 // Liest File in FileBuffer und liefert Länge zurück
 var
   my_ReadFile: TextFile;
-  my_line, my_str: String;
-  my_tool: integer;
-  my_dia: Double;
+  my_line: String;
+  my_tool, my_pos: integer;
+  my_val: Double;
+  invalid_header, my_valid: boolean;
+  my_char: char;
 
 begin
   if not FileExists(my_name) then begin
@@ -220,13 +244,13 @@ begin
   FileParamArray[fileID].bounds.min.y := high(Integer);
   FileParamArray[fileID].bounds.max.x := low(Integer);
   FileParamArray[fileID].bounds.max.y := low(Integer);
-  use_inches_in_drillfile:= true;
+  use_inches_in_drillfile:= true; // default Inches
   my_line:='';
   FileMode := fmOpenRead;
   AssignFile(my_ReadFile, my_name);
   CurrentPen:= 10;
   PendingAction:= lift;
-
+  invalid_header:= true;
   Reset(my_ReadFile);
   // Header mit Tool-Tabelle laden
   while not Eof(my_ReadFile) do begin
@@ -243,36 +267,40 @@ begin
       use_inches_in_drillfile:= true;
     if AnsiContainsStr(my_line, 'METRIC') then
       use_inches_in_drillfile:= false;
-    if my_line[1] = 'T' then begin
-      my_str:= copy(my_line, 2, pos('C',my_line)-2);
-      my_tool:= StrToIntDef(my_str, 1) + 10;
+
+    my_pos:= 1;
+    ParseCommand(my_pos, my_line, my_val, my_char);
+    if my_char = 'T' then begin
+      my_tool:= round(my_val + 10);
+      repeat
+        my_valid:= ParseCommand(my_pos, my_line, my_val, my_char);
+      until (my_char = 'C') or (not my_valid);
+      if my_char = 'C' then
       if (my_tool < 32) then begin
-        my_str:= copy(my_line, pos('C',my_line)+1, 99);
-        my_dia:= StrDotToFloat(my_str);
         if use_inches_in_drillfile then
-          my_dia:= my_dia * 25.4;
+          my_val:= my_val * 25.4;
         if useDrillDia then begin
-          job.pens[my_tool].diameter:= my_dia;
-          job.pens[my_tool].tipdia:= my_dia;
+          job.pens[my_tool].diameter:= my_val;
+          job.pens[my_tool].tipdia:= my_val;
+          job.pens[my_tool].used:= true;
+          job.pens[my_tool].shape:= drillhole;
         end;
-        job.pens[my_tool].used:= true;
-        job.pens[my_tool].shape:= drillhole;
       end;
     end;
-    if my_line = '%' then
+    if (my_line = '%') or (my_line = 'M95') then begin
+      invalid_header:= false;
       break;
+    end;
   end;
-  if my_line <> '%' then begin
+  if invalid_header then begin
     showmessage('Drill file invalid!');
     CloseFile(my_ReadFile);
     exit;
   end;
-
   while not Eof(my_ReadFile) do begin
     Readln(my_ReadFile,my_line);
     drill_import_line(my_line, fileID, penOverride);
   end;
-  drill_import_line('M30', fileID, penOverride);
   CloseFile(my_ReadFile);
   FileParamArray[fileID].valid := true;
   file_rotate_mirror(fileID, false);

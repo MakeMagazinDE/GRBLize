@@ -17,7 +17,7 @@ const
   Taction = (none, lift, seek, mill, drill);
   Tshape = (contour, inside, outside, pocket, drillhole);
   Trotate = (deg0, deg90, deg180, deg270);
-  T_parseReturnType = (p_none, p_letters, p_number, p_endofline);
+  T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
 
   TFloatPoint = record
     X: Double;
@@ -133,6 +133,12 @@ const
     table_x: Double;
     table_y: Double;
     table_z: Double;
+    fix1_x: Double;
+    fix1_y: Double;
+    fix1_z: Double;
+    fix2_x: Double;
+    fix2_y: Double;
+    fix2_z: Double;
   end;
 
 const
@@ -207,12 +213,68 @@ var
   // sucht in Array my_path nach Punkt mit geringstem Abstand zu last_xy
   function find_nearest_point(var search_path: Tpath; last_x, last_y: Integer): Integer;
 
+// Zerlegt String nach Zahlen und Buchtstaben(ketten),
+// beginnt my_line an Position my_pos nach Buchstaben oder Zahlen anbzusuchen.
+// Wurde eine Zahl gefunden, ist Result = p_number, ansonsten p_letter.
+// Wurde nichts (mehr) gefunden, ist Result = p_endofline.
+// POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
+// T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
   function ParseLine(var position: Integer; var linetoparse: string;
                      var value: Double; var letters: String): T_parseReturnType;
+
+// Dekodiert einen einzelnes Befehlsbuchstaben/Wert-Paar, beginnend an Position
+// Liefert Buchstaben in "letter" und folgenden Wert in "value" zurück
+// Ergebnis ist TRUE, wenn Befehlsbuchstaben/Wert-Paar gefunden wurde
+// POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
+  function ParseCommand(var position: Integer; var linetoparse: string;
+    var value: Double; var letter: char): boolean;
+
+  procedure ExecuteFile(const AFilename: String;
+    AParameter, ACurrentDir: String; AWait, AHide: Boolean);
 
 implementation
 
 uses grbl_player_main;
+
+procedure ExecuteFile(const AFilename: String;
+                 AParameter, ACurrentDir: String; AWait, AHide: Boolean);
+var
+  si: TStartupInfo;
+  pi: TProcessInformation;
+
+begin
+  if Length(ACurrentDir) = 0 then
+    ACurrentDir := ExtractFilePath(AFilename)
+  else if AnsiLastChar(ACurrentDir) = '\' then
+    Delete(ACurrentDir, Length(ACurrentDir), 1);
+
+  FillChar(si, SizeOf(si), 0);
+  with si do begin
+    cb := SizeOf(si);
+    dwFlags := STARTF_USESHOWWINDOW;
+    if AHide then
+      wShowWindow := SW_HIDE
+    else
+      wShowWindow := SW_NORMAL;
+  end;
+  FillChar(pi, SizeOf(pi), 0);
+  AParameter := Format('"%s" %s', [AFilename, TrimRight(AParameter)]);
+
+  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, False,
+                   CREATE_DEFAULT_ERROR_MODE or CREATE_NEW_CONSOLE or
+                   NORMAL_PRIORITY_CLASS, Nil, PChar(ACurrentDir), si, pi) then
+  try
+    if AWait then
+      while WaitForSingleObject(pi.hProcess, 50) <> Wait_Object_0 do begin
+
+
+      end;
+    TerminateProcess(pi.hProcess, Cardinal(-1));
+  finally
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  end;
+end;
 
 
 function FloatToStrDot(my_val: Double):String;
@@ -240,45 +302,71 @@ function ParseLine(var position: Integer; var linetoparse: string;
 // Wurde eine Zahl gefunden, ist Result = p_number, ansonsten p_letter.
 // Wurde nichts (mehr) gefunden, ist Result = p_endofline.
 // POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
-// T_parseReturnType = (p_none, p_letters, p_number, p_endofline);
+// T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
 var
   my_str: String;
   my_char: char;
-  my_end: integer;
+  my_end, i: integer;
 begin
   result:= p_endofline;
-  my_end:= length(linetoparse) - 1;
+  my_end:= length(linetoparse);
   value:= 0;
   letters:= '';
 
+  result:= p_none;
   if (position > my_end) then
     exit;
   // Leer- und Steuerzeichen überspringen
-  result:= p_none;
   repeat
     my_char := linetoparse[position]; // erstes Zeichen
     inc(position);
-  until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end + 1);
+  until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end);
+
   dec(position);   // Zeigt auf erstes relevantes Zeichen oder Ende
-  if (position > my_end) then
+  if position = my_end then
     exit;
+
   my_char := linetoparse[position]; // erstes relevantes Zeichen
 
   my_str:='';
   if my_char in ['A'..'z'] then begin
     result:= p_letters;
-    while (linetoparse[position] in ['A'..'z']) and (position <= my_end) do begin
-      my_str:= my_str+ linetoparse[position];
-      inc(position);
+    for i:= position to my_end do begin
+      if not (linetoparse[i] in ['A'..'z']) then
+        break;
+      my_str:= my_str+ linetoparse[i];
     end;
+    position:= i;
     letters:= my_str;
   end else if my_char in ['0'..'9', '.',  '+', '-'] then begin
     result:= p_number;
-    while (linetoparse[position] in ['0'..'9', '.',  '+', '-']) and (position <= my_end) do begin
-      my_str:= my_str+ linetoparse[position];
-      inc(position);
+    for i:= position to my_end do begin
+      if not (linetoparse[i] in ['0'..'9', '.',  '+', '-']) then
+        break;
+      my_str:= my_str+ linetoparse[i];
     end;
+    position:= i;
     value:= StrDotToFloat(my_str);
+  end;
+end;
+
+function ParseCommand(var position: Integer; var linetoparse: string;
+  var value: Double; var letter: char): boolean;
+// Dekodiert einen einzelnes Befehlsbuchstaben/Wert-Paar, beginnend an Position
+// Liefert Buchstaben in "letter" und folgenden Wert in "value" zurück
+// Ergebnis ist TRUE, wenn Befehlsbuchstaben/Wert-Paar gefunden wurde
+var
+  my_str: String;
+begin
+  letter:= #13;
+  result:= false;
+  if position < length(linetoparse) then begin
+    letter:= linetoparse[position];
+    inc(position);
+    if (letter >= 'A') and (letter <= 'z') then begin
+      ParseLine(position, linetoparse, value, my_str);
+      result:= true;
+    end;
   end;
 end;
 
@@ -773,7 +861,7 @@ begin
   // Werkzeugkorrektur-Offsets für fertiges BlockArray
   for i:= 0 to high(final_array) do
     compile_milling(final_array[i]);
-  list_blocks;
+  ListBlocks;
 end;
 
 procedure item_change(arr_idx: Integer);
@@ -781,7 +869,7 @@ procedure item_change(arr_idx: Integer);
 begin
   if (arr_idx < length(final_array)) and (arr_idx >= 0) then
     compile_milling(final_array[arr_idx]);
-  list_blocks;
+  ListBlocks;
 end;
 
 

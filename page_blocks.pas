@@ -3,10 +3,11 @@
 // #############################################################################
 
 
-procedure list_Blocks;
+procedure ListBlocks;
 var i, my_len, my_row, my_pathcount: Integer;
   my_entry: Tfinal;
   x1, y1, x2, y2: Double;
+  out_of_work: Boolean;
 begin
   with Form1.SgBlocks do begin
     Rowcount:= 2;
@@ -23,14 +24,30 @@ begin
       my_row:= Rowcount - 1;
       Cells[0,my_row]:= IntToStr(my_row);
       Cells[1,my_row]:= IntToStr(my_entry.pen);
-      if my_entry.enable then
-        Cells[2,my_row]:= 'ON'
-      else
-        Cells[2,my_row]:= 'OFF';
       x1:= my_entry.bounds.min.x / c_hpgl_scale;
       y1:= my_entry.bounds.min.y / c_hpgl_scale;
       x2:= my_entry.bounds.max.x / c_hpgl_scale;
       y2:= my_entry.bounds.max.y / c_hpgl_scale;
+      out_of_work:= false;
+      if my_entry.enable then begin
+        if (x1 < 0) then
+          out_of_work:= true;
+        if (y1 < 0) then
+          out_of_work:= true;
+        if (x2 > job.partsize_x) then
+          out_of_work:= true;
+        if (y2 > job.partsize_y) then
+          out_of_work:= true;
+      end;
+      if out_of_work then begin
+        Form1.Memo1.lines.add('WARNING: Tool path ' + IntToStr(i+1) + ' outside work - disabled');
+        my_entry.enable:= false;
+        final_array[i].enable:= false;
+      end;
+      if my_entry.enable then
+        Cells[2,my_row]:= 'ON'
+      else
+        Cells[2,my_row]:= 'OFF';
       Cells[3,my_row]:= FormatFloat('0.0', job.pens[my_entry.pen].diameter);
       Cells[4,my_row]:= ShapeArray[ord(my_entry.shape)];
       Cells[5,my_row]:= FormatFloat('0.00', x1) + '/' + FormatFloat('0.00', y1)

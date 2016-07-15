@@ -7,8 +7,8 @@ object Form2: TForm2
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
   Caption = 'Drawing'
-  ClientHeight = 623
-  ClientWidth = 864
+  ClientHeight = 563
+  ClientWidth = 856
   Color = clBtnFace
   Constraints.MaxHeight = 800
   Constraints.MaxWidth = 1200
@@ -23,16 +23,21 @@ object Form2: TForm2
   OnActivate = FormActivate
   OnClose = FormClose
   OnCreate = FormCreate
+  OnMouseWheel = FormMouseWheel
   OnPaint = FormPaint
   OnResize = FormResize
+  DesignSize = (
+    856
+    563)
   PixelsPerInch = 96
   TextHeight = 13
   object DrawingBox: TPaintBox
     Left = 0
     Top = 0
-    Width = 1200
-    Height = 800
+    Width = 857
+    Height = 565
     Hint = 'Milling View - Drag with left-click or modify with right-click'
+    Anchors = [akLeft, akTop, akRight, akBottom]
     Color = clCream
     DragCursor = crSizeAll
     ParentColor = False
@@ -41,6 +46,8 @@ object Form2: TForm2
     OnMouseDown = DrawingBoxMouseDown
     OnMouseMove = DrawingBoxMouseMove
     OnMouseUp = DrawingBoxMouseUp
+    ExplicitWidth = 865
+    ExplicitHeight = 625
   end
   object Panel1: TPanel
     Left = 8
@@ -80,7 +87,7 @@ object Form2: TForm2
       Width = 129
       Height = 20
       Hint = 'View zoom - disabled when camera ON'
-      Max = 20
+      Max = 50
       Min = 1
       PageSize = 1
       Position = 4
@@ -122,7 +129,7 @@ object Form2: TForm2
       Top = 108
       Width = 16
       Height = 17
-      Caption = '20'
+      Caption = '50'
       TabOrder = 5
     end
     object CheckBoxToolpath: TCheckBox

@@ -87,6 +87,8 @@ type
     procedure CheckBoxDimensionsClick(Sender: TObject);
     procedure ScrollBarChange(Sender: TObject);
     procedure TrackBarZoomChange(Sender: TObject);
+    procedure FormMouseWheel(Sender: TObject; Shift: TShiftState;
+      WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 
   private
     { Private-Deklarationen }
@@ -107,7 +109,6 @@ var
   scaled_X, scaled_Y: Double;
   bm_scroll: Tpoint;
   mouse_start: Tpoint;
-  mouse_x, mouse_y: Integer;
   NeedsRedraw, drawing_tool_down  : Boolean;
   HilitePen, HiliteBlock, HilitePath, HilitePoint: Integer;
   drawing_ToolPos: TFloatPoint; // in mm!
@@ -271,16 +272,11 @@ end;
 procedure set_drawing_scales;
 var
   my_fac: Integer;
-  draw_zero_x, draw_zero_y: Integer;
 
 begin
-  draw_zero_x:= c_center_offs_x + bm_scroll.x;
-  draw_zero_y:= Form2.DrawingBitmap.Height + bm_scroll.y - c_center_offs_y;
-
+  drawing_offset_x:= c_center_offs_x + bm_scroll.x;
+  drawing_offset_y:= Form2.DrawingBox.Height + bm_scroll.y - c_center_offs_y;
   Scale:= Int(Form2.TrackBarZoom.Position) * 1.0;
-  my_fac:= round(Scale * 20);
-  drawing_offset_x:= draw_zero_x + (my_fac div 100);
-  drawing_offset_y:= draw_zero_y - (my_fac div 100);
 end;
 
 procedure add_scroll_offset(var p:Tpoint);
@@ -293,8 +289,8 @@ end;
 
 procedure ArrowTo(RC:TCanvas; xa,ya,xe,ye,pb,pl:integer; Fill:boolean);
 var
-  m,t,sqm : real;
-  x1,y1,x2,y2,xs,ys,la : real;
+  m,t,sqm : double;
+  x1,y1,x2,y2,xs,ys,la : double;
 begin
   la:=sqrt(sqr(xe-xa)+sqr(ye-ya));
   if la<0.01 then exit;
@@ -406,6 +402,7 @@ var
   vlen_ok: Boolean;
   pv: TPoint;
   temp_pen_color, temp_brush_color: Tcolor;
+  dx, dy: Double;
 begin
   if not Form2.CheckBoxToolpath.Checked then
     exit;
@@ -420,7 +417,9 @@ begin
     else
       Canvas.Pen.Style:= psDot;       // psDashDot , psDot
     if enable or force_arrows then begin
-      vlen_ok:= (sqrt(sqr(pv.X) + sqr(pv.Y)) > 50);
+      dx:= sqr(pv.X);
+      dy:= sqr(pv.Y);
+      vlen_ok:= sqrt(dx + dy) > 50;
       temp_brush_color:= Canvas.Brush.Color;
       draw_arrow(p1, p2, vlen_ok, false); // lang genug, Pfeile malen
       Canvas.Brush.Color:= temp_brush_color;
@@ -890,8 +889,8 @@ begin
   end;
 
   DrawingBitmap:= TBitmap.create;
-  DrawingBitmap.Height:= DrawingBox.Height;
-  DrawingBitmap.Width:= DrawingBox.Width;
+  DrawingBitmap.Height:= 800;
+  DrawingBitmap.Width:= 1200;
 
   bm_scroll.x:= 0;
   bm_scroll.y:= ClientHeight - DrawingBox.Height;
@@ -1073,6 +1072,9 @@ begin
   NeedsRedraw:= true;
 end;
 
+
+
+
 // #############################################################################
 // #############################################################################
 
@@ -1082,7 +1084,7 @@ begin
     PopupMenuPoint.Items[0].Checked:= not PopupMenuPoint.Items[0].Checked;
     final_array[HiliteBlock].enable:= PopupMenuPoint.Items[0].Checked;
     NeedsRedraw:= true;
-    list_blocks;
+    ListBlocks;
     Form4.FormRefresh(Sender);
   end;
 end;
@@ -1125,40 +1127,73 @@ end;
 
 procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Offset to tool part zero');
+  Form1.Memo1.lines.add('Manual Work/part Y zero');
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+
+  WorkZeroX:= grbl_mpos.X;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y;
+  JogY:= WorkZeroY;
+
   grbl_offsXY(0, 0);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 procedure TForm2.pu_toolisatpointClick(Sender: TObject);
 var x,y: Double;
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset to point');
   hilite_to(x,y);
+
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+
+  WorkZeroX:= grbl_mpos.X - x;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y - y;
+  JogY:= WorkZeroY;
+
   grbl_offsXY(x, y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset tool to center');
   hilite_center_to(x,y);
+
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+
+  WorkZeroX:= grbl_mpos.X - x;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y - y;
+  JogY:= WorkZeroY;
   grbl_offsXY(x, y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 // #############################################################################
 
 procedure TForm2.pu_camIsAtPartZeroClick(Sender: TObject);
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset cam to part zero');
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
@@ -1167,88 +1202,133 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset cam to point');
   hilite_to(x,y);
+
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+
   x:= x - job.cam_x;
   y:= y - job.cam_y;
+
+  WorkZeroX:= grbl_mpos.X - x;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y - y;
+  JogY:= WorkZeroY;
   grbl_offsXY(x, y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset cam to center');
   hilite_center_to(x,y);
+
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+
   x:= x - job.cam_x;
   y:= y - job.cam_y;
+
+  WorkZeroX:= grbl_mpos.X - x;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y - y;
+  JogY:= WorkZeroY;
   grbl_offsXY(x, y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+  NeedsRedraw:= true;
 end;
 
 // #############################################################################
 
 procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to part zero');
-  grbl_moveZ(0, true);  // move Z up absolute
-  grbl_moveXY(0,0, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(0,0, false);
+    SendListToGrbl;
+    if WorkZeroZdone then
+      grbl_moveZ(job.z_penlift, false);
+    SendListToGrbl;
+  end else
+    Form1.Memo1.lines.add('Part Zero not set - no action taken');
 end;
 
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
 var x,y: Double;
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to point');
   hilite_to(x, y);
-  grbl_moveZ(0, true);  // move Z up absolute
-  grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(x, y, false);
+    SendListToGrbl;
+    if WorkZeroZdone then
+      grbl_moveZ(job.z_penlift, false);
+    SendListToGrbl;
+  end else
+    Form1.Memo1.lines.add('Part Zero not set - no action taken');
 end;
 
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
 var x,y: Double;
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to center');
   hilite_center_to(x,y);
-  grbl_moveZ(0, true);  // move Z up absolute
-  grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(x, y, false);
+    SendListToGrbl;
+    if WorkZeroZdone then
+      grbl_moveZ(job.z_penlift, false);
+    SendListToGrbl;
+  end else
+    Form1.Memo1.lines.add('Part Zero not set - no action taken');
 end;
 
 // #############################################################################
 
 procedure TForm2.pu_moveCamToPartZeroClick(Sender: TObject);
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to part zero');
-  grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(-job.cam_x,-job.cam_y, false);
-  grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(-job.cam_x,-job.cam_y, false);
+    if WorkZeroZdone then
+      grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else
+    Form1.Memo1.lines.add('Part Zero not set - no action taken');
 end;
 
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
 var x,y: Double;
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to point');
   hilite_to(x,y);
-  x:= x - job.cam_x;
-  y:= y - job.cam_y;
-  grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+  if WorkZeroXdone and WorkZeroYdone then begin
+    x:= x - job.cam_x;
+    y:= y - job.cam_y;
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(x, y, false);
+    SendListToGrbl;
+    grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else
+    Form1.Memo1.lines.add('Part Zero not set - no action taken');
 end;
 
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
@@ -1257,13 +1337,16 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to center');
   hilite_center_to(x, y);
-  x:= x - job.cam_x;
-  y:= y - job.cam_y;
-  grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+  if WorkZeroXdone and WorkZeroYdone then begin
+    x:= x - job.cam_x;
+    y:= y - job.cam_y;
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(x, y, false);
+    SendListToGrbl;
+    grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else
+    Form1.Memo1.lines.add('Part Zero not set - no action taken');
 end;
 
 // #############################################################################
@@ -1271,6 +1354,43 @@ end;
 
 procedure TForm2.TrackBarZoomChange(Sender: TObject);
 begin
+  NeedsRedraw:= true;
+end;
+
+
+procedure TForm2.FormMouseWheel(Sender: TObject; Shift: TShiftState;
+  WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  p: TPoint;
+  pos, diff, max: Integer;
+begin
+  Handled:= true;
+  p := DrawingBox.ScreenToClient(MousePos);
+  p.x:= (p.X - drawing_offset_x);
+  p.y:= (p.y - drawing_offset_y);
+  pos:= TrackBarZoom.Position;
+  max:= TrackBarZoom.Max;
+  diff:= pos div 4;
+  if diff = 0 then
+    diff:= 1;  //  diff:=  abs(WheelDelta div 120);
+
+  if WheelDelta < 0 then begin
+// Mittelpunkt neu setzen anhand Maus-Posititon
+    if pos < max then begin
+      if (diff + pos) > max then
+        diff:= max - pos;
+      TrackBarZoom.Position:= pos + diff;
+      bm_scroll.x:= bm_scroll.x - round(diff * p.x / Scale);
+      bm_scroll.y:= bm_scroll.y - round(diff * p.y / Scale);
+     end;
+  end else begin
+    if pos > diff then begin
+      TrackBarZoom.Position:= pos - diff;
+      bm_scroll.x:= bm_scroll.x + round(diff * p.x / Scale);
+      bm_scroll.y:= bm_scroll.y + round(diff * p.y / Scale);
+    end;
+  end;
+  TrackBarZoom.Perform(CN_HSCROLL, SB_ENDSCROLL, 0);
   NeedsRedraw:= true;
 end;
 

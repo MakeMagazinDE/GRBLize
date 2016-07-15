@@ -12,11 +12,11 @@ uses
   Dialogs, Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
   VFrames, ExtDlgs, XPMan, CheckLst, drawing_window,
   glscene_view, GLColor, ValEdit, System.ImageList, System.Actions,
-  FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd;
+  FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges;
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.2';
+  c_VerStr: String = '1.3c';
 
 type
   TForm1 = class(TForm)
@@ -60,7 +60,6 @@ type
     TabSheetGroups: TTabSheet;
     TabSheetDefaults: TTabSheet;
     TabSheetRun: TTabSheet;
-    Memo1: TMemo;
     SgGrblSettings: TStringGrid;
     Bevel3: TBevel;
     PosX: TLabel;
@@ -72,9 +71,7 @@ type
     Label11: TLabel;
     BtnSendGrblSettings: TBitBtn;
     ColorDialog1: TColorDialog;
-    Bevel4: TBevel;
     BtnRunJob: TSpeedButton;
-    Label13: TLabel;
     BtnRefreshGrblSettings: TBitBtn;
     CheckEndPark: TCheckBox;
     MposX: TLabel;
@@ -99,36 +96,13 @@ type
     TimerStatus: TTimer;
     BtnEmergStop: TBitBtn;
     PanelLED: TPanel;
-    CheckUseATC: TCheckBox;
     ComboBoxTip: TComboBox;
     Panel3: TPanel;
-    Panel1: TPanel;
-    Panel4: TPanel;
+    PanelReady: TPanel;
+    PanelAlarm: TPanel;
     Panel2: TPanel;
     Label6: TLabel;
-    BitBtn1: TBitBtn;
-    BitBtn2: TBitBtn;
-    BitBtn3: TBitBtn;
-    BitBtn4: TBitBtn;
-    BitBtn5: TBitBtn;
-    BitBtn6: TBitBtn;
-    BitBtn7: TBitBtn;
-    BitBtn8: TBitBtn;
-    BitBtn9: TBitBtn;
-    BitBtn10: TBitBtn;
-    BitBtn11: TBitBtn;
-    BitBtn12: TBitBtn;
     Bevel5: TBevel;
-    Label15: TLabel;
-    BitBtn13: TBitBtn;
-    BitBtn14: TBitBtn;
-    BitBtn15: TBitBtn;
-    BitBtn16: TBitBtn;
-    BitBtn17: TBitBtn;
-    BitBtn18: TBitBtn;
-    Label16: TLabel;
-    Label17: TLabel;
-    Label18: TLabel;
     BtnLoadGrblSetup: TSpeedButton;
     BtnSaveGrblSetup: TSpeedButton;
     TimerBlink: TTimer;
@@ -144,94 +118,101 @@ type
     LabelWorkY: TLabel;
     LabelWorkZ: TLabel;
     Label4: TLabel;
-    TrackBarSimSpeed: TTrackBar;
     ComboBoxGtip: TComboBox;
     ComboBoxGdia: TComboBox;
     Bevel7: TBevel;
     Label8: TLabel;
-    Label10: TLabel;
     BtnRunGcode: TSpeedButton;
     Label19: TLabel;
     EditZoffs: TEdit;
-    ComboBoxATC: TComboBox;
-    Label20: TLabel;
     CheckFixedProbeZ: TCheckBox;
     BtnZcontact: TSpeedButton;
     LabelTableX: TLabel;
     LabelTableY: TLabel;
     LabelTableZ: TLabel;
     Label31: TLabel;
-    Label21: TLabel;
-    LabelToolReference: TLabel;
     Bevel6: TBevel;
     Bevel9: TBevel;
-    Bevel10: TBevel;
-    BtnProbeTLC: TSpeedButton;
-    BtnMoveToolChange: TSpeedButton;
-    Label22: TLabel;
-    BtnMoveWorkZero: TSpeedButton;
-    BtnMovePark: TSpeedButton;
     Label9: TLabel;
     CheckPartProbeZ: TCheckBox;
-    BtnUnload: TButton;
-    BtnLoad: TButton;
     PanelZdone: TPanel;
-    Label14: TLabel;
-    BtnHomeCycle: TSpeedButton;
-    PanelATC0: TPanel;
-    PanelATC1: TPanel;
-    PanelATC2: TPanel;
-    PanelATC3: TPanel;
-    PanelATC4: TPanel;
-    PanelATC5: TPanel;
-    PanelATC6: TPanel;
-    PanelATC7: TPanel;
-    PanelATC8: TPanel;
-    PanelATC9: TPanel;
-    Label32: TLabel;
-    PanelToolInSpindle: TPanel;
-    Label33: TLabel;
-    BtnMoveToATC: TButton;
-    Label34: TLabel;
-    Label35: TLabel;
-    Label36: TLabel;
-    Label37: TLabel;
-    Label38: TLabel;
-    Label39: TLabel;
-    Label40: TLabel;
-    Label41: TLabel;
-    Label42: TLabel;
-    Label43: TLabel;
     Label44: TLabel;
     BtnListAssignments: TButton;
-    Bevel12: TBevel;
     LabelHintZ: TLabel;
     ToolBar1: TToolBar;
     ToolButton9: TToolButton;
     ToolButton1: TToolButton;
     ToolButton2: TToolButton;
-    LabelFaults: TLabel;
-    PanelToolReferenced: TPanel;
-    LabelHintZ2: TLabel;
     CheckBoxSim: TCheckBox;
     BtnCancel: TSpeedButton;
     BtnConnect: TBitBtn;
-    PanelToolCompensated: TPanel;
     BtnListTools: TButton;
-    BtnResetRef: TButton;
-    TabSheet2: TTabSheet;
-    BtnGerberConvert: TButton;
-    Memo2: TMemo;
-    RadioGroup1: TRadioGroup;
-    RadioButtonFront: TRadioButton;
-    RadioButtonBack: TRadioButton;
-    EditInflate: TEdit;
-    Label29: TLabel;
     PanelYdone: TPanel;
     PanelXdone: TPanel;
+    TabSheetATC: TTabSheet;
+    BtnMoveToATC: TButton;
+    BtnUnload: TButton;
+    BtnLoad: TButton;
+    BtnZeroAll: TSpeedButton;
+    BtnSetFix1: TButton;
+    BtnSetFix2: TButton;
+    BtnSetPark: TButton;
+    Label32: TLabel;
+    sgATC: TStringGrid;
+    Label48: TLabel;
+    GerberImport1: TMenuItem;
+    PanelToolInSpindle: TPanel;
+    Label47: TLabel;
+    CheckUseATC: TCheckBox;
+    Bevel2: TBevel;
     Label24: TLabel;
-    PaintBox1: TPaintBox;
-    Label30: TLabel;
+    Label22: TLabel;
+    BtnHomeOverride: TSpeedButton;
+    BitBtn9: TBitBtn;
+    BitBtn8: TBitBtn;
+    BitBtn7: TBitBtn;
+    BitBtn10: TBitBtn;
+    BitBtn11: TBitBtn;
+    BitBtn12: TBitBtn;
+    BitBtn1: TBitBtn;
+    BitBtn2: TBitBtn;
+    BitBtn3: TBitBtn;
+    BitBtn4: TBitBtn;
+    BitBtn5: TBitBtn;
+    BitBtn6: TBitBtn;
+    Label17: TLabel;
+    Label18: TLabel;
+    BitBtn15: TBitBtn;
+    BitBtn14: TBitBtn;
+    BitBtn13: TBitBtn;
+    BitBtn16: TBitBtn;
+    BitBtn17: TBitBtn;
+    BitBtn18: TBitBtn;
+    BtnHomeCycle: TSpeedButton;
+    BtnMovePark: TSpeedButton;
+    BtnMoveFix1: TSpeedButton;
+    BtnMoveFix2: TSpeedButton;
+    Label20: TLabel;
+    BtnMoveWorkZero: TSpeedButton;
+    BtnMoveToolChange: TSpeedButton;
+    LabelHintZ2: TLabel;
+    Label15: TLabel;
+    Label16: TLabel;
+    Memo1: TMemo;
+    Label13: TLabel;
+    Label14: TLabel;
+    BtnProbeTLC: TSpeedButton;
+    PanelToolReferenced: TPanel;
+    PanelToolCompensated: TPanel;
+    Label21: TLabel;
+    LabelToolReference: TLabel;
+    BtnResetRef: TButton;
+    Bevel4: TBevel;
+    Bevel10: TBevel;
+    PanelAlive: TPanel;
+    Bevel11: TBevel;
+    EditFirstToolDia: TEdit;
+    LabelFaults: TLabel;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -301,7 +282,7 @@ type
     procedure BtnLoadGrblSetupClick(Sender: TObject);
     procedure BtnSaveGrblSetupClick(Sender: TObject);
     procedure TimerBlinkTimer(Sender: TObject);
-    procedure Panel4Click(Sender: TObject);
+    procedure PanelAlarmClick(Sender: TObject);
     procedure SgAppDefaultsKeyPress(Sender: TObject; var Key: Char);
     procedure SgAppDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
@@ -321,9 +302,26 @@ type
     procedure BtnRescanClick(Sender: TObject);
     procedure BtnListToolsClick(Sender: TObject);
     procedure BtnResetRefClick(Sender: TObject);
-    procedure BtnGerberConvertClick(Sender: TObject);
     procedure ComboBoxTipMouseLeave(Sender: TObject);
     procedure ComboBoxTipKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnMoveFix2Click(Sender: TObject);
+    procedure BtnMoveFix1Click(Sender: TObject);
+    procedure BtnSetFix1Click(Sender: TObject);
+    procedure BtnSetFix2Click(Sender: TObject);
+    procedure BtnZeroAllClick(Sender: TObject);
+    procedure BtnSetParkClick(Sender: TObject);
+    procedure GerberImport1Click(Sender: TObject);
+    procedure sgATCDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
+      State: TGridDrawState);
+    procedure sgATCSelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
+    procedure BtnCancelMouseEnter(Sender: TObject);
+    procedure BtnCancelMouseLeave(Sender: TObject);
+    procedure BtnHomeOverrideClick(Sender: TObject);
+    procedure PanelToolReferencedClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure PanelAliveClick(Sender: TObject);
+    procedure PanelReadyClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -339,14 +337,25 @@ type
       property Checked: Boolean read IsOn write SetLED;
     end;
 
+  function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
+  procedure DisplayMachinePosition;
+  procedure DisplayWorkPosition;
 
   procedure WaitForIdle;
   procedure SendSingleCommandStr(my_command: String);
-  procedure SendGrblAndWaitForIdle;
-  procedure list_Blocks;
+  procedure SendListToGrbl;
+  procedure ListBlocks;
   procedure EnableStatus;  // automatische Upates freischalten
   procedure DisableStatus;  // automatische Upates freischalten
+  function isCancelled: Boolean;
+  function isJobRunning: Boolean;
+  function isEmergency: Boolean;
+  function isWaitExit: Boolean;
 
+  function UnloadTool(tool_idx: Integer): boolean;
+  function LoadTool(tool_idx: Integer): boolean;
+  procedure OpenFilesInGrid;
+  procedure ForceToolPositions(x, y, z: Double);
 
 type
 
@@ -356,16 +365,13 @@ type
       Z: Double;
     end;
     t_mstates = (idle, run, hold, alarm, zero);
-    t_rstates = (s_reset, s_send, s_receive, s_wait, s_wait_status, s_idle_loop, s_disable, s_cancel);
+    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
+    t_rstates = (s_reset, s_send, s_receive, s_wait, s_wait_status, s_idle_loop, s_disable, s_sim, s_cancel);
     t_pstates = (s_notprobed, s_probed_manual, s_probed_contact);
 
 
 var
-  CancelJob: Boolean = false;     // Abbruch aller Schleifen
-  CancelSim: Boolean = false;     // Abbruch der Simulation
   SendActive: Boolean = false;    // true bis GRBL-Sendeschleife beendet
-  JobRunning: Boolean = false;    // true sobald Job gestartet wurde
-  JobWasCancelled: Boolean = false;    // true sobald laufender Job abgebrochen wurde
 
   Form1: TForm1;
   LEDbusy: TLed;
@@ -405,32 +411,58 @@ var
   StatusTimerState: t_rstates; // (none, status, response);
   MachineState: t_mstates;  // (idle, run, hold, alarm)GRBL ist in Ruhe wenn state_idle
   StatusTimerDisableRequest, StatusTimerEnableRequest : boolean;
-  CancelRequest: Boolean;
   StatusTimerLoopCount: Integer;
 
   LastRequest: Dword; // Wann zuletzt Status angefordert?
   LastResponseStr:String;
+  ZeroRequestDone: Boolean;
 
   // für Simulation
-  gcsim_x, gcsim_y, gcsim_z: Double;
   gcsim_x_old, gcsim_y_old, gcsim_z_old: Double;
-  gcsim_offset_x, gcsim_offset_y, gcsim_offset_z: Double;
   gcsim_seek: Boolean;
   gcsim_dia: Double;
   gcsim_feed: Integer;
   gcsim_active: Boolean;
   gcsim_tooltip: Integer;
   gcsim_color: TColor;
+  AliveIndicatorDirection: Boolean;
+  AliveCount: Integer;
+  AliveState: t_alivestates;
+  StopWatch: TStopwatch;
+
+const
+  c_zero_x = 50;
+  c_zero_y = 50;
+  c_zero_z = -25;
 
 implementation
 
-uses import_files, Clipper, About, bsearchtree, cam_view;
+uses import_files, Clipper, About, bsearchtree, cam_view, gerber_import;
 
 {$R *.dfm}
 
 // #############################################################################
 // #############################################################################
 
+function isCancelled: Boolean;
+begin
+  result:= Form1.BtnCancel.Tag > 0;
+end;
+
+function isJobRunning: Boolean;
+begin
+  result:= (Form1.BtnRunJob.Tag > 0);
+end;
+
+function isEmergency: Boolean;
+begin
+  result:= Form1.BtnEmergStop.tag > 0;
+end;
+
+function isWaitExit: Boolean;
+begin
+  result:= Form1.PanelAlive.tag > 0;
+end;
 
 procedure TLed.SetLED(led_on: boolean);
 // liefert vorherigen Zustand zurück
@@ -438,18 +470,45 @@ begin
   if led_on then begin
     Form1.PanelLED.Color:= clred;
     Form1.PanelLED.Font.Color:= clWhite;
+    Screen.Cursor:= crHourGlass;
   end else begin
     Form1.PanelLED.Color:= $00000040;
     Form1.PanelLED.Font.Color:= clgray;
+    Screen.Cursor:= crDefault;
   end;
   IsOn:= led_on;
 end;
 
+//##############################################################################
+
+procedure DisplayMachinePosition;
+begin
+  with Form1 do begin
+    MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
+    MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
+    MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
+  end;
+end;
+
+procedure DisplayWorkPosition;
+begin
+  with Form1 do begin
+    PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+    PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+    PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+  end;
+end;
+
+
 procedure button_enable(my_state: Boolean);
 begin
+  if (MachineState >= run) then
+    my_state:= false;
   with Form1 do begin
     BtnMoveWorkZero.Enabled:= my_state;
     BtnMovePark.Enabled:= my_state;
+    BtnMoveFix1.Enabled:= my_state;
+    BtnMoveFix2.Enabled:= my_state;
     BtnMoveToolChange.Enabled:= my_state;
     BtnMoveToATC.Enabled:= my_state;
     BtnUnload.Enabled:= my_state;
@@ -457,6 +516,7 @@ begin
     BtnZeroX.Enabled:= my_state;
     BtnZeroY.Enabled:= my_state;
     BtnZeroZ.Enabled:= my_state;
+    BtnZeroAll.Enabled:= my_state;
     Form1.BtnProbeTLC.Enabled:= my_state and Form1.CheckFixedProbeZ.checked;
     BtnZcontact.Enabled:= my_state and CheckPartProbeZ.Checked;
     BtnEmergStop.Enabled:= not Form1.CheckBoxSim.checked;
@@ -491,19 +551,24 @@ procedure button_run_enable(my_state: Boolean);
 begin
   with Form1 do begin
     BtnRunGcode.Enabled:= my_state;
-    BtnRunjob.Enabled:= my_state;
+    BtnRunJob.Enabled:= my_state and (length(final_array) > 0);
     BtnMoveWorkZero.Enabled:= my_state;
   end;
 end;
 
 procedure SetAllbuttons;
 var is_idle, is_probed, is_notbusy: boolean;
+  my_pen: Integer;
 begin
+  if not grbl_is_connected then begin
+    Form1.CheckBoxSim.Checked:= true;
+    Form1.CheckBoxSim.Enabled:= false;
+  end;
   is_idle:= MachineState = idle;
   is_probed:= ProbedState <> s_notprobed;
-  is_notbusy:= not LEDbusy.Checked;
-
-  if (Form1.BtnCancel.Tag = 1) then begin
+  is_notbusy:= not isJobRunning;
+  Form1.BtnCancel.Enabled:= not is_notbusy;
+  if isCancelled then begin
     button_enable(false);
     button_run_enable(false);
     with Form1 do begin
@@ -513,9 +578,8 @@ begin
         BtnCancel.Font.Color:= clblack;
     end;
   end else begin
-    button_enable(HomingPerformed or Form1.CheckBoxSim.checked);
-    button_run_enable((is_notbusy and HomingPerformed
-      and is_probed) or Form1.CheckBoxSim.checked);
+    button_enable(HomingPerformed);
+    button_run_enable(is_idle and HomingPerformed and is_probed);
     with Form1 do begin
       BtnCancel.Font.Color:= clred;
       if CheckBoxSim.checked then begin
@@ -525,20 +589,29 @@ begin
         BtnRunJob.Caption:= 'Run Job';
         BtnRunGcode.Caption:= 'Run G-Code File';
       end;
-
-      if grbl_is_connected and is_idle then begin
-        BtnHomeCycle.Enabled:= is_idle;
-        BtnSendGrblSettings.Enabled:= true;
-        BtnRefreshGrblSettings.Enabled:= true;
-        if (not HomingPerformed) and TimerBlinkToggle then
-          BtnHomeCycle.Font.Color:= cllime
-        else
-          BtnHomeCycle.Font.Color:= clgreen;
-      end else begin
-        BtnHomeCycle.Enabled:= true;
-        BtnSendGrblSettings.Enabled:= false;
-        BtnRefreshGrblSettings.Enabled:= false;
-      end;
+    end;
+  end;
+  with Form1 do begin
+    if (not HomingPerformed) and TimerBlinkToggle then
+      BtnHomeCycle.Font.Color:= cllime
+    else
+      BtnHomeCycle.Font.Color:= clgreen;
+    if grbl_is_connected and is_idle then begin
+      BtnHomeCycle.Enabled:= is_idle;
+      BtnSendGrblSettings.Enabled:= true;
+      BtnRefreshGrblSettings.Enabled:= true;
+    end else begin
+      BtnHomeCycle.Enabled:= true;
+      BtnSendGrblSettings.Enabled:= false;
+      BtnRefreshGrblSettings.Enabled:= false;
+    end;
+    if length(final_array) > 0 then begin
+      my_pen:= final_array[0].pen;
+      EditFirstToolDia.Text:=  '#' + inttostr(my_pen)
+        + ' = ' + FormatFloat('0.00', job.pens[my_pen].diameter) + ' mm'
+        + #32 + ToolTipArray[job.pens[my_pen].tooltip];
+    end else begin
+      EditFirstToolDia.Text:=  '(probe dummy tool)';
     end;
   end;
 end;
@@ -547,6 +620,7 @@ end;
 procedure ResetToolflags;
 // Nach Homing, Connect etc: Unkalibrierter Zustand
 begin
+  SpindleRunning:= false;
   drawing_tool_down:= false;
   Form1.ProgressBar1.position:= 0;
   if Form1.CheckBoxSim.Checked then begin
@@ -556,7 +630,6 @@ begin
     WorkZeroYdone:= true;
     WorkZeroZdone:= true;
     ProbedState:= s_probed_manual;
-    HomingPerformed:= true;
   end else begin
     FirstToolReferenced:=false;
     CurrentToolCompensated:= false;
@@ -570,12 +643,12 @@ end;
 procedure ResetCoordinates;
 // willkürliche Ausgangswerte, auch für Simulation
 begin
-  grbl_mpos.x:= 50;
-  grbl_mpos.y:= 70;
-  grbl_mpos.z:= -40;
+  grbl_mpos.x:= c_zero_x;
+  grbl_mpos.y:= c_zero_y;
+  grbl_mpos.z:= c_zero_z;
   grbl_wpos.x:= 0;
   grbl_wpos.y:= 0;
-  grbl_wpos.z:= job.z_penlift;
+  grbl_wpos.z:= job.z_gauge;
   WorkZeroX:= grbl_mpos.x - grbl_wpos.x;
   WorkZeroY:= grbl_mpos.y - grbl_wpos.y;
   WorkZeroZ:= grbl_mpos.z - grbl_wpos.z;
@@ -592,30 +665,34 @@ begin
   end;
 end;
 
+procedure ForceToolPositions(x, y, z: Double);
+begin
+  if Form1.ShowDrawing1.Checked then
+    SetDrawingToolPosMM(x, y, z);
+  if Form1.Show3DPreview1.Checked and Form1.CheckBoxSim.Checked then begin
+    GLSsetSimPositionMMxyz(x, y, z)
+  end;
+end;
+
+
 procedure ResetSimulation;
 // willkürliche Ausgangswerte, auch für Simulation
 begin
   ResetCoordinates;
-  gcsim_x:= grbl_wpos.x;
-  gcsim_y:= grbl_wpos.y;
-  gcsim_z:= grbl_wpos.z;
-  gcsim_x_old:= gcsim_x;
-  gcsim_y_old:= gcsim_y;
-  gcsim_z_old:= gcsim_z;
-  gcsim_offset_x:= grbl_mpos.x - gcsim_x;
-  gcsim_offset_y:= grbl_mpos.y - gcsim_y;
-  gcsim_offset_z:= grbl_mpos.z - gcsim_z;
+  gcsim_x_old:= grbl_wpos.x;
+  gcsim_y_old:= grbl_wpos.y;
+  gcsim_z_old:= grbl_wpos.z;
+  WorkZeroX:= grbl_mpos.x - grbl_wpos.x;
+  WorkZeroY:= grbl_mpos.y - grbl_wpos.y;
+  WorkZeroZ:= grbl_mpos.z - grbl_wpos.z;
   gcsim_dia:= 3;
   JogX:= grbl_wpos.x;
   JogY:= grbl_wpos.y;
   JogZ:= grbl_wpos.z;
-  WorkZeroX:= gcsim_offset_x;
-  WorkZeroY:= gcsim_offset_y;
-  WorkZeroZ:= gcsim_offset_z;
-  GLSsimMillAtPosMM(gcsim_x, gcsim_y, gcsim_z, gcsim_dia, false, true);
-  GLSsetSimPositionMMxyz(gcsim_x, gcsim_y, gcsim_z);
-  SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+  ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, -WorkZeroZ);
+  GLSsimMillAtPosMM(grbl_wpos.x, grbl_wpos.y, grbl_wpos.z, gcsim_dia, false, true);
   GLSsetSimToolMM(gcsim_dia, gcsim_tooltip, clGray);
+  GLSspindle_on_off(false);
   Form4.GLSsetATCandProbe;
   Form4.FormRefresh(nil);
 end;
@@ -629,6 +706,7 @@ end;
 {$I page_pens.pas}
 {$I page_grblsetup.pas}
 {$I page_run.pas}
+{$I page_atc.inc}
 {$I gcode_interpreter.pas}
 
 
@@ -656,6 +734,7 @@ var
 
 begin
   Show;
+  StopWatch:= TStopWatch.Create() ;
   SendListRequest:= false;
   SendListDone:= true;
   SendListActive:= false;
@@ -670,7 +749,6 @@ begin
   UnHilite;
   Caption := c_ProgNameStr;
   Form1.Show;
-  SpindleRunning:= false;
   if not IsFormOpen('deviceselectbox') then
     deviceselectbox := Tdeviceselectbox.Create(Self);
   deviceselectbox.hide;
@@ -755,10 +833,6 @@ begin
   if not CheckFixedProbeZ.Checked then begin
     CheckUseATC.Checked:= false;
   end;
-  if FileExists(JobSettingsPath) then
-    OpenJobFile(JobSettingsPath)
-  else
-    Form1.FileNew1Execute(sender);
 
   SgGrblSettings.FixedCols:= 1;
   SgAppdefaults.FixedCols:= 1;
@@ -766,14 +840,13 @@ begin
   Form4.FormRefresh(nil);
 
   BringToFront;
-  Memo1.lines.add(SetUpFTDI);
+  Memo1.lines.add(''+ SetUpFTDI);
 
   ResetSimulation;
   ResetCoordinates;
   ResetToolflags;
 
   ToolInSpindle:= 0; // Dummy aus Slot 0
-  CheckBoxSim.Checked:= true;
   EnableStatus;
   if ftdi_was_open or com_was_open then begin
     BtnConnect.Enabled:= true;
@@ -786,20 +859,33 @@ begin
   else if com_was_open then
     OpenCOMport;
 }
+
+  Form4.FormRefresh(nil);
+  UpdateATCsg;
+  if FileExists(JobSettingsPath) then
+    OpenJobFile
+  else
+    Form1.FileNew1Execute(sender);
   CheckEndPark.Checked:= job.parkposition_on_end;
   CheckFixedProbeZ.Checked:= job.use_fixed_probe;
   CheckUseATC.Checked:= job.atc_enabled;
   CheckPartProbeZ.Checked:= job.use_part_probe;
-
-  param_change;
-  Form4.FormRefresh(nil);
 end;
 
 
 
+procedure TForm1.GerberImport1Click(Sender: TObject);
+begin
+  GerberFileName:='';
+  ConvertedFileName:='';
+  GerberFileNumber:= 1;
+  FormGerber.ShowModal;
+end;
+
 procedure TForm1.FileExitItemClick(Sender: TObject);
 begin
   Close;
+  StopWatch.free;
 end;
 
 
@@ -813,6 +899,8 @@ procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 var
   grbl_ini:TRegistry;
 begin
+  PanelAlive.tag:= 1;
+  BtnCancel.tag:= 1;
   grbl_ini:= TRegistry.Create;
   try
     grbl_ini.RootKey := HKEY_CURRENT_USER;
@@ -837,8 +925,9 @@ begin
   finally
     grbl_ini.Free;
   end;
-
   TimerDraw.Enabled:= false;
+  TimerStatus.Enabled:= false;
+  TimerBlink.Enabled:= false;
 
   if com_isopen then
     COMclose;
@@ -864,6 +953,8 @@ begin
 end;
 
 procedure TForm1.PageControl1Change(Sender: TObject);
+var
+  my_pen: Integer;
 begin
   if LEDbusy.Checked then
     PageControl1.TabIndex:= 4;
@@ -872,11 +963,39 @@ begin
   Form4.FormRefresh(sender);
 end;
 
-procedure TForm1.Panel4Click(Sender: TObject);
+{procedure TForm1.PageControl1DrawTab(Control: TCustomTabControl;
+  TabIndex: Integer; const Rect: TRect; Active: Boolean);
+// PageControl1.OwnerDraw := True !
+var
+  CaptionX: Integer;
+  CaptionY: Integer;
+  TabCaption: string;
 begin
-  SendSingleCommandStr('$X'); // clear Alarm Lock
-end;
+  with Control.Canvas do begin
+    if TabIndex = 3 then begin
+      Font.Color := clred;
+    end;
+    if TabIndex = PageControl1.ActivePageIndex then
+      Brush.Color := clSilver
+    else
+      Brush.Color := clBtnFace;
 
+    TabCaption := PageControl1.Pages[TabIndex].Caption;
+    CaptionX := Rect.Left + ((Rect.Right - Rect.Left - TextWidth(TabCaption)) div 2);
+    CaptionY := Rect.Top + ((Rect.Bottom - Rect.Top - TextHeight('Gg')) div 2);
+
+    FillRect(Rect);
+    TextOut(CaptionX, CaptionY, TabCaption);
+//    TextRect(Rect, Rect.Left + 2, Rect.Top + 2, TabCaption);
+  end;
+end;
+}
+
+
+procedure TForm1.PanelToolReferencedClick(Sender: TObject);
+begin
+
+end;
 
 // #############################################################################
 
@@ -890,6 +1009,16 @@ begin
   GLSsetSimToolMM(gcsim_dia, ComboBoxGTip.ItemIndex, clGray);
 end;
 
+procedure TForm1.BtnCancelMouseEnter(Sender: TObject);
+begin
+  Screen.Cursor:= crDefault;
+end;
+
+procedure TForm1.BtnCancelMouseLeave(Sender: TObject);
+begin
+  if (MachineState = run) or LEDbusy.Checked then
+    Screen.Cursor:= crHourGlass;
+end;
 
 procedure TForm1.BtnResetRefClick(Sender: TObject);
 // Reset für erstes Werkzeug. Aktuell (evt. neu eingesetztes) Werkzeug
@@ -911,116 +1040,13 @@ begin
 end;
 
 
-//##############################################################################
-
-procedure ExecuteFile(const AFilename: String;
-                 AParameter, ACurrentDir: String; AWait, AHide: Boolean);
-var
-  si: TStartupInfo;
-  pi: TProcessInformation;
-
+procedure TForm1.Button1Click(Sender: TObject);
 begin
-  if Length(ACurrentDir) = 0 then
-    ACurrentDir := ExtractFilePath(AFilename)
-  else if AnsiLastChar(ACurrentDir) = '\' then
-    Delete(ACurrentDir, Length(ACurrentDir), 1);
-
-  FillChar(si, SizeOf(si), 0);
-  with si do begin
-    cb := SizeOf(si);
-    dwFlags := STARTF_USESHOWWINDOW;
-    if AHide then
-      wShowWindow := SW_HIDE
-    else
-      wShowWindow := SW_NORMAL;
-  end;
-  FillChar(pi, SizeOf(pi), 0);
-  AParameter := Format('"%s" %s', [AFilename, TrimRight(AParameter)]);
-
-  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, False,
-                   CREATE_DEFAULT_ERROR_MODE or CREATE_NEW_CONSOLE or
-                   NORMAL_PRIORITY_CLASS, Nil, PChar(ACurrentDir), si, pi) then
-  try
-    if AWait then
-      while WaitForSingleObject(pi.hProcess, 50) <> Wait_Object_0 do begin
-
-
-      end;
-    TerminateProcess(pi.hProcess, Cardinal(-1));
-  finally
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-  end;
-end;
-
-
-procedure TForm1.BtnGerberConvertClick(Sender: TObject);
-var my_converter_path, my_source_path,
-  my_dest_path, my_side, my_arg: String;
-  my_offset: Double;
-  img: TImage;
-  height, width, heightfac, widthfac, sizefac: Integer;
-begin
-  Memo2.lines.clear;
-  my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\pcb2gcode.exe';
-  if not FileExists(my_converter_path) then begin
-    Memo2.lines.add('PCB2GCODE converter not found.');
-    exit;
-  end;
-  OpenFileDialog.FilterIndex:= 4;
-  if OpenFileDialog.Execute then
-    my_source_path:= OpenFileDialog.Filename
-  else
-    exit;
-  if RadioButtonFront.Checked then
-    my_side:= '--front'
-  else
-    my_side:= '--back';
-
-  Paintbox1.canvas.Brush.Color:= clwhite;
-  Paintbox1.canvas.FillRect(rect(0,0,600,400));
-
-  my_dest_path:= ChangeFileExt(my_source_path, '.nc' + my_side[3]);
-  Memo2.lines.add('Converting Gerber file');
-  Memo2.lines.add(my_source_path);
-  Memo2.lines.add('to G-Code file');
-  Memo2.lines.add(my_dest_path);
-  Memo2.lines.add('Please wait...');
-  my_offset:= StrToFloatDef(EditInflate.Text, 0.1);
-  my_arg:= my_side + #32 + my_source_path
-    + ' --zsafe 1 --zchange 30 --zwork -0.2'
-    + ' --offset ' + FloatToStrDot(my_offset)
-    + ' --mill-feed 200'
-    + ' --optimise=1 --mill-speed 6000 --metric=1 --metricoutput=1 '
-    + my_side + '-output ' + my_dest_path;
-//  Memo2.lines.add(my_arg);
-  ExecuteFile(my_converter_path, my_arg, ExtractFilePath(my_converter_path), true, false);
-  Memo2.lines.add('');
-  mdelay(500);
-  Memo2.lines.add('Done.');
-  Memo2.lines.add('Please import created G-Code file in Job page.');
-
-  my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
-  img := TImage.create(nil);
-  img.Picture.LoadFromFile(my_converter_path);
-  // Image ist idR sehr groß, muss skaliert werden
-  height:= img.picture.Graphic.Height;
-  width:= img.picture.Graphic.Width;
-  widthfac:= width div 550 + 1;
-  heightfac:= height div 400 + 1;
-  if widthfac > heightfac then
-    sizefac:= widthfac
-  else
-    sizefac:= heightfac;
-  if sizefac > 10 then
-    sizefac:= 10;
-  height:= height div sizefac;
-  width:= width div sizefac;
-  Paintbox1.Canvas.StretchDraw(rect(0,0,width, height),img.picture.Graphic);
-  img.Free;
+  Form1.SgFiles.Cells[8,2]:='TEST';
 end;
 
 //##############################################################################
+
 
 procedure TForm1.CheckBoxSimClick(Sender: TObject);
 begin
@@ -1028,9 +1054,10 @@ begin
     ResetCoordinates;
     Form4.GLSsetATCandProbe;
   end else begin
-
+    ResetToolflags;
+    HomingPerformed:= false;
+    EnableStatus;
   end;
-
 end;
 
 procedure TForm1.CheckFixedProbeZClick(Sender: TObject);
@@ -1053,6 +1080,8 @@ begin
     Form4.GLSsetATCandProbe;
   end;
 end;
+
+
 
 // #############################################################################
 // ############################## T I M E R ####################################
@@ -1090,24 +1119,13 @@ begin
     PanelToolCompensated.Caption:= 'Disabled';
   end;
 
-  if CheckBoxSim.checked then begin
-    WorkZeroX:= gcsim_offset_x;
-    WorkZeroY:= gcsim_offset_y;
-    WorkZeroZ:= gcsim_offset_z;
-  end;
-
   TimerBlinkToggle:= not TimerBlinkToggle;
 
   // weniger aktuelle Sachen updaten
-  SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
-  ATCcolors(TimerBlinkToggle);
   if TimerBlinkToggle then begin
     LabelWorkX.Caption:= FormatFloat('000.00', WorkZeroX);
     LabelWorkY.Caption:= FormatFloat('000.00', WorkZeroY);
     LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
-    MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
-    MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
-    MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
   end else begin
     LabelToolReference.Caption:= FormatFloat('00.00', ToolDelta);
     LabelTableX.Caption:= FormatFloat('000.00', job.table_x);
@@ -1118,6 +1136,11 @@ begin
   end;
 
   SetAllButtons;
+  Form4.LabelActive.Visible:= not CheckBoxSim.Checked;
+  if (MachineState = idle) and (not isJobRunning) then begin
+    LEDbusy.Checked:= false;
+    Screen.Cursor:= crDefault;
+  end;
 end;
 
 procedure TForm1.TimerDrawElapsed(Sender: TObject);
@@ -1137,13 +1160,13 @@ function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
 // setzt pos_changed wenn sich Position änderte
 var
   my_str: String;
-  my_start_idx: Integer;
+  my_start_idx, x, y: Integer;
   is_valid, is_jogging: Boolean;
+  alive_angle: Double;
 
 begin
   result:= false;
   pos_changed:= false;
-
 //  update_abs:= false;
 //  Form1.EditStatus.Text:= my_response;
 
@@ -1160,7 +1183,6 @@ begin
     inc(ResponseFaultCounter);
     exit;
   end;
-
   is_valid:= false;
   with Form1 do begin
     grbl_receveivelist.clear;
@@ -1168,20 +1190,32 @@ begin
     if grbl_receveivelist.Count < 2 then
       exit;   // Meldung unvollständig
     my_Str:= grbl_receveivelist[0];
+    if AliveCount >= 7 then
+      AliveIndicatorDirection:= false;
+    if AliveCount <= 0 then
+      AliveIndicatorDirection:= true;
+    if AliveIndicatorDirection then
+      inc(AliveCount)
+    else
+      dec(AliveCount);
+
     if (my_Str = 'Idle') or (my_Str = 'Zero') then begin
-      Panel1.Color:= clLime;
-      Panel1.Font.Color:= clwhite;
+      PanelReady.Color:= clLime;
+      PanelReady.Font.Color:= clwhite;
       is_valid:= true;
       if (my_Str = 'Zero') then
         MachineState:= zero
-      else
+      else begin
         MachineState:= idle;
+        ZeroRequestDone:= false;
+      end;
     end else begin
-      Panel1.Color:= $00004000;
-      Panel1.Font.Color:= clgray;
+      PanelReady.Color:= $00004000;
+      PanelReady.Font.Color:= clgray;
     end;
 
     if (my_Str = 'Queue') or (my_Str =  'Hold') then begin
+      ZeroRequestDone:= false;
       is_valid:= true;
       Panel2.Color:= clAqua;
       Panel2.Font.Color:= clwhite;
@@ -1194,6 +1228,7 @@ begin
 
     is_jogging:= AnsiContainsStr(my_Str,'Jog');
     if (my_Str = 'Run') or is_jogging then begin
+      ZeroRequestDone:= false;
       is_valid:= true;
       Panel3.Color:= clFuchsia;
       Panel3.Font.Color:= clwhite;
@@ -1205,20 +1240,22 @@ begin
     end;
 
     if my_Str = 'Alarm' then begin
+      ZeroRequestDone:= false;
       is_valid:= true;
-      Panel4.Color:= clRed;
-      Panel4.Font.Color:= clwhite;
+      PanelAlarm.Color:= clRed;
+      PanelAlarm.Font.Color:= clwhite;
       MachineState:= alarm;
+      BtnEmergStop.tag:= 1;
     end else begin
-      Panel4.Color:= $00000040;
-      Panel4.Font.Color:= clgray;
+      PanelAlarm.Color:= $00000040;
+      PanelAlarm.Font.Color:= clgray;
     end;
     // keine gültige Statusmeldung?
     if not is_valid then begin
+      ZeroRequestDone:= false;
       inc(ResponseFaultCounter);
       exit;
     end;
-
     if is_jogging then begin  // Kurzmeldung von GRBL-JOG 0.9j
       if my_Str = 'JogX' then begin
         grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[1]);
@@ -1238,24 +1275,60 @@ begin
         grbl_mpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
         grbl_mpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
         grbl_mpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
+        DisplayMachinePosition;
       end;
       my_start_idx:= grbl_receveivelist.IndexOf('WPos');
       if my_start_idx >= 0 then begin
         grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
         grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
         grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-        PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-        PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-        PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+        DisplayWorkPosition;
       end;
 
     end;
   end;
 
-  if (old_grbl_wpos.X <> grbl_wpos.X) or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
+  if (MachineState = run) or (old_grbl_wpos.X <> grbl_wpos.X)
+     or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
     pos_changed:= true;
     old_grbl_wpos:= grbl_wpos;
     NeedsRedraw:= true;
+  end;
+  if (MachineState = hold) then
+    Form1.Cursor:= crHourGlass;
+end;
+
+procedure timer_send(my_str: String);
+var
+  my_response: String;
+begin
+  Form1.Memo1.lines.add(my_str);
+  my_response:= grbl_sendStr(my_str + #13, true);
+end;
+
+procedure TimerSendListDone;
+begin
+  grbl_sendlist.Clear;
+  SendListIdx:= 0;
+  SendListActive:= false;
+  SendListDone:= true;
+end;
+
+procedure TimerCommentDecode(my_str: String);
+var idx, new_tooltip: Integer;
+  new_color: TColor;
+  new_dia: Double;
+begin
+  Form1.Memo1.lines.add(my_str);
+  idx := pos('Bit change:', my_str);  // ist eigentlich ein Kommentar
+  if idx > 0 then begin
+    idx := pos(':', my_str) + 1;
+    new_dia:= extract_float(my_str, idx, false);
+    new_tooltip:= extract_int(my_str, idx);
+    new_color:= extract_int(my_str, idx);
+    GLSsetSimToolMM(new_dia, new_tooltip, new_color);
+    if Form1.Show3DPreview1.Checked then // wird vorher aufgerufen
+      GLSmakeToolArray(new_dia);
   end;
 end;
 
@@ -1265,81 +1338,70 @@ procedure TForm1.TimerStatusElapsed(Sender: TObject);
 var pos_changed, my_error: Boolean;
   my_str, my_response: String;
 begin
-  if Form1.CheckBoxSim.Checked then
-    StatusTimerState:= s_disable;
+  if isEmergency then
+    exit;
+  if (not grbl_is_connected) or CheckBoxSim.checked then
+    StatusTimerState:= s_sim
+  else begin
+    if SendListRequest then begin
+      if grbl_sendlist.Count > 0 then
+        StatusTimerState:= s_send
+      else
+        SendListDone:= true;
+      SendListIdx:= 0;
+      SendListRequest:= false;
+    end;
+    if StatusTimerDisableRequest then
+      StatusTimerState:= s_disable;
+  end;
+  if BtnCancel.tag > 1 then      // hat Vorrang
+    StatusTimerState:= s_cancel;
+
   case StatusTimerState of
     s_reset:
   // Zurücksetzen
       begin
+        TimerStatus.Interval:= 50;
         grbl_rx_clear; // letzte Antwort verwerfen
-        if SendListRequest then begin  // hat Vorrang
-          if grbl_sendlist.Count > 0 then
-            StatusTimerState:= s_send
-          else
-            SendListDone:= true;
-          SendListIdx:= 0;
-          exit;
-        end;
-        if StatusTimerDisableRequest then
-          StatusTimerState:= s_disable
-        else begin
-          grbl_rx_clear; // letzte Antwort verwerfen
-          if grbl_is_connected then
-            grbl_sendStr('?', false);   // neuen Status anfordern
-          StatusTimerState:= s_idle_loop;
-        end;
+        grbl_rx_clear; // letzte Antwort verwerfen
+        if grbl_is_connected then
+          grbl_sendStr('?', false);   // neuen Status anfordern
+        StatusTimerState:= s_idle_loop;
       end;
 
     s_send:
       begin
-        SendListRequest:= false;
-        if (SendListIdx >= grbl_sendlist.Count) or CancelRequest then begin
-          grbl_sendlist.Clear;
-          SendListIdx:= 0;
-          SendListActive:= false;
-          SendListDone:= true;
-          if CancelRequest then begin
-            StatusTimerState:= s_cancel;
-            Form1.Memo1.lines.add('G-Code block processing cancelled');
-          end else
-            StatusTimerState:= s_reset;
+        TimerStatus.Interval:= 20;
+        if (SendListIdx >= grbl_sendlist.Count) then begin
+          StatusTimerState:= s_reset;
+          TimerSendListDone;
           exit;
         end;
-
-        if not grbl_is_connected then
-          exit;
-
         my_str:= grbl_sendlist[SendListIdx];
         ProgressBar1.position:= SendListIdx;
-        if length(my_str) > 1 then
-          if (my_str[1] = '/') or (my_str[1] = '(') then
-            inc(SendListIdx) // Index erhöhen wenn Kommentar
-          else begin
+        if length(my_str) > 1 then begin
+          if (my_str[1] = '/') or (my_str[1] = '(') then begin
+            TimerCommentDecode(my_str);
+            inc(SendListIdx); // Index erhöhen wenn Kommentar
+          end else begin
             SendListActive:= true;
             // alles OK, neuen Befehl senden
             Form1.Memo1.lines.add(my_str);
             grbl_rx_clear; // letzte Antwort verwerfen
             grbl_sendStr(my_str + #13, false);
             StatusTimerState:= s_receive;
-          end else
+          end
+        end;
+      end;
 
-       end;
-        // ohne erneuten Timeraufruf gleich weiter mit Empfang, fall bereits eingetroffen
     s_receive:
       begin
-        if CancelRequest then begin
-          grbl_sendlist.Clear;
-          SendListIdx:= 0;
-          SendListActive:= false;
-          SendListDone:= true;
-          StatusTimerState:= s_cancel;
-          Form1.Memo1.lines.add('G-Code block processing cancelled');
-          exit;
-        end;
         if (grbl_receiveCount = 0) then begin // noch warten
 // Zwischendurch-Abfragen führen immer wieder zu Kommunikationproblemen,
 // deshalb vorerst abgeschaltet lassen.
 //            StatusTimerState:= s_wait;
+          AliveState:= s_alive_wait_indef;
+          ShowAliveState;
           exit;
         end;
         my_error:= false;
@@ -1361,7 +1423,10 @@ begin
           StatusTimerState:= s_send;
         end else begin
         // nicht OK, Alarmzustand, timeout oder Fehler
-          if pos('ALARM', LastResponseStr) > 0 then begin
+          if pos('HOLD', LastResponseStr) > 0 then begin
+            Form1.Memo1.lines.add(LastResponseStr);
+            Form1.Memo1.lines.add('HOLD state, processing paused');
+          end else if pos('ALARM', LastResponseStr) > 0 then begin
             Form1.Memo1.lines.add(LastResponseStr);
             Form1.Memo1.lines.add('ALARM state, processing cancelled');
             my_error:= true;
@@ -1376,42 +1441,15 @@ begin
           end;
         end;
         if my_error then begin
-          grbl_sendlist.Clear;
-          SendListIdx:= 0;
-          SendListActive:= false;
-          SendListDone:= true;
+          TimerSendListDone;
           StatusTimerState:= s_reset;
-          exit;
         end;
       end;
-
-{
-// Zwischendurch-Abfragen führen immer wieder zu Kommunikationproblemen,
-// deshalb vorerst abgeschaltet lassen.
-    s_wait:
-      begin
-        inc(StatusTimerLoopCount);
-        if grbl_receiveCount > 0 then
-        // könnte ein OK sein, wieder auf s_receive gehen
-          StatusTimerState:= s_receive
-        // wartet auf OK, gelegentlich neuen Status anfordern
-        else if (StatusTimerLoopCount mod 5 = 0) and grbl_is_connected then begin
-            grbl_sendStr('?', false);   // neuen Status anfordern
-            StatusTimerState:= s_wait_status;  // und darauf warten
-          end;
-      end;
-
-    s_wait_status:
-      begin
-        // wartet auf Status, muss inzwischen eingetroffen sein
-        DecodeStatus(grbl_receiveStr(20), pos_changed);
-        StatusTimerState:= s_receive;
-      end;
-}
 
     s_idle_loop:
       begin
     // Status auslesen
+        TimerStatus.Interval:= 50;
         if StatusTimerDisableRequest then
           StatusTimerState:= s_disable
         else begin
@@ -1419,9 +1457,10 @@ begin
           pos_changed:= false;
           if grbl_is_connected then
             DecodeStatus(grbl_receiveStr(25), pos_changed); // muss eingetroffen sein
-          SetDrawingToolPosMM(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+          ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
           StatusTimerState:= s_reset;
-          if (MachineState = zero) then begin
+          SendListActive:= false;
+          if (MachineState = zero) and (not ZeroRequestDone) then begin
             Memo1.lines.add('');
             if HomingPerformed then begin
               WorkZeroX:= grbl_mpos.x;
@@ -1432,64 +1471,139 @@ begin
               JogY:= WorkZeroY;
               JogZ:= WorkZeroZ;
 
+              MposOnPartGauge:= grbl_mpos.Z;
+              WorkZeroZ:= MposOnPartGauge - job.z_gauge;
+              ProbedState:= s_probed_manual;
+
               Memo1.lines.add('Zero request from machine panel, will set X, Y to zero');
               Memo1.lines.add('and Z to Z gauge height from Job Defaults');
+              my_str:= 'G94';
+              my_response:= uppercase(grbl_sendStr(my_str + #13, true));
+              Form1.Memo1.lines.add(my_str);
               my_str:= 'G92 X0 Y0 Z'+FloatToStrDot(job.z_gauge);
               my_response:= uppercase(grbl_sendStr(my_str + #13, true));
               Form1.Memo1.lines.add(my_str);
-              ProbedState:= s_probed_manual;
+              WorkZeroXdone:= true;
+              WorkZeroYdone:= true;
+              WorkZeroZdone:= true;
+
+              FirstToolReferenced:= false;
+              CurrentToolCompensated:= false;
               MachineState:= idle;
             end else
-              Memo1.lines.add('Zero request ignored - no Home Cycle performed');
+              Memo1.lines.add('WARNING: Zero request ignored - no Home Cycle performed');
+            ZeroRequestDone:= true;
           end;
         end;
-        CancelRequest:= false;
+      end;
+
+    s_disable:
+      begin
+  // abzuschalten
+  // ggf. eintreffeden Müll löschen, der nach dem letzten Status-Request auflief.
+        TimerStatus.enabled:= false;
+        StatusTimerDisabled:= true;
+        SendListActive:= false;
+      end;
+
+    s_sim:
+      begin
+        TimerStatus.Interval:= 20;
+        StatusTimerDisabled:= StatusTimerDisableRequest;
+        if (SendListIdx >= grbl_sendlist.Count) or (grbl_sendlist.Count = 0) then begin
+          TimerSendListDone;
+          gcsim_active:= false;
+          ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+          exit;
+        end;
+        gcsim_active:= true;          // für Cadencer-Prozess
+        gcsim_render_final:= false;   // wird bei bedarf (z<0) in InterpretGcodeLine gesetzt
+        my_str:= grbl_sendlist[SendListIdx];
+        ProgressBar1.position:= SendListIdx;
+        if length(my_str) > 1 then begin
+          if (my_str[1] = '/') or (my_str[1] = '(') then begin
+            TimerCommentDecode(my_str);
+            inc(SendListIdx); // Index erhöhen wenn Kommentar
+          end else begin
+            SendListActive:= true;
+            // alles OK, neuen Befehl senden
+            Form1.Memo1.lines.add(my_str);
+            TimerStatus.enabled:= false;
+            InterpretGcodeLine(my_str);
+            TimerStatus.enabled:= true;
+            NeedsRedraw:= true;
+          end;
+        end;
+        inc(SendListIdx); // Index erhöhen
+        DisplayWorkPosition;
+        DisplayMachinePosition;
       end;
 
     s_cancel:
       begin
-        grbl_sendlist.Clear;
-        SendListIdx:= 0;
-        if not grbl_is_connected then begin
-          StatusTimerState:= s_reset;
-          exit;
-        end;
-        if JobRunning then begin
+        TimerStatus.Interval:= 50;
+        Memo1.lines.add('');
+        Memo1.lines.add('Cancel Job');
+        Memo1.lines.add('=========================================');
+        Memo1.lines.add('Feed hold "!", wait for stop...');
+        if grbl_is_connected and (not Form1.CheckBoxSim.Checked) then begin
           TimerStatus.enabled:= false;
-          grbl_rx_clear; // letzte Antwort verwerfen
           grbl_sendStr('!', false);   // Feed Hold
-          Memo1.lines.add('Cancel Job');
-          Memo1.lines.add('=========================================');
-          Memo1.lines.add('Feed hold, wait for stop...');
+          mdelay(100);
+          grbl_rx_clear; // letzte Antwort verwerfen
           repeat
             grbl_sendStr('?', false); // Position für Offsets anfordern
             mdelay(50);
             DecodeStatus(grbl_receiveStr(50), pos_changed);
-          until not pos_changed;
+          until (not pos_changed) and (MachineState = hold) or isEmergency;
           mdelay(100);
-          Memo1.lines.add('Reset GRBL by CTRL-X');
+          Memo1.lines.add('Reset GRBL by "CTRL-X"');
           grbl_sendStr(#24, false);   // Reset CTRL-X, Maschine steht
           mdelay(250);
+          SpindleRunning:= false;
           SendListRequest:= false;
           SendActive:= false;
-          CancelRequest:= false;
-          Memo1.lines.add('Feed release, restore offsets');
+          Memo1.lines.add('Feed release "~"');
           grbl_sendStr('~', false);   // Feed Hold löschen
+          StatusTimerState:= s_reset;
+          ResetATC;
+          grbl_rx_clear; // letzte Antwort verwerfen
+          Memo1.lines.add('');
+          Memo1.lines.add('Unlock Alarm State');
+          timer_send('$X');   // Unlock
+          Memo1.lines.add('Move Z up');
+          timer_send('G0 G53 Z0');   // Move up
+          repeat
+            grbl_sendStr('?', false); // Position für Offsets anfordern
+            mdelay(50);
+            DecodeStatus(grbl_receiveStr(50), pos_changed);
+          until (not pos_changed) and (MachineState = idle) or isEmergency;
+          Memo1.lines.add('Restore Offsets');
+          timer_send('G92 Z'+FloatToStrDot(-WorkZeroZ)); // wir sind auf 0
+          timer_send('G92 X'+ FloatToSTrDot(grbl_mpos.X - WorkZeroX)
+            +' Y'+ FloatToSTrDot(grbl_mpos.Y - WorkZeroY));
+          mdelay(100);
           TimerStatus.enabled:= true;
+          Memo1.lines.add('Done.');
+        end else begin
+          Memo1.lines.add('Reset GRBL by "CTRL-X"');
+          Memo1.lines.add('Feed release "~"');
+          Memo1.lines.add('Unlock Alarm State');
+          Memo1.lines.add('Move Z up');
+          Memo1.lines.add('G0 G53 Z0');
+          GLSspindle_on_off(false);
+          ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, 10);
+          grbl_wpos.Z:= -WorkZeroZ;
+          grbl_mpos.Z:= 0;
+          DisplayWorkPosition;
+          DisplayMachinePosition;
+          Memo1.lines.add('Done.');
         end;
-        StatusTimerState:= s_reset;
-        SendListDone:= true;
-      end;
-
-    s_disable:
-  // abzuschalten
-      begin
-  // ggf. eintreffeden Müll löschen, der nach dem letzten Status-Request auflief.
-        TimerStatus.enabled:= false;
-        StatusTimerDisabled:= true;
-        if CancelRequest then
-          CancelRequest:= false;
-      end;
+        TimerSendListDone;
+        gcsim_active:= false;
+        BtnCancel.tag:= 0;
+        BtnRunjob.tag:= 0;
+      end
   else
     StatusTimerState:= s_reset;
   end;
@@ -1507,7 +1621,8 @@ begin
   StatusTimerDisableRequest:= true;
   repeat
     Application.ProcessMessages;
-  until (StatusTimerDisabled) or (Form1.BtnCancel.Tag = 1);
+  until (StatusTimerDisabled)  or isEmergency;
+  StatusTimerDisableRequest:= false;
   grbl_wait_for_timeout(20);
 end;
 
@@ -1518,6 +1633,7 @@ begin
   StatusTimerState:= s_reset;
   Form1.TimerStatus.enabled:= true;
   StatusTimerEnableRequest:= true;
+  Form1.TimerStatus.Interval:= 50;
 {
   repeat
     Application.ProcessMessages;
@@ -1533,24 +1649,21 @@ end;
 procedure WaitForIdle;
 // Warte auf Idle
 begin
-  if Form1.CheckBoxSim.Checked then
-    exit;
-  mdelay(100);
-  while (MachineState = run) do begin // noch beschäftigt?
-    if (Form1.BtnCancel.Tag = 1) or CancelRequest then
-      exit;     // Schleife abbrechen
-    Application.ProcessMessages;
-  end;
+  if not Form1.CheckBoxSim.Checked then
+    repeat
+      mdelay(50);
+    until (MachineState <> run) or isCancelled or isEmergency or isWaitExit; // noch beschäftigt?
 end;
 
 procedure SendSingleCommandStr(my_command: String);
 // Sende einzelnen Befehl, wird in TimerStatus ausgeführt
 begin
   grbl_addStr(my_command);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
 end;
 
-procedure SendGrblAndWaitForIdle;
+
+procedure SendListToGrbl;
 // Sende Befehlesliste und warte auf Idle
 // lohnt, wenn mehrere Befehle abzuarbeiten sind
 var
@@ -1558,6 +1671,7 @@ var
   i: Integer;
   pos_changed, response_error: Boolean;
 begin
+  gcsim_render_final:= false;
   NeedsRedraw:= true;
   if grbl_sendlist.Count = 0 then
     exit;
@@ -1566,37 +1680,16 @@ begin
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
     exit;
   end;
-  if (Form1.BtnCancel.Tag = 1) then
+  if isCancelled then
     exit;
   Form1.ProgressBar1.Max:= grbl_sendlist.Count;
   SendActive:= true;
-  if Form1.CheckBoxSim.checked then begin
-    gcsim_active:= true;          // für Cadencer-Prozess
-    gcsim_render_final:= false;   // wird bei bedarf (z<0) in InterpretGcodeLine gesetzt
-    LastResponseStr:='OK';
-    for i:= 0 to grbl_sendlist.Count-1 do begin   // Alle Gcodes simulieren
-      if CancelSim then
-        break;
-      if i mod 10 = 0 then begin            // etwas anderes passiert?
-        Form1.ProgressBar1.position:= i;
-        Application.ProcessMessages;
-      end;
-      my_str:= grbl_sendlist[i];
-      if Form1.TrackbarSimSpeed.Position < 10 then
-        Form1.Memo1.lines.add(my_str);
-      InterpretGcodeLine(my_str);
-    end;
-    if gcsim_render_final then
-      GLSfinalize3Dview;
-    gcsim_active:= false;
-  end else if grbl_is_connected then begin
-    // Liste wird in Timerabgearbeitet
-    SendListDone:= false;
-    SendListRequest:= true;
-    repeat
-      application.ProcessMessages;
-    until SendListDone;
-  end;
+  // Liste wird in Timerabgearbeitet
+  SendListDone:= false;
+  SendListRequest:= true;
+  repeat
+    mdelay(50);
+  until SendListDone or isCancelled or isEmergency;
   // falls wg. speed abgeschaltet
   Form4.GLLinesPath.Visible:= Form4.CheckToolpathVisible.Checked;
   Form4.GLDummyCubeTool.visible:= true;
@@ -1604,6 +1697,8 @@ begin
   Form1.ProgressBar1.position:= 0;
   grbl_sendlist.Clear;
   SendActive:= false;
+  if gcsim_render_final then
+    GLSfinalize3Dview;
 end;
 
 // #############################################################################
@@ -1629,6 +1724,7 @@ begin
     Form3.Hide;
 end;
 
+
 procedure TForm1.Show3DPreview1Click(Sender: TObject);
 begin
   WindowMenu1.Items[2].Checked:= not WindowMenu1.Items[2].Checked;
@@ -1644,6 +1740,158 @@ begin
   AboutBox.ProgName.Caption:= c_ProgNameStr;
   AboutBox.VersionInfo.Caption:= c_VerStr;
   Aboutbox.ShowModal;
+end;
+
+
+
+procedure TForm1.BtnEmergencyStopClick(Sender: TObject);
+var
+  my_response: String;
+begin
+  PanelAlive.tag:= 1;
+  BtnCancel.tag:= 1;
+  BtnRunJob.Tag:= 0;
+  button_enable(false);
+  ResetToolflags;
+  SendActive:= false;
+  Memo1.lines.add('');
+  Memo1.lines.add('WARNING: Emergency Stop');
+  Memo1.lines.add('=========================================');
+  // E-Stop ausführen
+  if grbl_is_connected and (not CheckBoxSim.checked) then begin
+    grbl_sendStr(#24, false);   // Soft Reset CTRL-X, Stepper sofort stoppen
+    SpindleRunning:= false;
+    mdelay(250);
+    BtnEmergStop.tag:= 1;
+    DisableStatus;
+    grbl_wait_for_timeout(250);
+    MessageDlg('EMERGENCY STOP. Steps missed if running.'
+      + #13 + 'Click <Home Cycle> or <Alarm> panel'
+      + #13 + 'to release ALARM LOCK.', mtWarning, [mbOK], 0);
+    EnableStatus;  // automatische Upates freischalten
+  end else begin
+    Memo1.lines.add('Reset GRBL Simulation');
+  end;
+  HomingPerformed:= false;
+  grbl_sendlist.Clear;
+  ResetATC;
+  Memo1.lines.add('Done. Please re-run Home Cycle.');
+  Memo1.lines.add('');
+end;
+
+procedure TForm1.BtnCancelClick(Sender: TObject);
+var
+  my_response: String;
+  pos_changed: Boolean;
+begin
+  if not isJobRunning then
+    exit;
+  BtnCancel.tag:= 1;
+  BtnRunJob.Tag:= 0;
+  Memo1.lines.add('');
+  Memo1.lines.add('Processing Cancel Request...');
+  // Wird von Timer-Interrupt erledigt
+end;
+
+
+procedure TForm1.BtnHomeCycleClick(Sender: TObject);
+var
+  my_response: String;
+begin
+  PanelAlive.tag:= 0;
+  BtnEmergStop.tag:= 0;
+  BtnCancel.Caption:= 'CANCEL';
+  BtnCancel.tag:= 0;
+  BtnRunjob.tag:= 0;
+  Memo1.lines.add('');
+  Memo1.lines.add('Home cycle initiated');
+  DefaultsGridListToJob;
+  if grbl_is_connected and (not CheckBoxSim.checked) then begin
+    LEDbusy.Checked:= true;
+    spindle_on_off(false);
+    ResetToolflags;
+    DisableStatus;
+    my_response:= grbl_sendStr('$h'+#13, true);
+    Memo1.lines.add(uppercase(my_response));
+    if my_response <> 'ok' then begin
+      MessageDlg('Homing failed. ALARM LOCK cleared,'
+        + #13 + 'but do not rely on machine status.', mtWarning, [mbOK], 0);
+      grbl_sendStr('$X'+#13, false);   // Clear Lock
+      grbl_wait_for_timeout(200);
+    end;
+    EnableStatus;  // automatische Upates freischalten
+  end else
+    ResetSimulation;
+  HomingPerformed:= true;
+  Memo1.lines.add('Done.');
+  Memo1.lines.add('');
+end;
+
+procedure TForm1.BtnHomeOverrideClick(Sender: TObject);
+begin
+  BtnEmergStop.tag:= 0;
+  BtnCancel.tag:= 0;
+  BtnRunjob.tag:= 0;
+  Memo1.lines.add('');
+  if CheckBoxSim.checked then
+    Memo1.lines.add('Home Cycle Override always on in simulation mode.')
+  else
+    Memo1.lines.add('Home Cycle Override initiated');
+  DefaultsGridListToJob;
+  if sim_not_supportet(true) then
+    ResetSimulation
+  else begin
+    LEDbusy.Checked:= true;
+    spindle_on_off(false);
+    ResetToolflags;
+    if grbl_is_connected and (not CheckBoxSim.checked) then begin
+      DisableStatus;
+      Memo1.lines.add('WARNING: Home Cycle Override - do not rely on absolute positions!');
+      grbl_sendStr('$X'+#13, false);   // Clear Lock
+      grbl_wait_for_timeout(200);
+      Memo1.lines.add('Unlock Alarm State');
+      EnableStatus;  // automatische Upates freischalten
+    end;
+  end;
+    Memo1.lines.add('Done. Proceed with care!');
+  HomingPerformed:= true;
+  Memo1.lines.add('');
+end;
+
+procedure TForm1.PanelReadyClick(Sender: TObject);
+begin
+  Memo1.lines.add('Receive resumed');
+  PanelAlive.tag := 0;
+end;
+
+procedure TForm1.PanelAlarmClick(Sender: TObject);
+begin
+  BtnEmergStop.tag:= 0;
+  BtnCancel.tag:= 0;
+  BtnRunjob.tag:= 0;
+  Memo1.lines.add('');
+  DefaultsGridListToJob;
+  if sim_not_supportet(true) then
+    ResetSimulation
+  else begin
+    ResetToolflags;
+    if grbl_is_connected and (not CheckBoxSim.checked) then begin
+      DisableStatus;
+      grbl_sendStr('$X'+#13, false);   // Clear Lock
+      grbl_wait_for_timeout(200);
+      Memo1.lines.add('Unlock Alarm State');
+      EnableStatus;  // automatische Upates freischalten
+    end;
+  end;
+    Memo1.lines.add('Done. Proceed with care!');
+  Memo1.lines.add('');
+end;
+
+procedure TForm1.PanelAliveClick(Sender: TObject);
+begin
+  PanelAlive.tag := 1;
+  Memo1.lines.add('WARNING: Receive cancelled');
+  Memo1.lines.add('Click READY panel to resume');
 end;
 
 end.

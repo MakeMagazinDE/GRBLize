@@ -41,6 +41,8 @@ object Form4: TForm4
     OnMouseDown = GLSceneViewer1MouseDown
     OnMouseMove = GLSceneViewer1MouseMove
     TabOrder = 0
+    ExplicitTop = 144
+    ExplicitHeight = 462
   end
   object Panel1: TPanel
     Left = 8
@@ -48,6 +50,20 @@ object Form4: TForm4
     Width = 249
     Height = 97
     TabOrder = 1
+    object LabelActive: TLabel
+      Left = 16
+      Top = 79
+      Width = 125
+      Height = 13
+      Caption = 'SIMULATION NOT ACTIVE'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clRed
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+      Visible = False
+    end
     object CheckToolpathVisible: TCheckBox
       Left = 16
       Top = 36
@@ -91,7 +107,7 @@ object Form4: TForm4
     end
     object PanelLED: TPanel
       Left = 158
-      Top = 65
+      Top = 67
       Width = 61
       Height = 21
       Hint = 'Busy/Running'

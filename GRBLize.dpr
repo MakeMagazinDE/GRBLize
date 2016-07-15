@@ -1,7 +1,4 @@
 program GRBLize;
-
-
-
 uses
   Forms,
   ABOUT in 'ABOUT.PAS' {AboutBox},
@@ -24,7 +21,8 @@ uses
   DXTypes in 'DirectX\DXTypes.pas',
   Direct3D9 in 'DirectX\Direct3D9.pas',
   grbl_player_main in 'grbl_player_main.pas' {Form1},
-  VFrames in 'VFrames.pas';
+  VFrames in 'VFrames.pas',
+  gerber_import in 'gerber_import.pas' {FormGerber};
 
 {$R *.res}
 
@@ -33,6 +31,7 @@ begin
   Application.Title := 'GRBLize';
   Application.CreateForm(TForm1, Form1);
   Application.CreateForm(TAboutBox, AboutBox);
+  Application.CreateForm(TFormGerber, FormGerber);
   Application.Run;
   Application.Terminate;
 end.

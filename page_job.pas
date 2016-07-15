@@ -2,177 +2,12 @@
 // ############################### FILES AND JOBS ##############################
 // #############################################################################
 
-procedure ATCcolors(colors_on: Boolean);
-// Anzeigeroutine für Blink-Timer
-var i: Integer;
-  my_color: TColor;
-begin
-  if ToolInSpindle > 0 then begin
-    Form1.PanelToolInSpindle.color:= atcArray[ToolInSpindle].color;
-    Form1.PanelToolInSpindle.caption:= IntToStr(ToolInSpindle);
-  end else if ToolInSpindle = 0 then begin
-    Form1.PanelToolInSpindle.color:= clgray;
-    Form1.PanelToolInSpindle.caption:= 'D'; // Dummy tool
-  end else if ToolInSpindle < 0 then begin
-    Form1.PanelToolInSpindle.color:= clBtnFace;
-    Form1.PanelToolInSpindle.caption:= 'N'; // None, collet open!
-  end;
 
-  if Form1.CheckUseATC.checked then
-    for i:= 0 to 9 do begin
-      if not atcArray[i].loaded then
-        continue;
-      my_color:= atcArray[i].color;
-      if (not atcArray[i].inslot) and (not colors_on) then
-        my_color:= clBtnFace;
-      case i of
-        0:
-          Form1.PanelATC0.color:= my_color;
-        1:
-          Form1.PanelATC1.color:= my_color;
-        2:
-          Form1.PanelATC2.color:= my_color;
-        3:
-          Form1.PanelATC3.color:= my_color;
-        4:
-          Form1.PanelATC4.color:= my_color;
-        5:
-          Form1.PanelATC5.color:= my_color;
-        6:
-          Form1.PanelATC6.color:= my_color;
-        7:
-          Form1.PanelATC7.color:= my_color;
-        8:
-          Form1.PanelATC8.color:= my_color;
-        9:
-          Form1.PanelATC9.color:= my_color;
-      end;
-    end;
-end;
+procedure UpdateATCsg;   forward;
+procedure ResetATC;   forward;
+procedure ClearATC;   forward;
 
-procedure ATCtoPanel;
-// ATC-Werkzeugbelegung anzeigen
-var i: Integer;
-  my_color, my_font_color: TColor;
-  my_str, my_penstr: String;
-  my_pen: Integer;
-begin
-  for i:= 1 to 9 do begin
-    my_pen:= 0;
-    my_penstr:='-';
-    if atcArray[i].used then begin
-      my_font_color:= clblack;
-      my_str:= 'Empty';
-    end else begin
-      my_font_color:= clgray;
-      my_str:= 'Unused in Job';
-    end;
-    if atcArray[i].enable then begin
-      my_color:= atcArray[i].color;
-      my_pen:= atcArray[i].pen;
-      my_penstr:= IntToStr(my_pen);
-      my_str:= 'HPGL Pen #' + my_penstr + ': '
-      + FloatToStr(atcArray[i].diameter)+' mm ' + ToolTipArray[atcArray[i].tooltip];
-    end else
-      my_color:= clBtnFace;
-    case i of
-      1:
-      begin
-        Form1.PanelATC1.hint:= my_str;
-        Form1.PanelATC1.color:= my_color;
-        Form1.PanelATC1.caption:= my_penstr;
-        Form1.PanelATC1.font.color:= my_font_color;
-      end;
-      2:
-      begin
-        Form1.PanelATC2.hint:= my_str;
-        Form1.PanelATC2.color:= my_color;
-        Form1.PanelATC2.caption:= my_penstr;
-        Form1.PanelATC2.font.color:= my_font_color;
-      end;
-      3:
-      begin
-        Form1.PanelATC3.hint:= my_str;
-        Form1.PanelATC3.color:= my_color;
-        Form1.PanelATC3.caption:= my_penstr;
-        Form1.PanelATC3.font.color:= my_font_color;
-      end;
-      4:
-      begin
-        Form1.PanelATC4.hint:= my_str;
-        Form1.PanelATC4.color:= my_color;
-        Form1.PanelATC4.caption:= my_penstr;
-        Form1.PanelATC4.font.color:= my_font_color;
-      end;
-      5:
-      begin
-        Form1.PanelATC5.hint:= my_str;
-        Form1.PanelATC5.color:= my_color;
-        Form1.PanelATC5.caption:= my_penstr;
-        Form1.PanelATC5.font.color:= my_font_color;
-      end;
-      6:
-      begin
-        Form1.PanelATC6.hint:= my_str;
-        Form1.PanelATC6.color:= my_color;
-        Form1.PanelATC6.caption:= my_penstr;
-        Form1.PanelATC6.font.color:= my_font_color;
-      end;
-      7:
-      begin
-        Form1.PanelATC7.hint:= my_str;
-        Form1.PanelATC7.color:= my_color;
-        Form1.PanelATC7.caption:= my_penstr;
-        Form1.PanelATC7.font.color:= my_font_color;
-      end;
-      8:
-      begin
-        Form1.PanelATC8.hint:= my_str;
-        Form1.PanelATC8.color:= my_color;
-        Form1.PanelATC8.caption:= my_penstr;
-        Form1.PanelATC8.font.color:= my_font_color;
-      end;
-      9:
-      begin
-        Form1.PanelATC9.hint:= my_str;
-        Form1.PanelATC9.color:= my_color;
-        Form1.PanelATC9.caption:= my_penstr;
-        Form1.PanelATC9.font.color:= my_font_color;
-      end;
-    end;
-  end;
-end;
-
-procedure SetATCtoolFromJob(const pen_idx: Integer);
-var atc: Integer;
-begin
-  atc:= job.pens[pen_idx].atc;
-  if atc > 9 then
-    atc:= 0; // invalid or manual
-  atcArray[atc].enable:= job.pens[pen_idx].enable;
-  atcArray[atc].loaded:= (atc > 0) and atcArray[atc].enable;
-  atcArray[atc].inslot:= atcArray[atc].loaded;
-  if (atc > 0) then begin
-    atcArray[atc].diameter:= job.pens[pen_idx].diameter;
-    atcArray[atc].color:= job.pens[pen_idx].color;
-    atcArray[atc].pen:= pen_idx;
-    atcArray[atc].used:= job.pens[pen_idx].used;
-    if job.pens[pen_idx].shape = drillhole then
-      atcArray[atc].tooltip:= 6 // Drill
-    else
-      atcArray[atc].tooltip:= job.pens[pen_idx].tooltip;
-  end else begin
-    atcArray[0].enable:= true;
-    atcArray[0].loaded:= true;
-    atcArray[0].used:= false;
-    atcArray[0].inslot:= false; // ist in der Maschine
-    atcArray[0].diameter:= 3;
-    atcArray[0].color:= clgray;
-    atcArray[0].pen:= 0;
-  end;
-  atcArray[10]:=  atcArray[0];
-  Form4.GLSupdateATC;
-end;
+procedure SetATCtoolFromJob(const pen_idx: Integer);   forward;
 
 
 procedure CalcTipDia;
@@ -201,6 +36,7 @@ end;
 procedure PenGridListToJob;
 var i, j: Integer;
 begin
+  ClearATC;
   for i:= 0 to c_numOfFiles do
     job.fileDelimStrings[i]:= Form1.SgFiles.Rows[i+1].DelimitedText;
   for i := 1 to 32 do with Form1.SgPens do begin
@@ -208,7 +44,6 @@ begin
     j:= i-1;
     job.pens[j].color:= StrToIntDef(Cells[1,i],0);
     job.pens[j].enable:= (Cells[2,i]) = 'ON';
-
 
     job.pens[j].z_end:= StrToFloatDef(Cells[4,i],0);
     job.pens[j].speed:= StrToIntDef(Cells[5,i],250);
@@ -224,12 +59,13 @@ begin
     SetATCtoolFromJob(j);
   end;
   NeedsRedraw:= true;
-  ATCtoPanel;
+  UpdateATCsg;
 end;
 
 procedure JobToPenGridList;
 var i: Integer;
 begin
+  ClearATC;
   for i := 0 to 31 do with Form1.SgPens do begin
     if i < 10 then
       Cells[0,i+1]:= 'P' + IntToStr(i)
@@ -257,7 +93,7 @@ begin
   Form1.SgPens.Repaint;
   for i:= 0 to c_numOfFiles do
     Form1.SgFiles.Rows[i+1].DelimitedText:= job.fileDelimStrings[i];
-  ATCtoPanel;
+  UpdateATCsg;
 end;
 
 // #############################################################################
@@ -278,6 +114,7 @@ begin
     Cells[5,i+1]:= '0';
     Cells[6,i+1]:= '100';
     Cells[6,i+1]:= 'YES';
+    Cells[8,i+1]:= '';
     job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100';
     with FileParamArray[i] do begin
       bounds.min.x := high(Integer);
@@ -298,18 +135,16 @@ begin
   UnHilite;
   setlength(final_array,0);
   NeedsRedraw:= true;
-  list_blocks;
+  ListBlocks;
 end;
 
 procedure InitJob;
 var i: Integer;
 begin
-  Form1.PanelATC0.hint:= 'Slot 0 must be empty for swap';
-  Form1.PanelATC0.color:= clBtnFace;
   Form1.SgPens.Rows[0].DelimitedText:=
     'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc",ATC,Tip';
   Form1.SgFiles.Rows[0].DelimitedText:=
-    '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %"';
+    '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %",Clear,"Remark"';
   Form1.SgBlocks.Rows[0].DelimitedText:=
     '#,Pen/Drill,Ena,Dia,Shape,Bounds,Center,Points';
   Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
@@ -328,8 +163,8 @@ begin
     pens[5].color:=cllime;
     pens[6].color:=$00FF8000;
     pens[7].color:=clfuchsia;
-    pens[8].color:=clsilver;
-    pens[9].color:=8580258;
+    pens[8].color:= $A2DCA2;
+    pens[9].color:= $DCA2A2;
     pens[10].color:=clsilver;
     pens[11].color:= 11254230;
     pens[12].color:=11579647;
@@ -348,7 +183,7 @@ begin
       pens[i].tooltip:= 6;
       pens[i].diameter:= 1.0;
       pens[i].tipdia:= 1.0;
-      pens[i].z_end:= 2.0;
+      pens[i].z_end:= 2.5;
       pens[i].z_inc:= 3.0;
       pens[i].speed:= 400;
     end;
@@ -403,12 +238,12 @@ begin
     Rows[28].DelimitedText:='"Table max travel Z",60';
   end;
   ClearFiles;
+  Form1.Memo1.lines.add('Job/application default settings applied');
 end;
 
 procedure DefaultsGridListToJob;
 var r: Integer;
 begin
-  Form1.Memo1.lines.add('Job/application default settings applied');
   with Form1.SgJobDefaults do begin
     if RowCount < 3 then begin
       InitJob;
@@ -465,12 +300,30 @@ begin
     job.table_x:= StrToFloatDef(Cells[1,26],200);
     job.table_y:= StrToFloatDef(Cells[1,27],200);
     job.table_z:= StrToFloatDef(Cells[1,28],60);
+
+    job.fix1_x:= StrToFloatDef(Cells[1,29],200);
+    job.fix1_y:= StrToFloatDef(Cells[1,30],200);
+    job.fix1_z:= StrToFloatDef(Cells[1,31],60);
+    job.fix2_x:= StrToFloatDef(Cells[1,32],200);
+    job.fix2_y:= StrToFloatDef(Cells[1,33],200);
+    job.fix2_z:= StrToFloatDef(Cells[1,34],60);
   end;
+end;
+
+procedure SetPCBmillTool(tool_idx: Integer);
+begin
+  job.pens[tool_idx].diameter:= 3.175;
+  job.pens[tool_idx].shape:= contour;
+  job.pens[tool_idx].tipdia:= 0.2;
+  job.pens[tool_idx].z_end:= 0.2;
+  job.pens[tool_idx].tooltip:= 1;
+  job.pens[tool_idx].tooltip:= 1;
+  job.pens[tool_idx].speed:= 500;
 end;
 
 Procedure OpenFilesInGrid;
 var
-  i: Integer; my_path, my_ext: String;
+  i, pen_override: Integer; my_path, my_ext: String; use_excellon: Boolean;
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -479,7 +332,7 @@ begin
     job.pens[i].used:= false;
     job.pens[i].enable:= false;
   end;
-  with Form1.SgFiles do
+  with Form1.SgFiles do begin
     for i:= 1 to c_numOfFiles +1 do begin
       if Cells[2, i] = '90°' then
         FileParamArray[i-1].rotate:= deg90
@@ -489,7 +342,6 @@ begin
         FileParamArray[i-1].rotate:= deg180
       else
         FileParamArray[i-1].rotate:= deg0;
-      FileParamArray[i-1].penoverride:= StrToIntDef(Cells[1, i], -1);
       FileParamArray[i-1].mirror:= Cells[3, i] = 'ON';
       FileParamArray[i-1].offset.X:= round(StrToFloatDef(Cells[4, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
@@ -500,38 +352,67 @@ begin
         continue;
       FileParamArray[i-1].isdrillfile := (my_ext = '.DRL');
       FileParamArray[i-1].enable:= true;
-      if FileParamArray[i-1].isdrillfile then
-        drill_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1), job.use_excellon_dia)
-      else if (my_ext = '.HPGL') or (my_ext = '.HPG') or (my_ext = '.PLT') or (my_ext = '.PEN') then
+      pen_override:= StrToIntDef(Cells[1, i], -1);
+      if (my_ext = '.DRL') then begin
+        Cells[8, i]:= 'Drill'; // Replace Pen
+        use_excellon:= job.use_excellon_dia and (pen_override < 0);
+        drill_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1), use_excellon);
+      end else if (my_ext = '.HPGL') or (my_ext = '.HPG') or (my_ext = '.PLT') or (my_ext = '.PEN') then begin
+        Cells[8, i]:= 'Plot'; // Replace Pen
         hpgl_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1))
-      else if (my_ext = '.NC') or (my_ext = '.NCF') or (my_ext = '.NCB')
-        or (my_ext = '.NGC') or (my_ext = '.TAP') or (my_ext = '.CNC') then
-        gcode_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1))
-      else if (my_ext = '.SVG') then
-        svg_fileload(my_path, i-1, StrToIntDef(Cells[1, i], 2))
-      else
-        ShowMessage('Unknown File Extension:' + ExtractFileName(my_path));
+      end else if (my_ext = '.NC') or (my_ext = '.NGC') or (my_ext = '.TAP') or (my_ext = '.CNC') then begin
+        Cells[8, i]:= 'GCode'; // Remark
+        gcode_fileload(my_path, i-1, -1);
+      end else if (my_ext = '.NCF') then begin
+        Cells[8, i]:= 'PCB top'; // Remark
+        Cells[1, i]:= '8'; // Replace Pen
+        gcode_fileload(my_path, i-1, 8);
+        SetPCBmillTool(8);
+      end else if (my_ext = '.NCB') then begin
+        Cells[8, i]:= 'PCB botm'; // Remark
+        Cells[1, i]:= '9'; // Replace Pen
+        gcode_fileload(my_path, i-1, 9);
+        SetPCBmillTool(9);
+      end else if (my_ext = '.SVG') then begin
+        Cells[8, i]:= 'SVG'; // Remark
+        svg_fileload(my_path, i-1, -1);
+      end else
+        Form1.Memo1.lines.add('Unknown File Extension:' + ExtractFileName(my_path));
+      FileParamArray[i-1].penoverride:= pen_override;
+      if pen_override >= 0 then begin
+        job.pens[pen_override].enable:= true;
+        job.pens[pen_override].used:= true;
+      end;
+      job.fileDelimStrings[i-1]:= Rows[i].DelimitedText;
     end;
+  end;
+
+  for i:= 0 to 31 do begin
+    job.pens[i].enable:= job.pens[i].used;
+  end;
+
   JobToPenGridList;
   param_change;
   NeedsRedraw:= true;
+
   job.pens[0].used:= false;
   job.pens[0].enable:= true;
   Form1.SgPens.Repaint;
   Form4.FormRefresh(nil);
 end;
 
-Procedure OpenJobFile(my_job_name: String);
+Procedure OpenJobFile;
 var
 // mySaveFile: File of Tjob;
  sl: TstringList;
  i, j, s, my_len, my_row: Integer;
 
 begin
-  JobSettingsPath:= my_job_name;
-  sl:= Tstringlist.Create;
-  if FileExists(my_job_name) then begin
-    sl.LoadfromFile(my_job_name);
+  ResetToolFlags;
+  Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
+  if FileExists(JobSettingsPath) then begin
+    sl:= Tstringlist.Create;
+    sl.LoadfromFile(JobSettingsPath);
     if sl.strings[0]='#Files' then begin
       s:= 1;
       my_row:= 0;
@@ -543,6 +424,8 @@ begin
           break;
         Form1.SgFiles.Rows[my_row].DelimitedText:= sl.Strings[i];
       end;
+      Form1.SgFiles.Repaint;
+      OpenFilesInGrid;
       s:=i+1;
       my_row:= 0;
       for i := s to sl.Count-1 do begin
@@ -553,6 +436,9 @@ begin
           break;
         Form1.SgPens.Rows[my_row].DelimitedText:= sl.Strings[i];
       end;
+      Form1.SgPens.Repaint;
+      PenGridListToJob;
+      param_change;
       s:=i+1;
       my_row:= 0;
       for i := s to sl.Count-1 do begin
@@ -564,9 +450,7 @@ begin
         Form1.SgJobDefaults.Rowcount:= my_row+1;
         Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
       end;
-
-      Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
-      OpenFilesInGrid;
+      Form1.SgJobDefaults.Repaint;
       s:=i+1;
       my_row:= 1;
       my_len:= length(final_array);
@@ -585,6 +469,7 @@ begin
         end;
         inc(my_row);
       end;
+      Form1.SgBlocks.Repaint;
       s:=i+1;
       Form1.MemoComment.Clear;
       for i := s to sl.Count-1 do begin
@@ -593,12 +478,12 @@ begin
         Form1.MemoComment.Lines.Add(sl.Strings[i]);
       end;
     end;
-  end else
+    sl.Free;
+  end else begin
     InitJob;
-  sl.Free;
-  ResetToolFlags;
-  PenGridListToJob;
-  list_blocks;
+    PenGridListToJob;
+  end;
+  ListBlocks;
 end;
 
 Procedure LoadIniFile;
@@ -661,7 +546,7 @@ begin
   for i:= 1 to Form1.SgJobDefaults.Rowcount - 1 do
     sl.Add(Form1.SgJobDefaults.Rows[i].CommaText);
   sl.Add('#Blocks');
-  list_blocks;
+  ListBlocks;
   if Form1.SgBlocks.Rowcount > 1 then
     for i:= 1 to Form1.SgBlocks.Rowcount - 1 do
       if Form1.SgBlocks.Cells[0,i] <> '' then
@@ -680,7 +565,8 @@ procedure TForm1.JobOpenExecute(Sender: TObject);
 begin
   if OpenJobDialog.Execute then begin
     InitJob;
-    OpenJobFile(OpenJobDialog.Filename);
+    JobSettingsPath:= OpenJobDialog.Filename;
+    OpenJobFile;
   end;
 end;
 
@@ -710,8 +596,9 @@ procedure TForm1.FileNew1Execute(Sender: TObject);
 begin
   InitJob;
   DefaultsGridListToJob;
-  JobSettingsPath:= ExtractFilePath(Application.exename) + 'new.job';
+  JobSettingsPath:= '';
   draw_cnc_all;
+  Form1.Caption:= c_ProgNameStr;
   Form4.FormRefresh(nil);
 end;
 
@@ -801,7 +688,7 @@ begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   NeedsRedraw:= true;
-  list_blocks;
+  ListBlocks;
   if SgJobDefaults.Row > 7 then
     OpenFilesInGrid;
 end;
@@ -1035,7 +922,7 @@ begin
             else
               Cells[3, Row]:= 'ON';
           end;
-        4,5,6:
+        4,5,6, 8:
           begin
             Options:= Options + [goEditing, goAlwaysShowEditor];
           end;
@@ -1045,10 +932,11 @@ begin
             Cells[1, Row]:= '-1';
             Cells[2, Row]:= '0°';
             Cells[3, Row]:= 'OFF';
+            Cells[8,Row]:= '';
             for i:= 0 to c_numOfPens do
               job.pens[i].used:= false;
           end;
-        end;
+       end;
       job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
       UnHilite;
       OpenFilesInGrid;
@@ -1062,8 +950,8 @@ begin
     with SgFiles do begin
       job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
       Options:= Options - [goEditing, goAlwaysShowEditor];
-      Repaint;
       UnHilite;
+      Repaint;
       OpenFilesInGrid;
     end;
 end;
@@ -1071,6 +959,7 @@ end;
 
 procedure TForm1.SgFilesClick(Sender: TObject);
 // wird nach Loslassen der Maustaste ausgeführt!
+var my_ext: String;
 begin
   with SgFiles do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
@@ -1082,7 +971,15 @@ begin
         Cells[0, Row]:= '';
       job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
       UnHilite;
-      OpenFilesInGrid;
+      my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
+      if (my_ext = '.GBR') then begin
+        sgFiles.Cells[0, Row]:= '';
+        ConvertedFileName:='';
+        GerberFileName:= OpenFileDialog.Filename;
+        GerberFileNumber:= Row;
+        FormGerber.ShowModal;
+      end else
+        OpenFilesInGrid;
     end;
   end;
 end;

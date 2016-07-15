@@ -16,31 +16,20 @@ var
   err_1, err_2, n          :integer;
   cx, cy, cz               :integer;
   int_scale: Double;
-  my_speed, my_delay: Integer;
-  show_tool, show_sim: boolean;
+  my_delay: Integer;
+  show_drawing, show_3d: boolean;
 
 begin
-  my_speed:= Form1.TrackbarSimSpeed.Position;
-  show_tool:= my_speed < 10;
-  show_sim:= Form1.Show3DPreview1.Checked and Form1.CheckBoxSim.checked;
+  GLSsimMillAtPosMM(xf0, yf0, zf0, gcsim_dia, true, true);
+  my_delay:= 5;
   if fast_move then begin
-    int_scale:= gl_bresenham_scale div 2;  // gröbere Auflössung für Seeks
-    my_speed:= 5 + my_speed;
-    my_delay:= 20;
+    int_scale:= gl_bresenham_scale div 4;  // gröbere Auflössung für Seeks
   end else begin
     int_scale:= gl_bresenham_scale;
-    my_delay:= 10 - my_speed;
-    my_speed:= my_speed * gl_bresenham_scale div 2 + 1;
   end;
+  show_3d:= Form1.Show3DPreview1.Checked;
+  show_drawing:= Form1.ShowDrawing1.Checked;
 
-{
-  if my_speed > 10 then begin// Start und Ende immer zeichnen
-    if Form1.Show3DPreview1.Checked then
-      SimMillAtPos(xf0, yf0, zf0, sim_dia, true);
-    if Form1.ShowDrawing1.Checked then
-      SetDrawingToolPosMM(xf0, yf0, zf0, true);
-  end;
-}
   x0:= round(xf0*int_scale); x1:= round(xf1*int_scale);
   y0:= round(yf0*int_scale); y1:= round(yf1*int_scale);
   z0:= round(zf0*int_scale); z1:= round(zf1*int_scale);
@@ -79,13 +68,19 @@ begin
       err_1:= err_1 + dy2;
       err_2:= err_2 + dz2;
       xx:= xx + ix;
-      if show_sim then
-        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, show_tool);
-      if show_tool and Form1.ShowDrawing1.Checked then
-      // wird ansonsten von DecodeResponse gesetzt
+      if show_drawing then
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
-      if (n mod my_speed = 0) then
-        mdelay(my_delay);
+      if show_3d then
+        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
+      if (n mod 5 = 0) then begin
+        if fast_move then
+          mdelay(1)
+        else
+          mdelay(my_delay);
+        NeedsRedraw:= true;
+      end;
+      if isCancelled then
+        break;
     end;
   end else if (ay >= ax) and (ay >= az) then begin
     err_1:= dx2 - ay;
@@ -102,13 +97,19 @@ begin
       err_1:= err_1 + dx2;
       err_2:= err_2 + dz2;
       yy:= yy + iy;
-      if show_sim then
-        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, show_tool);
-      if show_tool and Form1.ShowDrawing1.Checked then
-      // wird ansonsten von DecodeResponse gesetzt
+      if show_drawing then
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
-      if (n mod my_speed = 0) then
-        mdelay(my_delay);
+      if show_3d then
+        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
+      if (n mod 5 = 0) then begin
+        if fast_move then
+          mdelay(1)
+        else
+          mdelay(my_delay);
+        NeedsRedraw:= true;
+      end;
+      if isCancelled then
+        break;
     end;
   end else if (az >= ax) and (az >= ay) then begin
     err_1:= dy2 - az;
@@ -125,19 +126,22 @@ begin
       err_1:= err_1 + dy2;
       err_2:= err_2 + dx2;
       zz:= zz + iz;
-      if show_sim then
-        GLSsimMillAtPosMM(xx/int_scale,yy/int_scale, zz/int_scale, gcsim_dia, false, show_tool);
-      if show_tool and Form1.ShowDrawing1.Checked then
-      // wird ansonsten von DecodeResponse gesetzt
+      if show_drawing then
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
-      if (n mod my_speed = 0) then
-        mdelay(my_delay);
+      if show_3d then
+        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
+      if (n mod 5 = 0) then begin
+        if fast_move then
+          mdelay(1)
+        else
+          mdelay(my_delay);
+        NeedsRedraw:= true;
+      end;
+      if isCancelled then
+        break;
     end;
   end;
-  if show_sim then
-    GLSsimMillAtPosMM(xf1, yf1, zf1, gcsim_dia, true, show_tool);
-  if show_tool and Form1.ShowDrawing1.Checked then
-    SetDrawingToolPosMM(xf1, yf1, zf1);
+  GLSsimMillAtPosMM(xf1, yf1, zf1, gcsim_dia, false, true);
 end;
 
 // #############################################################################
@@ -161,26 +165,19 @@ var
 begin
   if (pos('M3', my_str) > 0) or (pos('M4', my_str) > 0) then begin
     GLSspindle_on_off(true);
-    mdelay((12-Form1.TrackbarSimSpeed.Position)* 250);
-    if Form1.Show3DPreview1.Checked then // wird vorher aufgerufen
-      GLSmakeToolArray(gcsim_dia);
-  end;
-  ip := pos('Bit change:', my_str);  // ist eigentlich ein Kommentar
-  if ip > 0 then begin
-    ip := pos(':', my_str) + 1;
-    new_dia:= extract_float(my_str, ip, false);
-    new_tooltip:= extract_int(my_str, ip);
-    new_color:= extract_int(my_str, ip);
-    GLSsetSimToolMM(new_dia, new_tooltip, new_color);
+    mdelay(500);
     if Form1.Show3DPreview1.Checked then // wird vorher aufgerufen
       GLSmakeToolArray(gcsim_dia);
   end;
   if (my_str[1] = '/') or (my_str[1] = '(') then // andere Kommentare
     exit;
-  is_offset:= (pos('G49', my_str) > 0) or (pos('G92', my_str) > 0) or (pos('G43.1', my_str) > 0);     // G92
-  if is_offset then begin
+  if pos('G43', my_str) > 0 then // straight probe
     exit;
-  end;
+  if pos('G49', my_str) > 0 then // TLC cancel
+    exit;
+  if pos('G38', my_str) > 0 then // TLC cancel
+    exit;
+  is_offset:= (pos('G92', my_str) > 0);     // G92
   if pos('M5', my_str) > 0 then
     GLSspindle_on_off(false)
   else if pos('G1', my_str) > 0 then
@@ -189,41 +186,40 @@ begin
     gcsim_seek:= true;
 //  if pos('G38.2', my_str) > 0 then
 //    exit;
-  is_offset:= false;
   is_absolute:= (pos('G53', my_str) > 0);
   idx:= pos('X', my_str);
   if idx > 0 then begin
     inc(idx);
     x:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
-    if is_offset then
-      gcsim_offset_x:= x
-    else if is_absolute then
-      gcsim_x:= x - gcsim_offset_x
+    if is_offset then begin
+      grbl_wpos.x:= x;
+    end else if is_absolute then
+      grbl_wpos.x:= x - WorkZeroX
     else
-      gcsim_x:= x;
+      grbl_wpos.x:= x;
   end;
   idx:= pos('Y', my_str);
   if idx > 0 then begin
     inc(idx);
     y:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
-    if is_offset then
-      gcsim_offset_y:= y
-    else if is_absolute then
-      gcsim_y:= y - gcsim_offset_y
+    if is_offset then begin
+      grbl_wpos.y:= y;
+    end else if is_absolute then
+      grbl_wpos.y:= y - WorkZeroY
     else
-      gcsim_y:= y;
+      grbl_wpos.y:= y;
   end;
   idx:= pos('Z', my_str);
   if idx > 0 then begin
     inc(idx);
     z:= extract_float(my_str, idx, true); // GCode-Dezimaltrenner
-    if is_offset then
-      gcsim_offset_z:= z
-    else if is_absolute then
-      gcsim_z:= z - gcsim_offset_z
+    if is_offset then begin
+      grbl_wpos.z:= z;
+    end else if is_absolute then
+      grbl_wpos.z:= z - WorkZeroZ
     else
-      gcsim_z:= z;
-    if gcsim_z < 0 then
+      grbl_wpos.z:= z;
+    if grbl_wpos.z < 0 then
       gcsim_render_final:= true;
   end;
   idx:= pos('F', my_str);
@@ -231,11 +227,15 @@ begin
     inc(idx);
     gcsim_feed:= extract_int(my_str, idx);
   end;
-  bresenham3D(gcsim_x_old, gcsim_x, gcsim_y_old, gcsim_y,
-    gcsim_z_old, gcsim_z, gcsim_seek);
-  gcsim_x_old:= gcsim_x;
-  gcsim_y_old:= gcsim_y;
-  gcsim_z_old:= gcsim_z;
+  if not is_offset then
+    bresenham3D(gcsim_x_old, grbl_wpos.x, gcsim_y_old, grbl_wpos.y,
+      gcsim_z_old, grbl_wpos.z, gcsim_seek);
+  gcsim_x_old:= grbl_wpos.x;
+  gcsim_y_old:= grbl_wpos.y;
+  gcsim_z_old:= grbl_wpos.z;
+  grbl_mpos.x:= grbl_wpos.x + WorkZeroX;
+  grbl_mpos.y:= grbl_wpos.y + WorkZeroy;
+  grbl_mpos.z:= grbl_wpos.z + WorkZeroZ;
 end;
 
 
