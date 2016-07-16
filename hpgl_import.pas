@@ -371,6 +371,7 @@ begin
   if (LastAction = none) or ((my_action >= mill) and (LastAction < mill)) then begin
     CurrentBlockID:= new_block(fileID);
     blockArrays[fileID, CurrentBlockID].pen:= penOverride;
+    blockArrays[fileID, CurrentBlockID].closed:= true;
   end;
   if got_new_xy and (my_action >= mill) then begin
     append_point(fileID, CurrentBlockID, LastPoint);

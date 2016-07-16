@@ -468,8 +468,8 @@ begin
       blockArrays[fileID,b].closed:= true;
       setlength(blockArrays[fileID,b].outline_raw, my_pathlen);
       setlength(blockArrays[fileID,b].outline, my_pathlen);
-    end else
-      blockArrays[fileID,b].closed:= false;
+    end;// else
+//      blockArrays[fileID,b].closed:= false;
 
     if (not my_file_entry.mirror) and (my_file_entry.rotate = deg0) then
       continue;
