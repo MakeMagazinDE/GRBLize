@@ -30,6 +30,12 @@ const
     mid: TIntPoint;
   end;
 
+  TfloatBounds = record
+    min: TFloatPoint;
+    max: TFloatPoint;
+    mid: TFloatPoint;
+  end;
+
   Tfile_param = record
     valid: boolean;
     enable: boolean;
@@ -59,14 +65,13 @@ const
   end;
 
   Tatc_record = record
-    enable: boolean;
-    loaded: boolean;
-    used: boolean;
-    inslot: boolean; // Flag wird von Wechsler-Routine aktuallisiert
-    color: TColor;
-    diameter: Double;
-    tooltip: Integer;
+    enable: boolean; // ... und Pen ist eingeschaltet
+    inslot: boolean; // Flag wird von Wechsler-Routine aktualisiert
     pen: Integer;
+    TREFok: boolean;
+    TLCok: boolean;
+    TLCref: Double;
+    TLCdelta: Double;
   end;
 
   Tblock_record = record
@@ -88,6 +93,7 @@ const
     pen: Integer;
     shape: Tshape;
     closed: Boolean;
+    was_closed: Boolean;
     bounds: Tbounds;
     outlines: Tpaths;
     millings: Tpaths;
@@ -133,6 +139,12 @@ const
     table_x: Double;
     table_y: Double;
     table_z: Double;
+    fix1_x: Double;
+    fix1_y: Double;
+    fix1_z: Double;
+    fix2_x: Double;
+    fix2_y: Double;
+    fix2_z: Double;
   end;
 
 const
@@ -142,8 +154,8 @@ const
    ('CONTOUR', 'INSIDE', 'OUTSIDE', 'POCKET', 'DRILL');
   ShapeColorArray: Array [0..4] of Tcolor =
    (clBlack, clBlue, clRed, clFuchsia, clgreen);
-  ToolTipArray: Array [0..6] of String[15] =
-   ('Flat Tip', 'Cone 30°', 'Cone 45°', 'Cone 60°', 'Cone 90°','Ball Tip','Drill');
+  ToolTipArray: Array [0..7] of String[15] =
+   ('Flat Tip', 'Cone 30°', 'Cone 45°', 'Cone 60°', 'Cone 90°','Ball Tip','Drill', 'Dummy');
   zeroPoint: TIntPoint = (
     X: 0;
     Y: 0;
@@ -179,6 +191,8 @@ var
   blockArrays: Array [0..c_numOfFiles] of Array of Tblock_record;
 
   final_array: Array of Tfinal;
+  final_bounds: Tbounds; // Abmessungen gesamt inkl. Offsets in HPGL-Units, wird in ListBlocks gesetzt
+  final_bounds_mm: TfloatBounds; // Abmessungen gesamt inkl. Offsets in mm, wird in ListBlocks gesetzt
   atcArray: Array[0..31] of Tatc_record;
 
   CurrentPen, PendingPen: Integer;
@@ -223,9 +237,52 @@ var
   function ParseCommand(var position: Integer; var linetoparse: string;
     var value: Double; var letter: char): boolean;
 
+  procedure ExecuteFile(const AFilename: String;
+    AParameter, ACurrentDir: String; AWait, AHide: Boolean);
+
 implementation
 
 uses grbl_player_main;
+
+procedure ExecuteFile(const AFilename: String;
+                 AParameter, ACurrentDir: String; AWait, AHide: Boolean);
+var
+  si: TStartupInfo;
+  pi: TProcessInformation;
+
+begin
+  if Length(ACurrentDir) = 0 then
+    ACurrentDir := ExtractFilePath(AFilename)
+  else if AnsiLastChar(ACurrentDir) = '\' then
+    Delete(ACurrentDir, Length(ACurrentDir), 1);
+
+  FillChar(si, SizeOf(si), 0);
+  with si do begin
+    cb := SizeOf(si);
+    dwFlags := STARTF_USESHOWWINDOW;
+    if AHide then
+      wShowWindow := SW_HIDE
+    else
+      wShowWindow := SW_NORMAL;
+  end;
+  FillChar(pi, SizeOf(pi), 0);
+  AParameter := Format('"%s" %s', [AFilename, TrimRight(AParameter)]);
+
+  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, False,
+                   CREATE_DEFAULT_ERROR_MODE or CREATE_NEW_CONSOLE or
+                   NORMAL_PRIORITY_CLASS, Nil, PChar(ACurrentDir), si, pi) then
+  try
+    if AWait then
+      while WaitForSingleObject(pi.hProcess, 50) <> Wait_Object_0 do begin
+
+
+      end;
+    TerminateProcess(pi.hProcess, Cardinal(-1));
+  finally
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  end;
+end;
 
 
 function FloatToStrDot(my_val: Double):String;
@@ -264,17 +321,25 @@ begin
   value:= 0;
   letters:= '';
 
+  result:= p_none;
   if (position > my_end) then
     exit;
   // Leer- und Steuerzeichen überspringen
-  result:= p_none;
   repeat
     my_char := linetoparse[position]; // erstes Zeichen
     inc(position);
-  until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end + 1);
+  until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end);
+
   dec(position);   // Zeigt auf erstes relevantes Zeichen oder Ende
+  if position > my_end then
+    exit;
+
   my_char := linetoparse[position]; // erstes relevantes Zeichen
 
+  if my_char = 'T' then begin
+  value:= 0;
+
+  end;
   my_str:='';
   if my_char in ['A'..'z'] then begin
     result:= p_letters;
@@ -415,8 +480,8 @@ begin
       blockArrays[fileID,b].closed:= true;
       setlength(blockArrays[fileID,b].outline_raw, my_pathlen);
       setlength(blockArrays[fileID,b].outline, my_pathlen);
-    end else
-      blockArrays[fileID,b].closed:= false;
+    end;// else
+//      blockArrays[fileID,b].closed:= false;
 
     if (not my_file_entry.mirror) and (my_file_entry.rotate = deg0) then
       continue;
@@ -471,7 +536,7 @@ begin
 end;
 
 procedure block_scale(fileID, blockID: Integer);
-// Block mit Pen-Offsets und Skalierung versehen
+// Block mit Pen-Skalierung versehen
 var i, my_pen, my_len: Integer;
   my_bounds: Tbounds;
   my_pt: TintPoint;
@@ -513,7 +578,6 @@ begin
   my_bounds.mid.x:= (my_bounds.min.x + my_bounds.max.x) div 2;
   my_bounds.mid.y:= (my_bounds.min.y + my_bounds.max.y) div 2;
   blockArrays[fileID,blockID].bounds:= my_bounds;
-
 end;
 
 procedure block_scale_file(fileID: Integer);
@@ -611,8 +675,8 @@ begin
 end;
 
 // #############################################################################
-{$I hpgl_import.pas}
-{$I drill_import.pas}
+{$I hpgl_import.inc}
+{$I drill_import.inc}
 // #############################################################################
 
 
@@ -640,6 +704,7 @@ begin
     final_array[i].enable:= my_block.enable;
     final_array[i].pen:= my_block.pen;
     final_array[i].closed:= my_block.closed;
+    final_array[i].was_closed:= my_block.closed;
     final_array[i].bounds:= my_block.bounds;
 
     // ersten Outline-Pfad übertragen
@@ -808,7 +873,7 @@ begin
   // Werkzeugkorrektur-Offsets für fertiges BlockArray
   for i:= 0 to high(final_array) do
     compile_milling(final_array[i]);
-  list_blocks;
+  ListBlocks;
 end;
 
 procedure item_change(arr_idx: Integer);
@@ -816,7 +881,6 @@ procedure item_change(arr_idx: Integer);
 begin
   if (arr_idx < length(final_array)) and (arr_idx >= 0) then
     compile_milling(final_array[arr_idx]);
-  list_blocks;
 end;
 
 

@@ -7,8 +7,8 @@ object Form2: TForm2
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
   Caption = 'Drawing'
-  ClientHeight = 623
-  ClientWidth = 864
+  ClientHeight = 563
+  ClientWidth = 856
   Color = clBtnFace
   Constraints.MaxHeight = 800
   Constraints.MaxWidth = 1200
@@ -23,16 +23,21 @@ object Form2: TForm2
   OnActivate = FormActivate
   OnClose = FormClose
   OnCreate = FormCreate
+  OnMouseWheel = FormMouseWheel
   OnPaint = FormPaint
   OnResize = FormResize
+  DesignSize = (
+    856
+    563)
   PixelsPerInch = 96
   TextHeight = 13
   object DrawingBox: TPaintBox
     Left = 0
     Top = 0
-    Width = 1200
-    Height = 800
+    Width = 857
+    Height = 565
     Hint = 'Milling View - Drag with left-click or modify with right-click'
+    Anchors = [akLeft, akTop, akRight, akBottom]
     Color = clCream
     DragCursor = crSizeAll
     ParentColor = False
@@ -41,6 +46,8 @@ object Form2: TForm2
     OnMouseDown = DrawingBoxMouseDown
     OnMouseMove = DrawingBoxMouseMove
     OnMouseUp = DrawingBoxMouseUp
+    ExplicitWidth = 865
+    ExplicitHeight = 625
   end
   object Panel1: TPanel
     Left = 8
@@ -80,7 +87,7 @@ object Form2: TForm2
       Width = 129
       Height = 20
       Hint = 'View zoom - disabled when camera ON'
-      Max = 20
+      Max = 50
       Min = 1
       PageSize = 1
       Position = 4
@@ -122,7 +129,7 @@ object Form2: TForm2
       Top = 108
       Width = 16
       Height = 17
-      Caption = '20'
+      Caption = '50'
       TabOrder = 5
     end
     object CheckBoxToolpath: TCheckBox
@@ -140,10 +147,10 @@ object Form2: TForm2
   object PopupMenuObject: TPopupMenu
     Left = 1120
     Top = 8
-    object pu_enable: TMenuItem
+    object pu_enabled: TMenuItem
       Caption = 'Enabled'
       Checked = True
-      OnClick = pu_enableClick
+      OnClick = pu_enabledClick
     end
     object N1: TMenuItem
       Caption = '-'
@@ -248,10 +255,10 @@ object Form2: TForm2
     AutoPopup = False
     Left = 1120
     Top = 8
-    object MenuItem1: TMenuItem
+    object pu_PointEnabled: TMenuItem
       Caption = 'Enabled'
       Checked = True
-      OnClick = pu_enableClick
+      OnClick = pu_enabledClick
     end
     object MenuItem2: TMenuItem
       Caption = '-'
@@ -308,12 +315,12 @@ object Form2: TForm2
       Caption = '-'
       GroupIndex = 2
     end
-    object MenuItem14: TMenuItem
+    object pu_MoveToPoint: TMenuItem
       Caption = 'Move Tool to Point'
       GroupIndex = 2
       OnClick = pu_moveToolToPointClick
     end
-    object MenuItem22: TMenuItem
+    object pu_MoveCamToPoint: TMenuItem
       Caption = 'Move Cam to Point'
       GroupIndex = 2
       OnClick = pu_moveCamToPointClick

@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ExtCtrls,  Buttons, StdCtrls, ComCtrls, Registry, 
+  Dialogs, ExtCtrls,  Buttons, StdCtrls, ComCtrls, Registry, MMsystem,
   VFrames;
 
 type
@@ -123,7 +123,6 @@ end;
 procedure TForm3.FormCreate(Sender: TObject);
 var
   grbl_ini:TRegistry;
-  form_visible: boolean;
 
 begin
   grbl_ini:= TRegistry.Create;
@@ -136,9 +135,10 @@ begin
       Left:= grbl_ini.ReadInteger('CamFormLeft');
     if grbl_ini.ValueExists('CamOn') then
       CamIsOn:= grbl_ini.ReadBool('CamOn');
+{
     if grbl_ini.ValueExists('CamFormVisible') then
       form_visible:= grbl_ini.ReadBool('CamFormVisible');
-  finally
+}  finally
     grbl_ini.Free;
   end;
 
@@ -200,15 +200,27 @@ begin
       fVideoImage.VideoStop;
   end;
   fActivated := false;
-  Form1.WindowMenu1.Items[1].Checked:= false;
+  Form1.ShowSpindleCam1.Checked:= false;
 end;
+
+// #############################################################################
 
 procedure TForm3.BtnCamAtZeroClick(Sender: TObject);
 begin
+  WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Offset cam to part zero');
+
   grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+
+  WorkZeroX:= grbl_mpos.X + job.cam_x;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y + job.cam_x;
+  JogY:= WorkZeroY;
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+  NeedsRedraw:= true;
 end;
 
 procedure TForm3.BtnCamAtPointClick(Sender: TObject);
@@ -226,9 +238,20 @@ begin
   end;
   x:= x - job.cam_x;
   y:= y - job.cam_y;
+
   grbl_offsXY(x, y);
-  SendGrblAndWaitForIdle;
+  SendListToGrbl;
+
+  WorkZeroX:= grbl_mpos.X - x;
+  JogX:= WorkZeroX;
+  WorkZeroY:= grbl_mpos.Y - y;
+  JogY:= WorkZeroY;
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+  NeedsRedraw:= true;
 end;
+
+// #############################################################################
 
 procedure TForm3.BtnMoveCamPointClick(Sender: TObject);
 var x,y: Double;
@@ -245,21 +268,32 @@ begin
   end;
   x:= x - job.cam_x;
   y:= y - job.cam_y;
-  grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(x, y, false);
+    grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
 end;
 
 procedure TForm3.BtnMoveCamZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to part zero');
-  grbl_moveZ(0, true);  // move Z up
-  grbl_moveXY(-job.cam_x,-job.cam_y, false);
-  grbl_moveZ(job.cam_z_abs, true);
-  SendGrblAndWaitForIdle;
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(-job.cam_x,-job.cam_y, false);
+    grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
 end;
 
 procedure TForm3.BtnMoveToolPointClick(Sender: TObject);
@@ -273,25 +307,52 @@ begin
     Form1.Memo1.lines.add('Move tool to center');
     hilite_center_to(x,y);
   end;
-  grbl_moveZ(0, true);  // move Z up absolute
-  grbl_moveXY(x, y, false);
-  SendGrblAndWaitForIdle;
-  grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(x, y, false);
+    if WorkZeroAllDone then begin
+      grbl_moveZ(job.z_penlift, false);
+    end else begin
+      Form1.Memo1.lines.add('WARNING: Z Zero not set!');
+      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+    end;
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
+
+  SendListToGrbl;
 end;
 
 procedure TForm3.BtnMoveToolZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to part zero');
-  grbl_moveZ(0, true);  // move Z up absolute
-  grbl_moveXY(0,0, false);
-  grbl_moveZ(job.z_penlift, false);
-  SendGrblAndWaitForIdle;
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(0,0, false);
+    if WorkZeroAllDone then begin
+      grbl_moveZ(job.z_penlift, false);
+    end else begin
+      Form1.Memo1.lines.add('WARNING: Z Zero not set!');
+      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+    end;
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
 end;
+
+// #############################################################################
 
 procedure TForm3.Timer1Timer(Sender: TObject);
 begin
+  if CamIsOn and (RadioGroupCam.ItemIndex = 0) then
+    RadioGroupCam.ItemIndex:= 1;
   if (HilitePoint < 0) and (HiliteBlock < 0) then begin
     BtnCamAtPoint.Enabled:= false;
     BtnMoveToolPoint.Enabled:= false;

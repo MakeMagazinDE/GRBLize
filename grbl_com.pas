@@ -7,13 +7,15 @@ unit grbl_com;
 interface
 
 //uses SysUtils, FTDIdll, FTDIchip, FTDItypes;
-uses SysUtils, StrUtils, Windows, Classes, Forms, Controls, Menus,
+uses SysUtils, StrUtils, DateUtils, Windows, Classes, Forms, Controls, Menus, MMsystem,
   Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect;
 
 type
   TFileBuffer = Array of byte;
+   t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
   procedure mdelay(const Milliseconds: DWord);
+  procedure ShowAliveState(my_state: t_alivestates);
 
   function SetupFTDI: String;
   function InitFTDI(my_device:Integer; baud_str: String):String;
@@ -31,9 +33,6 @@ type
 
   // fordert Maschinenstatus mit "?" an
   function grbl_statusStr: string;
-
-  // Resync, sende #13 und warte 1000 ms auf OK
-  function grbl_resync: boolean;
 
   // GCode-String oder Char an GRBL senden, auf OK warten wenn my_getok = TRUE
   function grbl_sendStr(sendStr: String; my_getok: boolean): String;
@@ -99,6 +98,28 @@ type
 
   procedure grbl_wait_for_timeout(timeout: Integer);
 
+type TStopWatch = class
+   private
+     fFrequency : TLargeInteger;
+     fIsRunning: boolean;
+     fIsHighResolution: boolean;
+     fStartCount, fStopCount : TLargeInteger;
+     procedure SetTickStamp(var lInt : TLargeInteger);
+     function GetElapsedTicks: TLargeInteger;
+     function GetElapsedMilliseconds: TLargeInteger;
+     function GetCurrentMilliseconds : TLargeInteger;
+   public
+     constructor Create(const startOnCreate : boolean = false) ;
+     procedure Start;
+     procedure Stop;
+     property IsHighResolution : boolean read fIsHighResolution;
+     property ElapsedTicks : TLargeInteger read GetElapsedTicks;
+     property ElapsedMilliseconds : TLargeInteger read GetElapsedMilliseconds;
+     property CurrentMilliseconds : TLargeInteger read GetCurrentMilliseconds;
+     property IsRunning : boolean read fIsRunning;
+   end;
+
+
 var
 //FTDI-Device
   ftdi: Tftdichip;
@@ -114,6 +135,9 @@ var
   grbl_checksema: boolean;
   grbl_delay_short, grbl_delay_long: Word;
   ComFile: THandle;
+  AliveIndicatorDirection: Boolean;
+  AliveCount: Integer;
+  LastAliveState: t_alivestates;
   grbl_is_connected: boolean;
 
 
@@ -121,17 +145,103 @@ implementation
 
 uses grbl_player_main, glscene_view, Graphics;
 
+// #############################################################################
+
+constructor TStopWatch.Create(const startOnCreate : boolean = false) ;
+begin
+  inherited Create;
+
+  fIsRunning := false;
+
+  fIsHighResolution := QueryPerformanceFrequency(fFrequency);
+  if not fIsHighResolution then
+    fFrequency := MSecsPerSec;
+
+  if startOnCreate then
+    Start;
+end;
+
+function TStopWatch.GetElapsedTicks: TLargeInteger;
+begin
+  result := fStopCount - fStartCount;
+end;
+
+procedure TStopWatch.SetTickStamp(var lInt : TLargeInteger) ;
+begin
+  if fIsHighResolution then
+     QueryPerformanceCounter(lInt)
+   else
+     lInt := MilliSecondOf(Now) ;
+end;
+
+function TStopWatch.GetElapsedMilliseconds: TLargeInteger;
+// Millisekunden von StopWatch.Start bis StopWatch.Stop
+begin
+  result := (MSecsPerSec * (fStopCount - fStartCount)) div fFrequency;
+end;
+
+function TStopWatch.GetCurrentMilliseconds: TLargeInteger;
+// aktuelle Millisekunden seit StopWatch.Start
+var current_ticks: TLargeInteger;
+begin
+  SetTickStamp(current_ticks) ;
+  result := (MSecsPerSec * (current_ticks - fStartCount)) div fFrequency;
+end;
+
+procedure TStopWatch.Start;
+// Stoppuhr "starten" (d.h. fStartCount stetzen)
+begin
+  SetTickStamp(fStartCount) ;
+  fIsRunning := true;
+end;
+
+procedure TStopWatch.Stop;
+// Stoppuhr "anhalten" (d.h. fStopCount stetzen)
+begin
+  SetTickStamp(fStopCount) ;
+  fIsRunning := false;
+end;
+
+// #############################################################################
+
 procedure mdelay(const Milliseconds: DWord);
 var
   FirstTickCount: DWord;
 begin
   FirstTickCount := GetTickCount;
-  while ((GetTickCount - FirstTickCount) < Milliseconds) do
-  begin
-    Application.ProcessMessages;
-    Sleep(0);
+  while ((GetTickCount - FirstTickCount) < Milliseconds) do begin
+    if StartupDone then
+      Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
+    sleep(0);
   end;
 end;
+
+procedure ShowAliveState(my_state: t_alivestates);
+begin
+  LastAliveState:= my_state;
+  with Form1 do
+    case my_state of
+      s_alive_responded:
+        begin
+          PanelAlive.Caption:='Resp OK';
+          PanelAlive.Color:= (AliveCount shl 12) or clgreen;
+        end;
+      s_alive_wait_indef:
+        begin
+          PanelAlive.Caption:='Wait';
+          PanelAlive.Color:= clred;
+        end;
+      s_alive_wait_timeout:
+        begin
+          PanelAlive.Caption:='Wait';
+          PanelAlive.Color:= clred or clgreen;
+        end;
+    end;
+  Form1.PanelAlive.Update;
+end;
+
+
+// #############################################################################
 
 function ExtComName(ComNr: DWORD): string;
 begin
@@ -203,6 +313,8 @@ begin
     COMReceiveCount:= Comstat.cbInQue
   else
     COMReceiveCount:= 0;
+  if GettickCount mod 10 = 0 then
+    ShowAliveState(LastAliveState);
 end;
 
 procedure COMRxClear;
@@ -269,33 +381,43 @@ begin
     Result := char(c);
 end;
 
+// #############################################################################
+
 function COMReceiveStr(timeout: DWORD): string;
 // wartet unendlich, wenn timeout = 0
 var
   my_str: AnsiString;
-  BytesRead: DWORD;
   i: Integer;
   my_char: Char;
-  targettime: cardinal;
+  target_time, current_time: TLargeInteger;
   has_timeout: Boolean;
 begin
+  StopWatch.Start;
   COMSetTimeout(1);
   Result := '';
   my_str:= '';
+  my_char:= #0;
   has_timeout:= timeout > 0;
-  targettime := GetTickCount + cardinal(timeout);
+  current_time:= StopWatch.GetCurrentMilliseconds;
+  target_time := current_time + cardinal(timeout);
   repeat
     i:= COMReceiveCount;
     if i > 0 then begin
       my_char:= COMReadChar;
       if my_char >= #32 then
         my_str:= my_str + my_char;
+    end else begin
+      if StartupDone then
+        Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
+      sleep(0);
     end;
-    Application.processmessages;
-  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelJob;
-  if has_timeout then
-    if (GetTickCount > targettime) then
+    current_time:= StopWatch.GetCurrentMilliseconds;
+  until (my_char= #10) or ((current_time > target_time) and has_timeout) or isWaitExit;
+  if has_timeout then begin
+    if (current_time > target_time) then begin
       my_str:= '#Timeout';
+    end;
+  end;
   Result:= my_str;
 end;
 
@@ -337,24 +459,33 @@ var
   my_str: AnsiString;
   i: Integer;
   my_char: AnsiChar;
-  targettime: cardinal;
+  target_time, current_time: TLargeInteger;
   has_timeout: Boolean;
+
 begin
+  StopWatch.Start;
   my_str:= '';
   has_timeout:= timeout > 0;
-  targettime := GetTickCount + cardinal(timeout);
+  current_time:= StopWatch.GetCurrentMilliseconds;
+  target_time := current_time + cardinal(timeout);
   repeat
     i:= FTDIreceiveCount;
     if i > 0 then begin
       ftdi.read(@my_char, 1, i);
       if my_char >= #32 then
         my_str:= my_str + my_char;
+    end else begin
+      if StartupDone then
+        Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
+      sleep(0);
     end;
-    Application.processmessages;
-  until (my_char= #10) or ((GetTickCount > targettime) and has_timeout) or CancelJob;
-  if has_timeout then
-    if (GetTickCount > targettime) then
+    current_time:= StopWatch.GetCurrentMilliseconds;
+  until (my_char= #10) or ((current_time > target_time) and has_timeout) or isWaitExit;
+  if has_timeout then begin
+    if (current_time > target_time) then begin
       my_str:= '#Timeout';
+    end;
+  end;
   Result:= my_str;
 end;
 
@@ -420,6 +551,16 @@ end;
 // #############################################################################
 // #############################################################################
 
+procedure grbl_wait_for_timeout(timeout: Integer);
+begin
+  if isGrblActive then
+    repeat
+      if StartupDone then
+        Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
+      sleep(0);
+    until (grbl_receiveStr(timeout) = '#Timeout') or isEmergency or isWaitExit;
+end;
+
 
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
@@ -428,48 +569,92 @@ begin
   grbl_statusStr:= grbl_receiveStr(100);
 end;
 
-
-function grbl_resync: boolean;
-// Resync, sende #13 und warte 50 ms auf OK
+function grbl_checkResponse: Boolean;
 var my_str: AnsiString;
   i: Integer;
+  pos_changed: Boolean;
 begin
+  ShowAliveState(s_alive_wait_timeout);
   my_str:= '';
+  result:= false;
   if ftdi_isopen or com_isopen then begin
-    grbl_wait_for_timeout(50);
-    for i:= 0 to 3 do begin  // Anzahl Versuche
-      grbl_sendStr(#13,false);
-      my_str:= uppercase(grbl_receiveStr(50));
-      if (my_str = 'OK') or (pos(my_str,'ALARM') > 0) or (pos(my_str,'ERROR') > 0) then
+    DisableStatus;
+    grbl_rx_clear;
+    grbl_sendStr(#24, false);   // Soft Reset CTRL-X, Stepper sofort stoppen
+    sleep(100);
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('Grbl Startup Message (Version):');
+    Form1.Memo1.lines.add('=========================================');
+    repeat
+      my_str:= grbl_receiveStr(20);
+      if length(my_Str) > 1 then
+        Form1.Memo1.lines.add(my_str);
+    until my_Str = '#Timeout';
+    for i := 0 to 3 do begin
+      my_str:= grbl_statusStr;
+      MachineState:= none;
+      DecodeStatus(my_str, pos_changed);
+      if MachineState <> none then
         break;
     end;
-    grbl_resync:= (my_str = 'OK');
-  end else
-    grbl_resync:= false;
-end;
-
-function grbl_checkResponse: Boolean;
-begin
-  DisableStatus;
-  grbl_sendlist.Clear;
-  grbl_sendStr('$X' + #13, false);
-  grbl_wait_for_timeout(50);
-  result:= false;
-  if ftdi_isopen or com_isopen then
-    if grbl_resync then
-      result:= true
-    else
-      MessageDlg('No response or GRBL Resync failed.'
-        + #13 + 'Check if GRBL version matches setting in GRBL Defaults page'
-        + #13 + 'setting in GRBL Defaults page.', mtWarning, [mbOK], 0);
-  EnableStatus;
+    Form1.Memo1.lines.add(my_str);
+    Form1.Memo1.lines.add('=========================================');
+    HomingPerformed:= false;
+    case MachineState of
+      alarm:
+        begin
+          // Nach Neustart immer Alarm wg. Homing Lock
+          PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+          Form1.Memo1.lines.add('');
+          Form1.Memo1.lines.add('WARNING: Alarm state, machine not homed!');
+          Form1.Memo1.lines.add('Press HOME CYCLE on machine panel');
+          Form1.Memo1.lines.add('or Machine Control page.');
+          result:= true; // Homing ermöglichen
+        end;
+      hold:
+        begin
+          PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+          Form1.Memo1.lines.add('');
+          Form1.Memo1.lines.add('ERROR: Machine on HOLD.');
+          Form1.Memo1.lines.add('Press CONTINUE or RESET on machine panel.');
+          Form1.Memo1.lines.add('Try connecting again.');
+        end;
+      idle:
+        begin
+          grbl_wait_for_timeout(50);
+          grbl_sendStr(#13,false);
+          my_str:= ansiuppercase(grbl_receiveStr(20));
+          if (pos('OK',my_str) > 0) then begin
+            result:= true;
+            HomingPerformed:= true;
+            Form1.Memo1.lines.add('');
+            Form1.Memo1.lines.add('Machine ready.')
+          end else begin
+            Form1.Memo1.lines.add('');
+            PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+            Form1.Memo1.lines.add('ERROR: GRBL resync failed.');
+            Form1.Memo1.lines.add('Try connecting again.');
+          end;
+        end;
+    else begin
+        PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+        Form1.Memo1.lines.add('');
+        Form1.Memo1.lines.add('ERROR: Communication fault - no response.');
+        Form1.Memo1.lines.add('Press RESET on machine panel.');
+        Form1.Memo1.lines.add('Try connecting again.');
+        Form1.BtnCloseClick(nil);
+      end;
+    end;
+    if result then
+      EnableStatus;
+  end;
+  ShowAliveState(s_alive_responded);
 end;
 
 procedure grbl_addStr(my_str: String);
 // Zeile an Sendeliste anhängen, wird in Timer2 behandelt
 begin
-  if (not CancelJob) then
-    grbl_sendlist.add(my_str);
+  grbl_sendlist.add(my_str);
 end;
 
 // #############################################################################
@@ -684,7 +869,7 @@ var i, my_len, my_z_feed: Integer;
       if z < my_z_end then
         z:= my_z_end;
       grbl_millZF(z, my_z_feed);
-    until (z <= my_z_end) or (Form1.BtnCancel.Tag = 1);
+    until (z <= my_z_end) or isCancelled;
   end;
   grbl_moveZ(job.z_penup, false);
 end;
@@ -712,8 +897,6 @@ begin
     z:= -job.pens[millpen].z_end;
     if z < my_z_limit then
       z:= my_z_limit;
-    if i mod 25 = 0 then
-      Application.ProcessMessages;
     grbl_moveZ(job.z_penup, false);
     x:= (millpath[0].x + offset.x) / c_hpgl_scale;
     y:= (millpath[0].y + offset.y) / c_hpgl_scale;
@@ -728,16 +911,16 @@ begin
       x:= (millpath[i].x + offset.x) / c_hpgl_scale;
       y:= (millpath[i].y + offset.y) / c_hpgl_scale;
       grbl_millXYF(x,y, job.pens[millpen].speed);
-      if (Form1.BtnCancel.Tag = 1) then
+      if isCancelled then
         break;
     end;
-    if is_closedpoly and (not (Form1.BtnCancel.Tag = 1)) then begin
+    if is_closedpoly and (not isCancelled) then begin
       x:= (millpath[0].x + offset.x) / c_hpgl_scale;
       y:= (millpath[0].y + offset.y) / c_hpgl_scale;
       grbl_millXYF(x,y, job.pens[millpen].speed);
     end;
 
-  until (my_z_limit <= my_z_end) or (Form1.BtnCancel.Tag = 1);
+  until (my_z_limit <= my_z_end) or isCancelled;
   grbl_moveZ(job.z_penup, false);
 end;
 
@@ -759,7 +942,7 @@ begin
   end;
   { Iterate through the device list that was returned }
   if ftdi_device_count > 0 then begin
-    result:= InttoStr (ftdi_device_count) +  ' FTDI devices found';
+    result:= InttoStr (ftdi_device_count) +  ' FTDI device(s) found';
     for i := 0 to ftdi_device_count - 1 do begin
     {$IFDEF UNICODE}
       ftdi_sernum_arr[i] := UnicodeString(ftdi_device_list^[i].serialNumber);
@@ -844,14 +1027,6 @@ begin
     end else
       result:= 'Reset error';
   end;
-end;
-
-procedure grbl_wait_for_timeout(timeout: Integer);
-begin
-  if grbl_is_connected then
-    repeat
-      Application.ProcessMessages;
-    until grbl_receiveStr(timeout) = '#Timeout';
 end;
 
 end.

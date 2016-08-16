@@ -48,8 +48,21 @@ object Form4: TForm4
     Width = 249
     Height = 97
     TabOrder = 1
+    object LabelActive: TLabel
+      Left = 10
+      Top = 71
+      Width = 125
+      Height = 13
+      Caption = 'SIMULATION NOT ACTIVE'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clRed
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+    end
     object CheckToolpathVisible: TCheckBox
-      Left = 16
+      Left = 10
       Top = 36
       Width = 97
       Height = 17
@@ -91,7 +104,7 @@ object Form4: TForm4
     end
     object PanelLED: TPanel
       Left = 158
-      Top = 65
+      Top = 67
       Width = 61
       Height = 21
       Hint = 'Busy/Running'
@@ -112,7 +125,7 @@ object Form4: TForm4
       OnClick = PanelLEDClick
     end
     object CheckWorkGrid: TCheckBox
-      Left = 16
+      Left = 10
       Top = 12
       Width = 125
       Height = 17
@@ -120,17 +133,14 @@ object Form4: TForm4
       TabOrder = 4
       OnClick = CheckWorkGridClick
     end
-    object CheckLiveRender: TCheckBox
-      Left = 16
-      Top = 60
-      Width = 97
-      Height = 17
-      Hint = 'Rendering of Finite Element view will be on-the-fyl (slow!)'
-      Caption = 'Live Rendering'
-      Enabled = False
-      ParentShowHint = False
-      ShowHint = True
+    object BtnClearPathNodes: TButton
+      Left = 102
+      Top = 35
+      Width = 29
+      Height = 21
+      Caption = 'CLR'
       TabOrder = 5
+      OnClick = BtnClearPathNodesClick
     end
   end
   object GLScene1: TGLScene
@@ -138,9 +148,7 @@ object Form4: TForm4
     Left = 16
     Top = 168
     object GLDummyCubeCenter: TGLDummyCube
-      Direction.Coordinates = {000000000000803F6C31713200000000}
-      RollAngle = 135.000000000000000000
-      Up.Coordinates = {F40435BF9A8C2A32F20435BF00000000}
+      Up.Coordinates = {00000000FFFF7F3F0000000000000000}
       Pickable = False
       CubeSize = 1.000000000000000000
       object GLDummyCubePartZero: TGLDummyCube
@@ -170,6 +178,10 @@ object Form4: TForm4
           end
         end
         object GLHeightFieldWP: TGLHeightField
+          Material.FrontProperties.Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3E6666263F}
+          Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FCDCC4C3F6666263F}
+          Material.FrontProperties.Emission.Color = {000000000000000000000000D9CEF73E}
+          Material.BlendingMode = bmTransparency
           Material.Texture.Compression = tcHighSpeed
           Direction.Coordinates = {00000000000000800000803F00000000}
           Position.Coordinates = {00000000000000000000803F0000803F}
@@ -466,8 +478,8 @@ object Form4: TForm4
           object GLCylinderToolshaft: TGLCylinder
             Material.BackProperties.Ambient.Color = {C9C8C83EC9C8C83EC9C8C83E0000803F}
             Material.BackProperties.Diffuse.Color = {C9C8483FC9C8483FC9C8483F0000803F}
-            Material.FrontProperties.Ambient.Color = {C9C8483FC9C8483FC9C8483F0000803F}
-            Material.FrontProperties.Diffuse.Color = {C9C8483FC9C8483FC9C8483F0000803F}
+            Material.FrontProperties.Ambient.Color = {0000000000000000000000000000803F}
+            Material.FrontProperties.Diffuse.Color = {C9C8C83EC9C8C83EC9C8C83E0000803F}
             Direction.Coordinates = {000000000000803F0000000000000000}
             PitchAngle = 90.000000000000000000
             Position.Coordinates = {00000000000000000000C03F0000803F}
@@ -479,6 +491,7 @@ object Form4: TForm4
             TopRadius = 0.250000000000000000
           end
           object GLAnnulusCollet: TGLAnnulus
+            Material.FrontProperties.Ambient.Color = {C9C8483EC9C8483EC9C8483E0000803F}
             Material.FrontProperties.Diffuse.Color = {C9C8C83EC9C8C83EC9C8C83E0000803F}
             Material.Texture.Image.Picture.Data = {
               07544269746D6170BA9C0200424DBA9C02000000000036000000280000001E01
@@ -5846,12 +5859,14 @@ object Form4: TForm4
             TopRadius = 0.400000005960464500
           end
           object GLSphereTooltip: TGLSphere
+            Material.FrontProperties.Ambient.Color = {0000000000000000000000000000803F}
             Direction.Coordinates = {00000000000080BF0000000000000000}
             Up.Coordinates = {00000000000000000000803F00000000}
             Pickable = False
             Radius = 0.200000002980232200
           end
           object GLCylinderTooltip: TGLCylinder
+            Material.FrontProperties.Ambient.Color = {0000000000000000000000000000803F}
             Direction.Coordinates = {00000000000080BF0000000000000000}
             Up.Coordinates = {00000000000000000000803F00000000}
             Pickable = False
@@ -5901,7 +5916,7 @@ object Form4: TForm4
         SpotDirection.Coordinates = {00000000000000000000000000000000}
       end
       object GLDummyCubeTarget: TGLDummyCube
-        Direction.Coordinates = {00000000000000800000803F00000000}
+        Up.Coordinates = {0000C0B30000803F0000000000000000}
         Pickable = False
         CubeSize = 1.000000000000000000
         object GLSphere2: TGLSphere
@@ -5931,6 +5946,10 @@ object Form4: TForm4
         end
       end
       object GLCubeWP: TGLCube
+        Material.FrontProperties.Ambient.Color = {CDCC4C3ECDCC4C3ECDCC4C3E0000003F}
+        Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FCDCC4C3F0000003F}
+        Material.FrontProperties.Emission.Color = {000000000000000000000000F853E33E}
+        Material.BlendingMode = bmTransparency
         Direction.Coordinates = {00000000000080BF0000000000000000}
         Position.Coordinates = {00004040000000400000003F0000803F}
         Up.Coordinates = {00000000000000000000803F00000000}
@@ -5965,7 +5984,7 @@ object Form4: TForm4
         Material.FaceCulling = fcCull
         Pickable = False
         Contours = <>
-        Parts = [espOutside, espStartPolygon, espStopPolygon]
+        Parts = [espOutside, espInside, espStartPolygon, espStopPolygon]
         Height = 0.500000000000000000
         Stacks = 2
         Normals = nsSmooth
@@ -5997,12 +6016,12 @@ object Form4: TForm4
       FocalLength = 50.000000000000000000
       SceneScale = 4.000000000000000000
       TargetObject = GLDummyCubeTarget
-      Position.Coordinates = {00000C4200000C4200000C420000803F}
-      Direction.Coordinates = {0000000000000080FFFF7F3F00000000}
+      Position.Coordinates = {0000000000000CC20000C8410000803F}
+      Direction.Coordinates = {0000803F000000000000008000000000}
+      Up.Coordinates = {00000000000000000000803F00000000}
     end
   end
   object Timer1: TTimer
-    Interval = 2000
     OnTimer = Timer1Timer
     Left = 16
     Top = 216
@@ -6024,7 +6043,12 @@ object Form4: TForm4
     MoveUpWhenMovingForward = True
     InvertHorizontalSteeringWhenUpsideDown = True
     MovingObject = GLCamera1
-    UseVirtualUp = True
+    InertiaParams.MovementInertia = 100.000000000000000000
+    InertiaParams.TurnMaxAngle = 1.000000000000000000
+    InertiaParams.TurnInertia = 100.000000000000000000
+    InertiaParams.TurnSpeed = 100.000000000000000000
+    MoveAroundParams.Inertia = 75.000000000000000000
+    MoveAroundParams.MaxAngle = 2.000000000000000000
     MoveAroundParams.TargetObject = GLDummyCubeTarget
     Left = 64
     Top = 224

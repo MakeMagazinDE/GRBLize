@@ -53,15 +53,13 @@ begin
   end;
 end;
 }
-procedure drill_import_line(my_line: String; fileID, penOverride: Integer);
+procedure drill_import_line(my_line: String; fileID, penOverride: Integer; fac: Double);
 // Actions: none, lift, seek, drill, mill
 var
   my_x, my_y: double;
   my_pos: Integer;
-  my_valid: boolean;
   my_char: char;
   my_tool, my_block_Idx: Integer;
-  has_dec_point: boolean;  // Dezimalpunkt in Koordinaten (selten!)
   num_dec_digits: Integer; // Anzahl Dezimalstellen
   my_val, my_fac: Double;
 
@@ -94,16 +92,16 @@ begin
           PendingAction:= none;
           if use_inches_in_drillfile then begin
           // Enthält String einen Dezimalpunkt?
-            my_fac:= 25.4;
-            if not AnsiContainsStr(my_line, '.') then
-              my_fac:= my_fac / power(10,4); // 4 = Anzahl der Nachkommastellen
+            my_fac:= 25.4;                   // 4 = Anzahl der Nachkommastellen
+            num_dec_digits:= 4;
           end else begin
           // Enthält String einen Dezimalpunkt?
             my_fac:= 1;
-            if not AnsiContainsStr(my_line, '.') then
-              my_fac:= my_fac / power(10,3); // 3 = Anzahl der Nachkommastellen
+            num_dec_digits:= 3;             // 3 = Anzahl der Nachkommastellen
           end;
 
+          if not AnsiContainsStr(my_line, '.') then
+            my_fac:= my_fac / power(10, num_dec_digits);
           // es folgt immer ein Y-Wert
           if ParseCommand(my_pos, my_line, my_y, my_char) then
             my_x:= my_val * my_fac;
@@ -113,6 +111,8 @@ begin
             my_block_Idx:= length(blockArrays[fileID])-1;
             append_point(fileID, my_block_idx, LastPoint);
             blockArrays[fileID, my_block_idx].pen:= CurrentPen;
+            check_filebounds(FileID, LastPoint);
+
 //            blockArrays[fileID, my_block_idx].enable:= true;
           end;
         end;
@@ -172,6 +172,7 @@ begin
   last_y:= 0;
   prefer_x:= 5;
   prefer_y:= 5;
+  found_idx:= 0;
 
   for i:= 0 to my_len-1 do begin
     // alle nicht besuchten Punkte absuchen
@@ -229,9 +230,9 @@ procedure drill_fileload(my_name:String; fileID, penOverride: Integer; useDrillD
 // Liest File in FileBuffer und liefert Länge zurück
 var
   my_ReadFile: TextFile;
-  my_line, my_str: String;
+  my_line: String;
   my_tool, my_pos: integer;
-  my_val: Double;
+  my_val, my_fac: Double;
   invalid_header, my_valid: boolean;
   my_char: char;
 
@@ -244,7 +245,7 @@ begin
   FileParamArray[fileID].bounds.min.y := high(Integer);
   FileParamArray[fileID].bounds.max.x := low(Integer);
   FileParamArray[fileID].bounds.max.y := low(Integer);
-  use_inches_in_drillfile:= true; // default Inches
+  use_inches_in_drillfile:= false; // default METRIC
   my_line:='';
   FileMode := fmOpenRead;
   AssignFile(my_ReadFile, my_name);
@@ -253,6 +254,7 @@ begin
   invalid_header:= true;
   Reset(my_ReadFile);
   // Header mit Tool-Tabelle laden
+  my_fac:= 0.001;
   while not Eof(my_ReadFile) do begin
     Readln(my_ReadFile,my_line);
     if length(my_line) > 0 then begin
@@ -271,20 +273,22 @@ begin
     my_pos:= 1;
     ParseCommand(my_pos, my_line, my_val, my_char);
     if my_char = 'T' then begin
+      if pos('.',my_line) > 0 then
+        my_fac:= 1;
       my_tool:= round(my_val + 10);
       repeat
         my_valid:= ParseCommand(my_pos, my_line, my_val, my_char);
       until (my_char = 'C') or (not my_valid);
-      if my_char = 'C' then
-      if (my_tool < 32) then begin
+      if (my_char = 'C') and (my_tool < 32) then begin
+        my_val:= my_val * my_fac;
         if use_inches_in_drillfile then
           my_val:= my_val * 25.4;
         if useDrillDia then begin
           job.pens[my_tool].diameter:= my_val;
           job.pens[my_tool].tipdia:= my_val;
+          job.pens[my_tool].used:= true;
+          job.pens[my_tool].shape:= drillhole;
         end;
-        job.pens[my_tool].used:= true;
-        job.pens[my_tool].shape:= drillhole;
       end;
     end;
     if (my_line = '%') or (my_line = 'M95') then begin
@@ -297,10 +301,9 @@ begin
     CloseFile(my_ReadFile);
     exit;
   end;
-
   while not Eof(my_ReadFile) do begin
     Readln(my_ReadFile,my_line);
-    drill_import_line(my_line, fileID, penOverride);
+    drill_import_line(my_line, fileID, penOverride, my_fac);
   end;
   CloseFile(my_ReadFile);
   FileParamArray[fileID].valid := true;
