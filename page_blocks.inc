@@ -5,12 +5,13 @@
 function ListBlocks: boolean;
 // Listet Blocks im Path-Tab
 // und stellt fest, ob Teile außerhalb des Werkstücks sind; liefert TRUE wenn ja
-var i, my_len, my_row, my_pathcount: Integer;
-  my_entry: Tfinal;
+var i, j, k, my_len, my_millingcount, my_row, my_pathcount: Integer;
+//  my_entry: Tfinal;
   x1, y1, x2, y2: Double;
   out_of_work: Boolean;
   my_offset: TIntPoint;
   my_bounds: Tbounds;
+  my_str: String;
 begin
   result:= false;
   try
@@ -33,17 +34,17 @@ begin
       if HiliteBlock >= my_len then
         HiliteBlock:= my_len - 1;
       for i:= 0 to my_len-1 do begin
-        my_entry:= final_array[i];
-        my_pathcount:= length(my_entry.millings);
+        //my_entry:= final_array[i];
+        my_pathcount:= length(final_array[i].millings);
         out_of_work:= false;
         if my_pathcount < 1 then
           continue;
-        // '#,Pen,Ena,Dia,Shape,Bounds,Center';
+        // '#,Pen,Ena,Dia,Shape,Bounds,Points';
         my_row:= Rowcount - 1;
         Cells[0,my_row]:= IntToStr(my_row);
-        Cells[1,my_row]:= IntToStr(my_entry.pen);
-        my_bounds:= my_entry.bounds;
-        my_offset:= job.pens[my_entry.pen].offset;
+        Cells[1,my_row]:= IntToStr(final_array[i].pen);
+        my_bounds:= final_array[i].bounds;
+        my_offset:= job.pens[final_array[i].pen].offset;
         my_bounds.min.x:= my_bounds.min.x + my_offset.x;
         my_bounds.min.y:= my_bounds.min.y + my_offset.y;
         my_bounds.max.x:= my_bounds.max.x + my_offset.x;
@@ -63,7 +64,7 @@ begin
         y1:= my_bounds.min.y / c_hpgl_scale;
         x2:= my_bounds.max.x / c_hpgl_scale;
         y2:= my_bounds.max.y / c_hpgl_scale;
-        if my_entry.enable then begin
+        if final_array[i].enable then begin
           if (x1 < 0) then
             out_of_work:= true;
           if (y1 < 0) then
@@ -75,31 +76,32 @@ begin
         end;
         if out_of_work then begin
           // Form1.Memo1.lines.add('WARNING: Tool path ' + IntToStr(i+1) + ' outside work - disabled');
-          my_entry.enable:= false;
           final_array[i].enable:= false;
           result:= true;
         end;
-        if my_entry.enable then
-          Cells[2,my_row]:= 'ON'
-        else
+        Cells[3,my_row]:= FormatFloat('0.0', job.pens[final_array[i].pen].diameter);
+        Cells[4,my_row]:= ShapeArray[ord(final_array[i].shape)];
+        // Enable-Flag für einzelne Pfade setzen
+        my_millingcount:= length(final_array[i].millings);
+        my_str:='';
+        if final_array[i].enable then begin
+          Cells[2,my_row]:= 'ON';
+          if my_millingcount > 0 then
+            for j := 0 to my_millingcount-1 do begin
+              if final_array[i].milling_enables[j] then
+                if final_array[i].closed then
+                  my_str:= my_str + '[' + IntToStr(length(final_array[i].millings[j])) + '] '
+                else
+                  my_str:= my_str + '-' + IntToStr(length(final_array[i].millings[j])) + '- ';
+            end;
+        end else
           Cells[2,my_row]:= 'OFF';
-        Cells[3,my_row]:= FormatFloat('0.0', job.pens[my_entry.pen].diameter);
-        Cells[4,my_row]:= ShapeArray[ord(my_entry.shape)];
-        Cells[5,my_row]:= FormatFloat('0.00', x1) + '/' + FormatFloat('0.00', y1)
-            + ' - ' + FormatFloat('0.00', x2) + '/' + FormatFloat('0.00', y2);
-        x1:= my_entry.bounds.mid.x / c_hpgl_scale;
-        y1:= my_entry.bounds.mid.y / c_hpgl_scale;
-        Cells[6,my_row]:= FormatFloat('0.00', x1) + '/' + FormatFloat('0.00', y1);
-        Cells[7,my_row]:= IntToStr(length(my_entry.millings[0]));
-        if my_entry.closed then
-          Cells[7,my_row]:= '[' + IntToStr(length(my_entry.millings[0])) + ']'
-        else
-          Cells[7,my_row]:= '-' + IntToStr(length(my_entry.millings[0])) + '-';
+        Cells[5,my_row]:= my_str;
         Rowcount:= Rowcount + 1;
       end;
       Rowcount:= Rowcount - 1;
       Col:= 1;
-      if (HiliteBlock >= 0) and (HiliteBlock < RowCount) then
+      if (HiliteBlock >= 0) and (HiliteBlock < RowCount - 1) then
         Row:= HiliteBlock + 1
       else
         Row:= Rowcount - 1;
@@ -177,9 +179,15 @@ begin
             aRect := Rect;
             if aCol = 4 then begin
               i:= ord(final_array[aRow-1].shape);
-              Font.Color:= ShapeColorArray[i];
               aStr:= ShapeArray[i];
-            end;
+              Font.Color:= ShapeColorArray[i];
+              if (not final_array[aRow-1].closed)
+              and (final_array[aRow-1].shape in [inside, pocket]) then
+              // inside und pocket müssen geschlossene Polygone sein
+                Font.style:= [fsStrikeOut]
+              else
+                Font.style:= [];
+             end;
             aRect.Top := aRect.Top + 1; // adjust top to center vertical
             DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
           end;
@@ -207,36 +215,23 @@ begin
   SgBlocks.MouseToCell( X,Y, my_col, my_row );
   if (my_row < 1) or (my_col < 1) then
     exit;
-  UnHilite;
+  SgBlocks.Col := my_col;
+  SgBlocks.Row := my_row;
   with SgBlocks do begin
     HiliteBlock:= my_Row - 1;
     my_bool:= false;
     if my_col = 2 then begin
-      if Cells[2, my_row] = 'ON' then
-        Cells[2, my_row]:= 'OFF'
-      else if Cells[2, my_row] = 'OFF' then begin
-        Cells[2, my_row]:= 'ON';
-        my_bool:= true;
-      end;
-      final_array[HiliteBlock].enable:= my_bool;
+      final_array[my_row-1].enable:= not final_array[my_row-1].enable;
+      enable_all_millings(final_array[my_row-1], final_array[my_row-1].enable);
+      ListBlocks;
       GLSneedsRedrawTimeout:= 1;
       AutoAssignATCtoolsToJob;
-    end else if my_col = 4 then begin
+    end else if (my_col = 4) and (my_row > 0) then begin
+      perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
+      uncheck_mbs;
       my_shape:= final_array[HiliteBlock].shape;
-      if my_shape >= drillhole then
-        my_shape:= contour
-      else
-        inc(my_shape);
-      if (ssRight in Shift) then      // reset to default mit rechter Maustaste
-        my_shape:= contour;
-      final_array[HiliteBlock].shape:= my_shape;
-      Cells[4,my_Row]:= ShapeArray[ord(my_shape)];
-      if (my_shape = inside) or  (my_shape = pocket) then
-        final_array[HiliteBlock].closed:= true
-      else
-        final_array[HiliteBlock].closed:= final_array[HiliteBlock].was_closed;
-      item_change(HiliteBlock);
-      ListBlocks;
+      PopupMenuBlockShape.Items[ord(my_shape)].Checked:= true;
+      PopupMenuBlockShape.Popup(X+left+Form1.left, Y+ top+Form1.top);
     end;
   end;
 end;

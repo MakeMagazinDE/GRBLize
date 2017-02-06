@@ -134,7 +134,7 @@ begin
   Form1.SgFiles.Rows[0].DelimitedText:=
     '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %",Clear,"Remark"';
   Form1.SgBlocks.Rows[0].DelimitedText:=
-    '#,Pen/Drill,Ena,Dia,Shape,Bounds,Center,Points';
+    '#,Tool,Ena,Dia,Shape,"Polygons [closed vectors] -open vectors-"';
   Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
   with job do begin
     for i := 0 to 31 do begin
@@ -383,16 +383,15 @@ begin
     end;
   end;
 
-  for i:= 0 to 31 do begin
+  job.pens[0].enable:= false; // Tool 0 immer disabled
+  for i:= 1 to 31 do begin
     job.pens[i].enable:= job.pens[i].used;
   end;
 
   JobToPenGridList;
-  param_change;
+  apply_pen_change;
   NeedsRedraw:= true;
 
-  job.pens[0].used:= false;
-  job.pens[0].enable:= true;
   Form1.SgPens.Repaint;
   GLSneedsATCupdateTimeout:= 1;
 end;
@@ -400,8 +399,8 @@ end;
 Procedure OpenJobFile;
 var
 // mySaveFile: File of Tjob;
- sl: TstringList;
- i, j, s, my_len, my_row: Integer;
+ sl, sl_p: TstringList;
+ i, j, k, s, my_len, my_row: Integer;
 
 begin
   ResetToolFlags;
@@ -409,67 +408,92 @@ begin
   if FileExists(JobSettingsPath) then begin
     sl:= Tstringlist.Create;
     sl.LoadfromFile(JobSettingsPath);
-    if sl.strings[0]='#Files' then begin
-      s:= 1;
-      my_row:= 0;
+    s:= sl.indexof('#Files');
+    if s >= 0 then begin
+      inc(s);
+      my_row:= 1;
       for i := s to sl.Count-1 do begin
-        inc(my_row);
-        if sl.strings[i]='#End' then
-          break;
-        if sl.strings[i]='#Pens' then
+        if AnsiContainsStr(sl.strings[i],'#') then
           break;
         Form1.SgFiles.Rows[my_row].DelimitedText:= sl.Strings[i];
+        inc(my_row);
       end;
       Form1.SgFiles.Repaint;
       OpenFilesInGrid;
-      s:=i+1;
-      my_row:= 0;
+    end;
+    s:= sl.indexof('#Pens');
+    if s >= 0 then begin
+      inc(s);
+      my_row:= 1;
       for i := s to sl.Count-1 do begin
-        inc(my_row);
-        if sl.strings[i]='#End' then
-          break;
-        if sl.strings[i]='#Defaults' then
+        if AnsiContainsStr(sl.strings[i],'#') then
           break;
         Form1.SgPens.Rows[my_row].DelimitedText:= sl.Strings[i];
+        inc(my_row);
       end;
       Form1.SgPens.Repaint;
       PenGridListToJob;
-      param_change;
-      s:=i+1;
-      my_row:= 0;
+      apply_pen_change;
+    end;
+    s:= sl.indexof('#Defaults');
+    if s >= 0 then begin
+      inc(s);
+      my_row:= 1;
       for i := s to sl.Count-1 do begin
-        inc(my_row);
-        if sl.strings[i]='#End' then
-          break;
-        if sl.strings[i]='#Blocks' then
+        if AnsiContainsStr(sl.strings[i],'#') then
           break;
         Form1.SgJobDefaults.Rowcount:= my_row+1;
         Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
+        inc(my_row);
       end;
       Form1.SgJobDefaults.Repaint;
-      s:=i+1;
+    end;
+    s:= sl.indexof('#Blocks');
+    if s >= 0 then begin
+      inc(s);
       my_row:= 1;
       my_len:= length(final_array);
       for i := s to sl.Count-1 do begin
-        if sl.strings[i]='#End' then
-          break;
-        if sl.strings[i]='#Comment' then
+        if AnsiContainsStr(sl.strings[i],'#') then
           break;
         if my_row <= my_len then begin
           Form1.SgBlocks.Rowcount:= my_row+1;
           Form1.SgBlocks.Rows[my_row].DelimitedText:= sl.Strings[i];
-          for j:= 0 to length(ShapeArray)-1 do
+          for j:= 0 to high(ShapeArray) do
             if Form1.SgBlocks.Cells[4,my_row] = ShapeArray[ord(j)] then
               final_array[my_row-1].shape:= Tshape(j);
           final_array[my_row-1].enable:= Form1.SgBlocks.Cells[2,my_row] = 'ON';
+          enable_all_millings(final_array[my_row-1], final_array[my_row-1].enable);
+          inc(my_row);
         end;
-        inc(my_row);
       end;
       Form1.SgBlocks.Repaint;
-      s:=i+1;
+    end;
+    s:= sl.indexof('#PathEnables');
+    if s >= 0 then begin
+      sl_p:= Tstringlist.Create;
+      inc(s);
+      j:= 0;
+      for i := s to sl.Count-1 do begin
+        if AnsiContainsStr(sl.strings[i],'#') then
+          break;
+        sl_p.Clear;
+        sl_p.CommaText:= sl.strings[i];
+        if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
+          for k := 0 to sl_p.Count-1 do
+            if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
+              final_array[j].milling_enables[k]:= sl_p[k] = '1';
+          inc(j);
+        end;
+      end;
+      sl_p.Free;
+    end;
+    s:= sl.indexof('#Comment');
+    if s >= 0 then begin
+      inc(s);
       Form1.MemoComment.Clear;
       for i := s to sl.Count-1 do begin
-        if sl.strings[i]='#End' then
+        if AnsiContainsStr(sl.strings[i],'#') then
           break;
         Form1.MemoComment.Lines.Add(sl.Strings[i]);
       end;
@@ -480,6 +504,8 @@ begin
     PenGridListToJob;
   end;
   ListBlocks;
+  for i := 0 to high(final_array) do
+    final_array[i].enable:= is_any_milling_enabled(final_array[i]);
 end;
 
 Procedure LoadIniFile;
@@ -523,10 +549,13 @@ procedure SaveJob;
 var
 // mySaveFile: File of Tjob;
  sl: TstringList;
- i: Integer;
+ i, p: Integer;
+ block_str: String;
+
 begin
   JobToPenGridList;
   sl:= Tstringlist.Create;
+  sl.clear;
   sl.Add('#Files');
   for i:= 1 to Form1.SgFiles.Rowcount - 1 do
     sl.Add(Form1.SgFiles.Rows[i].CommaText);
@@ -542,6 +571,17 @@ begin
     for i:= 1 to Form1.SgBlocks.Rowcount - 1 do
       if Form1.SgBlocks.Cells[0,i] <> '' then
         sl.Add(Form1.SgBlocks.Rows[i].CommaText);
+  sl.Add('#PathEnables');
+  for i:= 0 to high(final_array) do begin
+    block_str:='';
+    for p:= 0 to high(final_array[i].milling_enables) do
+      if final_array[i].milling_enables[p] then
+        block_str:= block_str + '1,'
+      else
+        block_str:= block_str + '0,';
+    block_str:= copy(block_str, 0, length(block_str)-1);
+    sl.Add(block_str);
+  end;
   sl.Add('#Comment');
   if Form1.MemoComment.Lines.Count > 0 then
     for i:= 0 to Form1.MemoComment.Lines.Count - 1 do
@@ -721,8 +761,10 @@ begin
   if aRow = 0 then with SgAppDefaults,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
-  end else if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF')) then // ON, OFF
-    with SgAppDefaults,Canvas do begin
+  end else with SgAppDefaults,Canvas do begin
+    Pen.Color := cl3Dlight;
+    Font.Color:=clblack;
+    if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF')) then begin // ON, OFF
       FrameRect(Rect);
       inc(Rect.Left);
       inc(Rect.Top);
@@ -741,6 +783,7 @@ begin
       aRect.Top := aRect.Top + 1; // adjust top to center vertical
       DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
     end;
+  end;
 end;
 
 procedure TForm1.SgAppDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
@@ -754,7 +797,7 @@ begin
   pt.X:= X;
   pt.Y:= Y;
   with SgAppDefaults do begin
-    Options:= Options - [goEditing, goAlwaysShowEditor];
+    Options:= Options - [goEditing];
     if Col = 1 then begin
       if Cells[1, my_Row] = 'ON' then
          Cells[1, my_Row]:= 'OFF'
@@ -790,15 +833,9 @@ begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
   end else with SgFiles,Canvas do begin
-{    if (ACol = Col) and (ARow= Row) and (aCol <> 0) then begin
-      Brush.Color := clHighlight;
-      Font.Color:=clwhite;
-      TextRect(Rect, Rect.Left + 2, Rect.Top + 2, cells[acol, arow]);
-      Font.Color:=clblack;
-    end;
-}
-    Font.Color:=clblack;
     Pen.Color := cl3Dlight;
+    Font.Color:=clblack;
+
     aStr:= Cells[ACol, ARow];
     case aCol of
       0:
@@ -888,13 +925,33 @@ var R: TRect;
   org: TPoint;
     i: Integer;
   my_row, my_col: integer;
+  my_ext: String;
 begin
   SgFiles.MouseToCell( X,Y, my_col, my_row );
-  if (my_row < 1) or (my_col < 1) then
+  if (my_row < 1) then
     exit;
   with SgFiles do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
     case Col of
+      0:
+        begin
+          UnHilite;
+          OpenFileDialog.FilterIndex:= 0;
+          if OpenFileDialog.Execute then begin
+            Cells[0, Row]:= OpenFileDialog.Filename;
+            job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+            UnHilite;
+            my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
+            if (my_ext = '.GBR') then begin
+              sgFiles.Cells[0, Row]:= '';
+              ConvertedFileName:='';
+              GerberFileName:= OpenFileDialog.Filename;
+              GerberFileNumber:= Row;
+              FormGerber.ShowModal;
+            end else
+              OpenFilesInGrid;
+          end;
+        end;
       1:
         begin
           R := SgFiles.CellRect(my_Col, my_Row);
@@ -910,7 +967,6 @@ begin
             SetFocus;
             DroppedDown := true;
           end;
-          exit;
         end;
       2:
         begin
@@ -922,6 +978,8 @@ begin
             Cells[2, my_Row]:= '270°'
           else
             Cells[2, my_Row]:= '0°';
+          Repaint;
+          OpenFilesInGrid;
         end;
       3:
         begin
@@ -929,13 +987,17 @@ begin
             Cells[3, my_Row]:= 'OFF'
           else
             Cells[3, my_Row]:= 'ON';
+          Repaint;
+          OpenFilesInGrid;
         end;
       4,5,6, 8:
         begin
+//          Options:= Options + [goEditing, goAlwaysShowEditor];
           Options:= Options + [goEditing, goAlwaysShowEditor];
         end;
       7:
         begin
+          UnHilite;
           Cells[0, my_Row]:= '';
           Cells[1, my_Row]:= '-1';
           Cells[2, my_Row]:= '0°';
@@ -943,11 +1005,10 @@ begin
           Cells[8, my_Row]:= '';
           for i:= 0 to c_numOfPens do
             job.pens[i].used:= false;
+          OpenFilesInGrid;
         end;
      end;
     job.fileDelimStrings[my_Row-1]:= Rows[my_Row].DelimitedText;
-    UnHilite;
-    OpenFilesInGrid;
   end;
 end;
 
@@ -956,39 +1017,19 @@ begin
   if (Key = #13) or (Key = #10) then
     with SgFiles do begin
       job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
-      Options:= Options - [goEditing, goAlwaysShowEditor];
-      UnHilite;
       Repaint;
       OpenFilesInGrid;
     end;
 end;
 
+procedure TForm1.SgFilesExit(Sender: TObject);
+begin
+
+end;
 
 procedure TForm1.SgFilesClick(Sender: TObject);
-// wird nach Loslassen der Maustaste ausgeführt!
-var my_ext: String;
 begin
-  with SgFiles do begin
-    Options:= Options - [goEditing, goAlwaysShowEditor];
-    if (Row > 0) and (Col = 0) then begin
-      OpenFileDialog.FilterIndex:= 0;
-      if OpenFileDialog.Execute then
-        Cells[0, Row]:= OpenFileDialog.Filename
-      else
-        Cells[0, Row]:= '';
-      job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
-      UnHilite;
-      my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
-      if (my_ext = '.GBR') then begin
-        sgFiles.Cells[0, Row]:= '';
-        ConvertedFileName:='';
-        GerberFileName:= OpenFileDialog.Filename;
-        GerberFileNumber:= Row;
-        FormGerber.ShowModal;
-      end else
-        OpenFilesInGrid;
-    end;
-  end;
+  SgFiles.Options:= SgFiles.Options - [goEditing, goAlwaysShowEditor];
 end;
 
 

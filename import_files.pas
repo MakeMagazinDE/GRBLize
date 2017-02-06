@@ -65,7 +65,8 @@ const
   end;
 
   Tatc_record = record
-    enable: boolean; // ... und Pen ist eingeschaltet
+//    enable: boolean; // ... und Pen ist eingeschaltet
+    used: boolean; // ... und Pen ist eingeschaltet
     inslot: boolean; // Flag wird von Wechsler-Routine aktualisiert
     pen: Integer;
     TREFok: boolean;
@@ -97,6 +98,7 @@ const
     bounds: Tbounds;
     outlines: Tpaths;
     millings: Tpaths;
+    milling_enables: array of Boolean; // äußere [0] und Child-Pfade
   end;
 
   Tjob = record
@@ -151,7 +153,7 @@ const
   ActionArray: Array [0..4] of String[7] =
    ('none', 'lift', 'seek', 'drill', 'mill');
   ShapeArray: Array [0..4] of String[15] =
-   ('CONTOUR', 'INSIDE', 'OUTSIDE', 'POCKET', 'DRILL');
+   ('Contour', 'Inside', 'Outside', 'Pocket', 'Drill');
   ShapeColorArray: Array [0..4] of Tcolor =
    (clBlack, clBlue, clRed, clFuchsia, clgreen);
   ToolTipArray: Array [0..7] of String[15] =
@@ -193,7 +195,7 @@ var
   final_array: Array of Tfinal;
   final_bounds: Tbounds; // Abmessungen gesamt inkl. Offsets in HPGL-Units, wird in ListBlocks gesetzt
   final_bounds_mm: TfloatBounds; // Abmessungen gesamt inkl. Offsets in mm, wird in ListBlocks gesetzt
-  atcArray: Array[0..31] of Tatc_record;
+  ATCarray: Array[0..31] of Tatc_record;
 
   CurrentPen, PendingPen: Integer;
   LastAction, PendingAction: Taction;
@@ -212,11 +214,18 @@ var
   procedure drill_fileload(my_name:String; fileID, penOverride: Integer; useDrillDia: Boolean);
   procedure gcode_fileload(my_name:String; fileID, penOverride: Integer);
 
-  procedure param_change;
+  procedure apply_pen_change;
   procedure item_change(arr_idx: Integer);
 
+  function RoundToDigits(zahl: double; n: integer): double;
   function FloatToStrDot(my_val: Double):String;
   function StrDotToFloat(my_str: String): Double;
+
+// alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
+  procedure enable_all_millings(var my_entry: Tfinal; enable_status: Boolean);
+// ein bestimmtes Pfad-Enable des übergebenen Blocks auf enable_status setzen
+  procedure enable_single_milling(var my_entry: Tfinal; path_idx: Integer; enable_status: Boolean);
+  function is_any_milling_enabled(var my_entry: Tfinal):Boolean;
 
   // sucht in Array my_path nach Punkt mit geringstem Abstand zu last_xy
   function find_nearest_point(var search_path: Tpath; last_x, last_y: Integer): Integer;
@@ -243,6 +252,47 @@ var
 implementation
 
 uses grbl_player_main;
+
+procedure enable_all_millings(var my_entry: Tfinal; enable_status: Boolean);
+// alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
+var i: Integer;
+begin
+  if length(my_entry.millings) > 0 then
+    for i := 0 to high(my_entry.millings) do
+      my_entry.milling_enables[i]:= enable_status;
+  if length(my_entry.millings) = 1 then
+    my_entry.enable:= enable_status;
+end;
+
+function is_any_milling_enabled(var my_entry: Tfinal):Boolean;
+var i: Integer;
+begin
+  result:= false;
+  if length(my_entry.millings) > 0 then
+    for i := 0 to high(my_entry.millings) do
+      if my_entry.milling_enables[i] then begin
+        result:= true;
+        break;
+      end;
+end;
+
+procedure enable_single_milling(var my_entry: Tfinal; path_idx: Integer; enable_status: Boolean);
+// ein bestimmtes Pfad-Enable des übergebenen Blocks auf enable_status setzen
+begin
+  if (path_idx < length(my_entry.millings)) and (length(my_entry.millings) > 0) then
+    my_entry.milling_enables[path_idx]:= enable_status;
+  if length(my_entry.millings) = 1 then
+    my_entry.enable:= enable_status;
+end;
+
+function RoundToDigits(zahl: double; n: integer): double;
+// Runde Zahl auf n Nachkommastellen
+var multi: double;
+begin
+  multi:=IntPower(10, n);
+  zahl:=round(zahl*multi);
+  result:=zahl/multi;
+end;
 
 procedure ExecuteFile(const AFilename: String;
                  AParameter, ACurrentDir: String; AWait, AHide: Boolean);
@@ -413,11 +463,11 @@ var my_len: Integer;
 begin
   my_len:= length(blockArrays[fileID, blockID].outline_raw);
 
-  // Skalierung und Offsets des Files
-  new_pt.X:= FileParamArray[fileID].offset.x
-    + (round(new_pt.X * 10 * FileParamArray[fileID].scale) div 1000);
-  new_pt.Y:= FileParamArray[fileID].offset.y
-    + (round(new_pt.Y * 10 * FileParamArray[fileID].scale) div 1000);
+//  // Skalierung und Offsets des Files
+//  new_pt.X:= FileParamArray[fileID].offset.x
+//    + (round(new_pt.X * 10 * FileParamArray[fileID].scale) div 1000);
+//  new_pt.Y:= FileParamArray[fileID].offset.y
+//    + (round(new_pt.Y * 10 * FileParamArray[fileID].scale) div 1000);
 
   // Bounds des Files neu setzen
   if new_pt.X < FileParamArray[fileID].bounds.min.x then
@@ -459,6 +509,8 @@ var b,p, my_pathlen, my_blocklen: Integer;
   nx, ny: Integer;
   my_file_entry: Tfile_param;
   my_pt, my_first_pt, my_last_pt: TIntPoint;
+  my_offset: TintPoint;
+  my_scale: Double;
 
 begin
   my_file_entry:= FileParamArray[fileID];
@@ -482,14 +534,36 @@ begin
       setlength(blockArrays[fileID,b].outline, my_pathlen);
     end;// else
 //      blockArrays[fileID,b].closed:= false;
-
-    if (not my_file_entry.mirror) and (my_file_entry.rotate = deg0) then
-      continue;
-
+    my_offset:= FileParamArray[fileID].offset;
+    my_scale:= FileParamArray[fileID].scale;
+    if FileParamArray[fileID].mirror then
+      my_offset.X:= -my_offset.X;
+    case my_file_entry.rotate of
+      deg90:
+        begin
+          ny:= my_offset.X;
+          my_offset.X:= my_offset.Y;
+          my_offset.Y:= -ny;
+        end;
+      deg180:
+        my_offset.X:= -my_offset.X;
+      deg270:
+        begin
+          ny:= my_offset.X;
+          my_offset.X:= -my_offset.Y;
+          my_offset.Y:= ny;
+        end;
+    end;
     for p:= 0 to my_pathlen - 1 do begin
       my_pt:= blockArrays[fileID, b].outline_raw[p];
+
+      // Skalierung und Offsets des Files
+      my_pt.X:= my_offset.X + (round(my_pt.X * 10 * my_scale) div 1000);
+      my_pt.Y:= my_offset.y + (round(my_pt.Y * 10 * my_scale) div 1000);
+
       nx:= my_file_entry.bounds.min.x + my_file_entry.bounds.max.x - my_pt.X;
       ny:= my_file_entry.bounds.min.y + my_file_entry.bounds.max.y - my_pt.Y;
+
       if my_file_entry.mirror then
         case my_file_entry.rotate of
           deg0:
@@ -792,49 +866,42 @@ var i, j, rp, mp: Integer;
   result_paths: Tpaths;
   my_poly_end: TEndType;
   my_cclw: boolean;
-
+  my_millingcount, my_pointcount: Integer; // millcount, pointcount
 begin
 // Offenbar seit Delphi XE8 funktioniert der Offset
 // von innenliegenden Objekten mit Clipper nicht mehr.
 // temporärer Workaround: Einzelne Objekte anlegen, keine Childs.
-
-
-  if (my_final_entry.shape = drillhole) or (my_final_entry.shape = contour) then begin
+  with TClipperOffset.Create() do
+  try
+    if (my_final_entry.shape = drillhole) or (my_final_entry.shape = contour) then begin
       my_final_entry.millings:= my_final_entry.outlines;
       exit;
     end;
+    my_radius:= job.pens[my_final_entry.pen].tipdia * (c_hpgl_scale div 2);  // = mm * 40plu / 2
+    my_dia:= job.pens[my_final_entry.pen].tipdia/2;
 
-  my_radius:= job.pens[my_final_entry.pen].tipdia * (c_hpgl_scale div 2);  // = mm * 40plu / 2
-  my_dia:= job.pens[my_final_entry.pen].tipdia/2;
-
-  if (my_final_entry.shape = inside) or (my_final_entry.shape = pocket) then begin
-    my_radius:= -my_radius;
-  end;
-
-  if length(my_final_entry.outlines)> 1 then begin
-    my_cclw:= Orientation(my_final_entry.outlines[0]); // ist Richtung Parent CCLW?
-    for i:= 1 to length(my_final_entry.outlines)-1 do begin
-      // wenn Parent Counterclockwise ist und auch Child, dann Child-Richtung umkehren
-      if Orientation(my_final_entry.outlines[i]) xor (not my_cclw) then
-        // Childs umkehren, damit sie ein "Loch" sind
-        my_final_entry.outlines[i]:= ReversePath(my_final_entry.outlines[i]);
+    if (my_final_entry.shape = inside) or (my_final_entry.shape = pocket) then begin
+      my_radius:= -my_radius;
     end;
-  end;
 
-
-  with TClipperOffset.Create() do
-  try
+    if length(my_final_entry.outlines)> 1 then begin
+      my_cclw:= Orientation(my_final_entry.outlines[0]); // ist Richtung Parent CCLW?
+      for i:= 1 to length(my_final_entry.outlines)-1 do begin
+        // wenn Parent Counterclockwise ist und auch Child, dann Child-Richtung umkehren
+        if Orientation(my_final_entry.outlines[i]) xor (not my_cclw) then
+          // Childs umkehren, damit sie ein "Loch" sind
+          my_final_entry.outlines[i]:= ReversePath(my_final_entry.outlines[i]);
+      end;
+    end;
     Clear;
     ArcTolerance:= 3;
     if my_final_entry.closed then
       my_poly_end:= etClosedPolygon
     else
       my_poly_end:= etOpenRound;
-
     AddPaths(my_final_entry.outlines, jtRound, my_poly_end);
     Execute(result_paths, my_radius);
     my_final_entry.millings:= result_paths;
-
     if my_final_entry.shape = pocket then begin
       my_radius:= my_radius + 5;
       if abs(my_radius) < 20 then // 0,5 mm
@@ -852,7 +919,28 @@ begin
           my_final_entry.millings[mp+j]:= CleanPolygon(result_paths[j], my_dia);
       end;
     end;
+    // falls Clipper keine Pfade erzeugt hat, Kontur nehmen - sonst scheitert ListBlocks!
+    if length(my_final_entry.millings) = 0 then begin
+      my_final_entry.millings:= my_final_entry.outlines;
+    end else
+      // Außenkonturen einzelner Linien müssen geschlossen werden. Ersten als letzten Punkt anfügen
+      if (my_final_entry.shape = outside) then begin
+        my_millingcount:= length(my_final_entry.millings);
+        if my_millingcount > 0 then
+          for i:= 0 to my_millingcount - 1 do begin
+            my_pointcount:= length(my_final_entry.millings[i]);
+            setLength(my_final_entry.millings[i], my_pointcount + 1); // anfügen
+            my_final_entry.millings[i,my_pointcount]:= my_final_entry.millings[i,0];
+          end;
+      end;
+
   finally
+    my_millingcount:= length(my_final_entry.millings);
+    // Enable-Flag-Array für einzelne Milling-Pfade erstellen
+    setLength(my_final_entry.milling_enables, my_millingcount);
+    if my_millingcount > 0 then
+      for i := 0 to my_millingcount-1 do
+        my_final_entry.milling_enables[i]:= my_final_entry.enable; // vorbelegen
     Free;
   end;
 end;
@@ -861,7 +949,7 @@ end;
 // #############################################################################
 
 
-procedure param_change;
+procedure apply_pen_change;
 // alle Änderungen, Offset etc.
 var i: Integer;
 begin
@@ -871,8 +959,11 @@ begin
     if FileParamArray[i].valid then
       make_final_array(i);
   // Werkzeugkorrektur-Offsets für fertiges BlockArray
-  for i:= 0 to high(final_array) do
+  for i:= 0 to high(final_array) do begin
     compile_milling(final_array[i]);
+// alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
+    enable_all_millings(final_array[i], final_array[i].enable);
+  end;
   ListBlocks;
 end;
 
@@ -881,6 +972,7 @@ procedure item_change(arr_idx: Integer);
 begin
   if (arr_idx < length(final_array)) and (arr_idx >= 0) then
     compile_milling(final_array[arr_idx]);
+  ListBlocks;
 end;
 
 

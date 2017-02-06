@@ -17,6 +17,7 @@ begin
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
   end else with SgPens,Canvas do begin
       // Draw the Band
+    Font.Color:=clblack;
     if (ACol > 2) then begin
       if not job.pens[aRow-1].enable then begin
         Brush.Color := clBtnFace;
@@ -129,22 +130,21 @@ begin
   if (Key = #13) or (Key = #10) then begin
     SgPens.Repaint;
     PenGridListToJob;
-    param_change;
+    apply_pen_change;
     GLSneedsRedrawTimeout:= 2;
     GLSneedsATCupdateTimeout:= 3;
   end;
 end;
 
-
 procedure TForm1.SgPensMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   my_shape: Tshape;
-  R: TRect;
-  org: TPoint;
   my_row, my_col: integer;
 begin
   SgPens.MouseToCell( X,Y, my_col, my_row );
+  SgPens.Col := my_col;
+  SgPens.Row := my_row;
   if (my_row < 1) or (my_col < 1) then
     exit;
   UnHilite;
@@ -181,40 +181,22 @@ begin
         job.pens[my_row-1].Scale:= StrToFloatDef(Cells[8,my_row],100);
       end;
     9:  // Shapes
-      begin
-        Options:= Options - [goEditing];
-        my_shape:= job.pens[my_row-1].shape;
-        if my_shape >= drillhole then
-          my_shape:= contour
-        else
-          inc(my_shape);
-        if (ssRight in Shift) then      // reset to default mit rechter Maustaste
-          if Row > 10 then
-            my_shape:= drillhole
-          else
-            my_shape:= contour;
-        job.pens[my_row-1].shape:= my_shape;
-        Cells[9,my_row]:= IntToStr(ord(job.pens[my_row-1].shape));
+     if my_row > 0 then begin
+        perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
+        uncheck_ms;
+        PopupMenuShape.Items[ord(job.pens[Row-1].shape)].Checked:= true;
+        PopupMenuShape.Popup(X+left+Form1.left, Y+ top+Form1.top);
       end;
     12:  // Tooltip
       if my_row > 0 then begin
-        R := SgPens.CellRect(my_Col, my_row);
-        org := self.ScreenToClient(self.ClientToScreen(R.TopLeft));
         perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
-        with ComboBoxTip do begin
-          SetBounds(org.X-14, org.Y-2, R.Right-R.Left+14, Form1.Height);
-          ItemIndex := STrToIntDef(Cells[12,my_row],0);
-          if ItemIndex < 0 then
-            ItemIndex:= 0;
-          Show;
-          BringToFront;
-          SetFocus;
-          DroppedDown:= true;
-        end;
+        uncheck_mtt;
+        PopupMenuTooltip.Items[ord(job.pens[Row-1].tooltip)].Checked:= true;
+        PopupMenuTooltip.Popup(X+left+Form1.left, Y+ top+Form1.top);
       end;
     end; //case
     PenGridListToJob;
-    param_change; // setzt Timeouts über ListBlocks auf 1
+    apply_pen_change; // setzt Timeouts über ListBlocks auf 1
     Repaint;
     if (my_Col = 1) or (my_Col = 9) then begin
       Form4.FormRefresh(nil);  // sofortiges Update für Enable und Shape
@@ -222,49 +204,4 @@ begin
   end;
 end;
 
-
-procedure TForm1.SgPensTopLeftChanged(Sender: TObject);
-var
-  my_rect: TRect;
-begin
-  my_rect:= SgPens.CellRect(2,SgPens.Row);
-  ComboBoxTip.ItemIndex:= 0;
-  ComboBoxTip.hide;
-end;
-
-procedure TForm1.ComboBoxTipExit(Sender: TObject);
-var my_str: String;
-begin
-  if ComboBoxTip.ItemIndex >= 0 then
-    my_str:= IntToStr(ComboBoxTip.ItemIndex); //  := Items[ItemIndex];
-  with SgPens do
-    if (Row > 0) and (Col= 12) then begin
-      Cells[col, row]:= my_str;
-      UnHilite;
-      if ComboBoxTip.ItemIndex = 6 then begin
-        job.pens[Row-1].shape:= drillhole;
-        Cells[9,Row]:= IntToStr(ord(job.pens[Row-1].shape));
-      end;
-      CalcTipDia;
-      Repaint;
-    end;
-  ComboBoxTip.hide;
-  NeedsRedraw:= true;
-  GLSneedsRedrawTimeout:= 1;
-  GLSneedsATCupdateTimeout:= 1;
-end;
-
-procedure TForm1.ComboBoxTipMouseLeave(Sender: TObject);
-begin
-  ComboBoxTip.hide;
-  CalcTipDia;
-  SgPens.Repaint;
-end;
-
-procedure TForm1.ComboBoxTipKeyPress(Sender: TObject; var Key: Char);
-begin
-  ComboBoxTip.hide;
-  CalcTipDia;
-  SgPens.Repaint;
-end;
 

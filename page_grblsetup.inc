@@ -151,13 +151,16 @@ var
 begin
   my_pos1:= Pos('=', my_str);
   my_pos2:= Pos(' ', my_str);
-  if my_pos2 <= 0 then my_pos2:= length(my_Str)-1 else dec(my_pos2);
+  if my_pos2 <= 0 then
+    my_pos2:= length(my_Str)
+  else
+    dec(my_pos2);
   result:= copy(my_str, my_pos1+1, my_pos2-my_pos1);
 end;
 
 procedure TForm1.BtnRefreshGrblSettingsClick(Sender: TObject);
 var
-  my_str: String;
+  my_str, my_str0: String;
 begin
   if isGrblActive then
     with Form1.SgGrblSettings do begin
@@ -175,7 +178,12 @@ begin
           break;
         if pos('[',my_str) > 0 then
           continue;
+{$IFDEF GRBL_11}
+        my_str0:= copy(my_str, 0, pos('=', my_str));
+        Cells[0,RowCount-1]:= my_str0 + SettingCodes_11[RowCount-2];
+{$ELSE}
         Cells[0,RowCount-1]:= my_str;
+{$ENDIF}
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
         if pos('$130', my_str) > 0 then begin
           job.table_x:= StrDotToFloat(setting_val_extr(my_str));

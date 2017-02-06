@@ -15,8 +15,6 @@ begin
         my_str:= pen_description(atcArray[i].pen);
       if i = ToolInSpindle then
           my_str:= my_str + ' (in spindle) '
-      else if not atcArray[i].enable then
-        my_str:= my_str + ' (disabled)'
       else if ((not atcArray[i].inslot) and Form1.CheckUseATC2.checked) then
         my_str:= my_str + ' (empty) ';
 
@@ -38,14 +36,14 @@ begin
 end;
 
 
-procedure SetATCslot(const pen_idx: Integer; atc_slot: integer);
+procedure SetATCslot(const pen_idx: Integer; atc_idx: integer);
 begin
-  if atc_slot > c_numATCslots then
-    atc_slot:= c_numATCslots; // invalid or manual
-  atcArray[atc_slot].enable:= job.pens[pen_idx].enable and job.pens[pen_idx].used;
-  atcArray[atc_slot].inslot:= atcArray[atc_slot].enable;
-  if (atc_slot > 0) then
-    atcArray[atc_slot].pen:= pen_idx;
+  if atc_idx > c_numATCslots then
+    atc_idx:= c_numATCslots; // invalid or manual
+  atcArray[atc_idx].inslot:= true;
+  atcArray[atc_idx].used:= true;
+  if (atc_idx > 0) then
+    atcArray[atc_idx].pen:= pen_idx;
 end;
 
 procedure ClearATCarray;
@@ -55,7 +53,7 @@ begin
 // atcArray[0] ist unbenutzt!
   Form1.sgATC.RowCount:= c_numATCslots + 2;
   for i:= 0 to c_numATCslots do begin
-    atcArray[i].enable:= false;
+    atcArray[i].used:= false;
     atcArray[i].inslot:= false;
     atcArray[i].TREFok:= false;
     atcArray[i].TLCok:= false;
@@ -104,17 +102,13 @@ begin
     end;
   end;
   JobToPenGridList;
-  FirstToolUsed:= 1;
   ToolInSpindle:= 1;
-  atcArray[FirstToolUsed].inslot:= false; // ist in der Maschine
+  atcArray[ToolInSpindle].inslot:= false; // ist in der Maschine
   UpdateATCsg;
   Form1.sgATC.Col:= 1;
   Form1.sgATC.Row:= 1;
-  if atcArray[FirstToolUsed].enable then
-    Form1.EditFirstToolDia.Text:= pen_description(atcArray[FirstToolUsed].pen)
-  else
-    Form1.EditFirstToolDia.Text:=  '(no tools, job empty)';
-  GLSsetToolToATCidx(FirstToolUsed);
+  Form1.EditFirstToolDia.Text:= pen_description(atcArray[ToolInSpindle].pen);
+  GLSsetToolToATCidx(ToolInSpindle);
   ForceToolPositions(grbl_wpos.x, grbl_wpos.y, grbl_wpos.z);
 end;
 
@@ -138,7 +132,7 @@ begin
     case aCol of
     0: // Slot
       begin
-        if atcArray[aRow].enable then
+        if job.pens[atcArray[aRow].pen].enable then
           my_color:= job.pens[atcArray[aRow].pen].color
         else
           my_color:=clgray;
@@ -228,7 +222,7 @@ begin
   end;
 
   for i:= 0 to c_numATCslots do
-    atcArray[i].inslot:= atcArray[i].enable;
+    atcArray[i].inslot:= atcArray[i].used;
   if (my_dlg_result = mrYES) then begin
     ToolInSpindle:= atc_idx_new;
     if Form1.Show3DPreview1.checked then
@@ -246,7 +240,7 @@ function UnloadATCtool(atc_idx: Integer): boolean;
 // tool_idx zählt ab 1
 var my_atc_x, my_atc_y: Double;
   atc_pos_idx: Integer;
-  old_enable: Boolean;
+
 begin
   result:= true;
   atc_pos_idx:= atc_idx - 1;
@@ -275,12 +269,8 @@ begin
   atcArray[atc_idx].inslot:= true;
 //    atcArray[tool_idx].tool_pen:= tool_idx;
   grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
-  if ToolInSpindle >= 1 then begin
-    old_enable:= atcArray[atc_idx].enable;
+  if ToolInSpindle >= 1 then
     atcArray[atc_idx]:= atcArray[ToolInSpindle];
-    atcArray[atc_idx].inslot:= true;
-    atcArray[atc_idx].enable:= old_enable;
-  end;
   if Form1.Show3DPreview1.Checked then begin
     GLSupdateATC;
     GLSsetToolDia(0, 0);

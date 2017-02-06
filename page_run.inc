@@ -67,11 +67,17 @@ begin
     exit;
   WaitForIdle;
   if switch_on then begin
-    Form1.Memo1.lines.add('Spindle ON, acceleration wait '+ IntToStr(job.spindle_wait) + ' sec');
     SendSingleCommandStr('M3');
+    Form1.Memo1.lines.add('Spindle ON, acceleration wait '+ IntToStr(job.spindle_wait) + ' sec');
   end else begin
+    if isCancelled then
+      SendSingleCommandStr('M5')
+    else begin
+      grbl_addstr('G4 P0');
+      grbl_addstr('M5');
+      SendListToGrbl;
+    end;
     Form1.Memo1.lines.add('Spindle OFF, brake wait '+ IntToStr(job.spindle_wait div 2) + ' sec');
-    SendSingleCommandStr('M5');
   end;
   if isGrblActive then begin
     if switch_on then
@@ -230,7 +236,7 @@ begin
   grbl_moveZ(0, true);
   grbl_moveXY(job.probe_x, job.probe_y, true);
   grbl_moveZ(job.probe_z, true);
-  grbl_addstr('G4 P0' + #13);
+  grbl_addstr('G4 P0');
   SendListToGrbl;
   my_zval:= probe_z;
   if my_zval = 0 then
@@ -298,11 +304,11 @@ begin
     if (MachineState = alarm) or (MposOnFixedProbe = 0) then
       exit;
     result:= true;
-    if atc_idx = FirstToolUsed then begin
-      atcArray[FirstToolUsed].TREFok:= true;
+    if atc_idx = 1 then begin
+      atcArray[1].TREFok:= true;
       MposOnFixedProbeReference:= MposOnFixedProbe;
-      atcArray[FirstToolUsed].TLCref:= MposOnFixedProbeReference;
-      atcArray[FirstToolUsed].TLCdelta:= 0;
+      atcArray[1].TLCref:= MposOnFixedProbeReference;
+      atcArray[1].TLCdelta:= 0;
     end else begin
       atcArray[atc_idx].TLCref:= 0;
       atcArray[atc_idx].TLCok:= true;
@@ -319,6 +325,17 @@ end;
 // ######################## R U N  J O B  B U T T O N S ########################
 // #############################################################################
 
+function CountUsedATCtools: Integer;
+// zählt tatsächlich benutzte Werkzeuge
+var
+  i: Integer;
+begin
+// atcArray[0] ist unbenutzt!
+  for i:= 1 to c_numATCslots do
+    if not atcArray[i].used then
+     break;
+  result:= i-1;
+end;
 
 function isToolDifferent(pen1, pen2: Integer): Boolean;
 // evt. (fast) gleicher Durchmesser und gleiche Form? Dann "false" liefern
@@ -329,7 +346,7 @@ begin
       result:= false;
 end;
 
-procedure ExitJobMsg;
+procedure ExitJobMsg(lift_tool: Boolean);
 begin
   // falls wg. speed abgeschaltet
   GLSfinalize3Dview;
@@ -346,7 +363,9 @@ begin
   Form1.BtnRunGcode.enabled:= true;
   Form1.BtnRunjob.tag:= 0;
   Form1.BtnCancel.tag:= 0;
-  SendSingleCommandAndDwell('G0 G53 Z0');
+  if lift_tool then
+    SendSingleCommandAndDwell('G0 G53 Z0');
+  Screen.Cursor:= crDefault;
 //  UpdateATCsg;
 end;
 
@@ -362,26 +381,28 @@ var p: Integer;
 begin
   if (length(my_entry.millings) > 0) then with Form1 do begin
     LEDbusy.Checked:= true;
-    for p:= length(my_entry.millings)-1  downto 0 do begin
+    for p:= high(my_entry.millings) downto 0 do begin
       if isCancelled then
         break;
       Application.ProcessMessages;
-      Memo1.lines.add('');
-      Memo1.lines.add('Run path '+ IntToStr(p));
-      Memo1.lines.add('=========================================');
-      grbl_addStr(BitChangeStr(my_entry));
-      if my_entry.shape = drillhole then
-        grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
-      else
-        grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
-      SendListToGrbl;
+      if my_entry.milling_enables[p] then begin
+        Memo1.lines.add('');
+        Memo1.lines.add('Run path '+ IntToStr(p));
+        Memo1.lines.add('=========================================');
+        grbl_addStr(BitChangeStr(my_entry));
+        if my_entry.shape = drillhole then
+          grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
+        else
+          grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
+        SendListToGrbl;
+      end;
     end;
   end;
 end;
 
 procedure TForm1.BtnRunToolClick(Sender: TObject);
 // nur einzelnes Werkzeug abarbeiten
-var i, atc_idx, my_len, atc_from_pens, my_btn, my_pen: Integer;
+var i, my_len, atc_from_pens, my_btn, my_pen: Integer;
   my_entry: Tfinal;
 begin
   try
@@ -398,14 +419,14 @@ begin
     Form4.GLLinesPath.Visible:= Form4.CheckToolpathVisible.Checked;
     Form4.GLDummyCubeTool.visible:= true;
 
-    atc_idx:= sgATC.Row;
-    GLSsetToolToATCidx(atc_idx);
+    ToolInSpindle:= sgATC.Row;
+    GLSsetToolToATCidx(ToolInSpindle);
     ForceToolPositions(grbl_wpos.x, grbl_wpos.y, grbl_wpos.z);
     Form1.Memo1.lines.add('');
     Memo1.lines.clear;
     my_btn := MessageDlg('Is machine zeroed with selected tool?'
       + #13 + 'Make sure spindle collet is loaded with:'
-      + #13 + #13 + pen_description(atcArray[atc_idx].pen)
+      + #13 + #13 + pen_description(atcArray[ToolInSpindle].pen)
       + #13 + #13 + 'Click OK to proceed, CANCEL to terminate job.', mtConfirmation, mbOKCancel, 0);
     Memo1.lines.Clear;
     Memo1.lines.add('Job run started.');
@@ -415,11 +436,9 @@ begin
 
     // ATC- bzw. Tool-Liste abarbeiten
     SendSingleCommandStr('G0 G53 Z0');
-    if not atcArray[atc_idx].enable then
-      exit;
 // alle Pfade mit gleicher ATC-Nummer abarbeiten. ATC enthält immer die Liste
 // der im Job benutzten Werkkzeuge.
-    my_pen:= atcArray[atc_idx].pen;
+    my_pen:= atcArray[ToolInSpindle].pen;
     GLSmakeToolArray(job.pens[my_pen].diameter);
     for i:= 0 to my_len-1 do begin
       my_entry:= final_array[i];
@@ -428,7 +447,7 @@ begin
       if length(my_entry.millings) = 0 then
         continue;
       atc_from_pens:= job.pens[my_entry.pen].atc;
-      if atc_from_pens <> atc_idx then
+      if atc_from_pens <> ToolInSpindle then
         continue;
       if isCancelled then
         exit;  // "finally" wird trotzdem ausgeführt!
@@ -449,14 +468,14 @@ begin
       SendSingleCommandStr('G0 X0 Y0'); // Work Zero
     end;
   finally
-    ExitJobMsg;
+    ExitJobMsg(true);
   end;
 end;
 
 procedure TForm1.BtnRunJobClick(Sender: TObject);
 var i, atc_idx, my_len, atc_from_pens, my_btn, my_pen: Integer;
   my_entry: Tfinal;
-
+  my_used_tools_count: Integer;
 begin
   BtnRunJob.enabled:= false;
   BtnRunTool.enabled:= false;
@@ -469,23 +488,30 @@ begin
     my_len:= length(final_array);
     if my_len < 1 then
        exit;
+    my_used_tools_count:= CountUsedATCtools; // tatsächlich benutzte Werkzeuge
+    if my_used_tools_count < 1 then
+       exit;
+    for i := 0 to high(final_array) do
+      final_array[i].enable:= is_any_milling_enabled(final_array[i]);
     if isSimActive then
       ResetSimulation;
-    if CheckUseATC2.checked and (ToolInSpindle <> 1) then begin
+    if ToolInSpindle <> 1 then begin
       PlaySound('SYSTEMHAND', 0, SND_ASYNC);
       Memo1.lines.add('');
       Memo1.lines.add('ERROR: Tool 1 is not in spindle.');
+      exit;
     end;
 
     BtnRunjob.tag:= 1;
+    GLSclearPathNodes;
     Form4.GLLinesPath.Visible:= Form4.CheckToolpathVisible.Checked;
     Form4.GLDummyCubeTool.visible:= true;
-    GLSsetToolToATCidx(FirstToolUsed);
+    GLSsetToolToATCidx(ToolInSpindle);
 
     Memo1.lines.clear;
     my_btn := MessageDlg('Is machine zeroed with first tool?'
       + #13 + 'Make sure spindle collet is loaded with:'
-      + #13 + #13 + pen_description(atcArray[FirstToolUsed].pen)
+      + #13 + #13 + pen_description(atcArray[ToolInSpindle].pen)
       + #13 + #13 + 'Click OK to proceed, CANCEL to terminate job.', mtConfirmation, mbOKCancel, 0);
     Memo1.lines.Clear;
     Memo1.lines.add('Job run started.');
@@ -494,16 +520,14 @@ begin
     GLSneedsATCupdateTimeout:= 1;
     if my_btn = mrCancel then
       exit;
-    if (not atcArray[FirstToolUsed].TREFok) and CheckToolChange.checked then begin
-      if not DoTLCandConfirm(false, FirstToolUsed) then
+    if (not atcArray[ToolInSpindle].TREFok) and CheckToolChange.checked then begin
+      if not DoTLCandConfirm(false, ToolInSpindle) then
         exit;
     end;
 
     // ATC- bzw. Tool-Liste abarbeiten
     SendSingleCommandStr('G0 G53 Z0');
-    for atc_idx:= 1 to c_numATCslots do begin
-      if not atcArray[atc_idx].enable then
-        continue;
+    for atc_idx:= 1 to my_used_tools_count do begin
 // alle Pfade mit gleicher ATC-Nummer abarbeiten. ATC enthält immer die Liste
 // der im Job benutzten Werkzeuge.
       GLSsetToolToATCidx(atc_idx);
@@ -527,37 +551,37 @@ begin
         Memo1.lines.add('Path done.');
       end;
 
-      if (not isCancelled) and CheckToolChange.checked and (atc_idx < c_numATCslots)
-        and atcArray[atc_idx + 1].enable then begin
-// Werkzeugwechel nur notwendig, wenn nicht letztes Werkzeug der ATC-Liste
+      if (not isCancelled) and CheckToolChange.checked then begin
+// Werkzeugwechel
         spindle_on_off(false);
         SendSingleCommandStr('G0 G53 Z0'); // move Z up
+        GLSclearPathNodes;
         if CheckUseATC2.checked then begin
 // automatischer Werkzeugwechsel
+          if atc_idx >= my_used_tools_count then
+            if not ChangeATCtool(atc_idx, 1, true) then // zurück zum ersten Tool
+              exit;
           if not ChangeATCtool(atc_idx, atc_idx + 1, true) then
             exit;
-        end else
+        end else begin
 // manueller Werkzeugwechsel
+          if atc_idx >= my_used_tools_count then
+            if not ManualToolchange(atc_idx, 1, true) then // zurück zum ersten Tool
+              exit;
           if not ManualToolchange(atc_idx, atc_idx + 1, true) then
             exit;
+        end;
 
         LEDbusy.Checked:= true;
         spindle_on_off(true);
         grbl_moveZ(0, true);
-//        grbl_moveXY(0, 0, false);
-        grbl_moveXY(final_bounds_mm.mid.x, final_bounds_mm.mid.y, false);
+        grbl_moveXY(0, 0, false);
+//        grbl_moveXY(final_bounds_mm.mid.x, final_bounds_mm.mid.y, false);
         grbl_moveZ(job.z_penlift, false);
         SendListToGrbl;
       end;
     end; // for loop
 
-    if CheckUseATC2.checked then begin
-  // automatischer Werkzeugwechsel
-      ChangeATCtool(ToolInSpindle, FirstToolUsed, false);  // erstes Werkzeug aufnehmen, ggf. TRUE
-      WorkZeroZdone:= false;
-    end;
-    if CheckToolChange.checked then
-      WorkZeroZdone:= false;
     Memo1.lines.add('Blocks done.');
     WaitForIdle;
 // grbl_millpath und grbl_drillpath enden mit job.z_penup, deshalb:
@@ -570,7 +594,7 @@ begin
       SendSingleCommandStr('G0 X0 Y0'); // Work Zero
     end;
   finally
-    ExitJobMsg;
+    ExitJobMsg(true);
   end;
 end;
 
@@ -578,12 +602,9 @@ procedure TForm1.RunGcode(Sender: TObject);
 // G-Code-Datei abspielen
 var
   my_ReadFile: TextFile;
-  my_line, old_line: String;
-  pos0, pos1: Integer;
-  new_z, z_offs: Double;
-  my_Settings: TFormatSettings;
+  my_line: String;
 
-  begin
+begin
   DefaultsGridListToJob;
   PenGridListToJob;
   if machine_busy_msg then
@@ -614,11 +635,6 @@ var
     CurrentPen:= 0;
     PendingAction:= lift;
     Reset(my_ReadFile);
-    z_offs:= StrToFloatDef(EditZoffs.Text, 0);
-    if z_offs <> 0 then
-      Memo1.lines.add('Using Z offset' + EditZoffs.Text);
-    my_Settings.Create;
-    my_Settings.DecimalSeparator:= '.';
     while not Eof(my_ReadFile) do begin
       if isCancelled then begin
         CloseFile(my_ReadFile);
@@ -626,19 +642,6 @@ var
       end;
       LEDbusy.Checked:= true;
       Readln(my_ReadFile, my_line);
-
-      pos0:= pos('Z', my_line);
-      if pos0 > 0 then begin
-      // Z mit Offset versehen
-        if not (pos('G53', my_line) > 0) then begin
-          pos1:= pos0+1;
-          new_z:= extract_float(my_line, pos1, true); // GCode-Dezimaltrenner
-          old_line:= my_line;
-          new_z:= new_z + z_offs;
-          my_line:= copy(old_line, 0, pos0) + FormatFloat('0.00', new_z, my_Settings)
-            + copy(old_line, pos1 - 1, 80);  // bis zum Ende der Zeile
-        end;
-      end;
       grbl_addStr(my_line);
       if grbl_sendlist.Count > 100 then
         SendListToGrbl;
@@ -658,7 +661,7 @@ var
       end;
     end;
   finally
-    ExitJobMsg;
+    ExitJobMsg(true);
   end;
 end;
 

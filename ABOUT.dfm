@@ -3,9 +3,9 @@ object AboutBox: TAboutBox
   Top = 108
   ActiveControl = OKButton
   BorderStyle = bsDialog
-  Caption = 'About HX3 Remote'
-  ClientHeight = 269
-  ClientWidth = 364
+  Caption = 'About GRBLize'
+  ClientHeight = 324
+  ClientWidth = 361
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clBlack
@@ -20,7 +20,7 @@ object AboutBox: TAboutBox
     Left = 8
     Top = 8
     Width = 345
-    Height = 249
+    Height = 307
     BevelOuter = bvLowered
     TabOrder = 0
     object ProgramIcon: TImage
@@ -492,7 +492,7 @@ object AboutBox: TAboutBox
       IsControl = True
     end
     object ProgName: TLabel
-      Left = 120
+      Left = 112
       Top = 8
       Width = 73
       Height = 23
@@ -506,7 +506,7 @@ object AboutBox: TAboutBox
       IsControl = True
     end
     object VersionInfo: TLabel
-      Left = 120
+      Left = 112
       Top = 40
       Width = 67
       Height = 16
@@ -523,7 +523,7 @@ object AboutBox: TAboutBox
       Left = 8
       Top = 88
       Width = 329
-      Height = 153
+      Height = 217
       BevelEdges = []
       BevelInner = bvNone
       BevelOuter = bvNone
@@ -531,7 +531,15 @@ object AboutBox: TAboutBox
       Color = clBtnFace
       Lines.Strings = (
         'HPGL/Excellon Converter/Viewer and G-Code Player'
-        'for GRBL-JOG step controller or GRBL from # 0.9'
+        ''
+        'IMPORTANT: GRBL must be compiled with'
+        ''
+        '#define HOMING_FORCE_SET_ORIGIN'
+        ''
+        
+          'option enabled in config.h so machine workspace is always positi' +
+          've'
+        '(home position 0,0,0 on bottom left).'
         ''
         'Written by Carsten Meyer, cm@ct.de '
         '(c) Heise Zeitschriften, c'#39't Hacks/Make 11/2014'

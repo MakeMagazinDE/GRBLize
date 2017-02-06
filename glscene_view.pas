@@ -603,7 +603,7 @@ begin
   GLHeightFieldWP.YSamplingScale.Step:= 1/gl_mult_scale;
   gl_initialized:= true;
   GLSsetATCandProbe;
-  GLSsetToolToATCidx(FirstToolUsed);
+  GLSsetToolToATCidx(ToolInSpindle);
 end;
 
 procedure GLScenterBlock(my_final_bounds: Tbounds);
@@ -719,7 +719,7 @@ begin
 
   if ena_solid then with GLExtrusionSolid1, Contours do begin
     // Werkstück Outlines/Umrisse einsetzen; können auch mehrere sein
-    for i:= 0 to length(final_array)-1 do begin
+    for i:= 0 to high(final_array) do begin
       my_entry:= final_array[i];
       if not my_entry.enable then
         continue;
@@ -779,7 +779,12 @@ begin
             my_poly_end:= etClosedPolygon
           else
             my_poly_end:= etOpenRound;
-          AddPaths(my_entry.millings, jtRound, my_poly_end);
+// statt "AddPaths(my_entry.millings, jtRound, my_poly_end);"
+// einzeln, weil Child-Pfade deaktiviert sein können
+          for p:= 0 to high(my_entry.millings) do begin // Anzahl Pfade
+            if my_entry.milling_enables[p] then
+              AddPath(my_entry.millings[p], jtRound, my_poly_end);
+          end;
           Execute(outer_paths, my_radius);
           Execute(inner_paths, -my_radius);
         finally
@@ -863,7 +868,7 @@ begin
     GLDummyCubeATCtools.DeleteChildren;
     for i:= 0 to c_numATCslots-1 do begin // Anzahl Slots
       my_dia:= job.pens[atcArray[i+1].pen].diameter;
-      if atcArray[i+1].enable then begin
+      if atcArray[i+1].used then begin
         my_color:= job.pens[atcArray[i+1].pen].color;
       end else begin
         my_color:= clgray;
@@ -877,7 +882,7 @@ begin
       my_disk.Material.FrontProperties.Emission.AsWinColor:= my_color;
       my_disk.Material.FrontProperties.Ambient.Color:= clrBlack;
       my_disk.Material.FrontProperties.Diffuse.Color:= clrBlack;
-      if atcArray[i+1].enable then begin
+      if atcArray[i+1].used then begin
         my_spacetext:= TGLSpaceText(GLDummyCubeATCtools.AddNewChild(TGLSpaceText));
         my_str:= FormatFloat('0.00', my_dia);
         my_spacetext.Text:= my_str;

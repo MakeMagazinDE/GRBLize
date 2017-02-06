@@ -147,10 +147,10 @@ object Form2: TForm2
   object PopupMenuObject: TPopupMenu
     Left = 1120
     Top = 8
-    object pu_enabled: TMenuItem
-      Caption = 'Enabled'
+    object pu_ObjectEnabled: TMenuItem
+      Caption = 'Object Enabled'
       Checked = True
-      OnClick = pu_enabledClick
+      OnClick = pu_ObjectenabledClick
     end
     object N1: TMenuItem
       Caption = '-'
@@ -256,9 +256,9 @@ object Form2: TForm2
     Left = 1120
     Top = 8
     object pu_PointEnabled: TMenuItem
-      Caption = 'Enabled'
+      Caption = 'Path Enabled'
       Checked = True
-      OnClick = pu_enabledClick
+      OnClick = pu_PathEnabledClick
     end
     object MenuItem2: TMenuItem
       Caption = '-'

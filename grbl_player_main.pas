@@ -1,7 +1,7 @@
 unit grbl_player_main;
 // CNC-Steuerung für GRBL-JOG-Platine mit GRBL 0.8c/jog.2 Firmware
 // oder GRBL 0.9j mit DEFINE GRBL115
-
+{ $DEFINE GRBL_11}
 
 interface
 
@@ -16,9 +16,14 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.4b';
+  c_VerStr: String = '1.5a';
   c_unloadATCstr: String = 'M8';
   c_loadATCstr: String = 'M9';
+{$IFDEF GRBL_11}
+  c_Grbl_VerStr: String = 'for GRBL 1.1 ';
+{$ELSE}
+  c_Grbl_VerStr: String = 'for GRBL 0.9 ';
+{$ENDIF}
 
 type
   TForm1 = class(TForm)
@@ -98,7 +103,6 @@ type
     TimerStatus: TTimer;
     BtnEmergStop: TBitBtn;
     PanelBusy: TPanel;
-    ComboBoxTip: TComboBox;
     PanelRun: TPanel;
     PanelReady: TPanel;
     PanelAlarm: TPanel;
@@ -125,8 +129,6 @@ type
     Bevel7: TBevel;
     Label8: TLabel;
     BtnRunGcode: TSpeedButton;
-    Label19: TLabel;
-    EditZoffs: TEdit;
     CheckTLCprobe: TCheckBox;
     LabelTableX: TLabel;
     LabelTableY: TLabel;
@@ -136,7 +138,6 @@ type
     Bevel9: TBevel;
     CheckPartProbeZ: TCheckBox;
     PanelZdone: TPanel;
-    Label44: TLabel;
     LabelHintZ: TLabel;
     ToolBar1: TToolBar;
     ToolButton9: TToolButton;
@@ -204,8 +205,6 @@ type
     pu_ProbeToolLengthRef: TMenuItem;
     pu_ProbetoolLengthComp: TMenuItem;
     BtnRunTool: TSpeedButton;
-    N2: TMenuItem;
-    pu_ToolEnable: TMenuItem;
     BtnMoveMillCenter: TSpeedButton;
     BtnZcontact: TSpeedButton;
     Label9: TLabel;
@@ -215,6 +214,59 @@ type
     Label21: TLabel;
     Label22: TLabel;
     BtnMoveZzero: TSpeedButton;
+    Action1: TAction;
+    PopupMenuShape: TPopupMenu;
+    ms_contour: TMenuItem;
+    ms_inside: TMenuItem;
+    ms_outside: TMenuItem;
+    ms_pocket: TMenuItem;
+    ms_drill: TMenuItem;
+    PopupMenuTooltip: TPopupMenu;
+    mt_flat: TMenuItem;
+    mt_cone30: TMenuItem;
+    mt_cone45: TMenuItem;
+    mt_cone60: TMenuItem;
+    mt_cone90: TMenuItem;
+    mt_ballnose: TMenuItem;
+    mt_drill: TMenuItem;
+    PopupMenuBlockShape: TPopupMenu;
+    MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    TabUtils: TTabSheet;
+    MemoUtils1: TMemo;
+    BtnUtilsSquare: TSpeedButton;
+    ScrollUtilsFeed: TScrollBar;
+    LabelUtilsFeed: TLabel;
+    EditUtilsZend: TEdit;
+    EditUtilsZinc: TEdit;
+    Label30: TLabel;
+    BtnUtilsReset: TBitBtn;
+    EditCornerX: TEdit;
+    EditCornerY: TEdit;
+    Label34: TLabel;
+    Label35: TLabel;
+    BtnSetCorner: TButton;
+    Label29: TLabel;
+    BtnUtilsCircle: TSpeedButton;
+    BtnSetRadius: TButton;
+    Label37: TLabel;
+    EditRadius: TEdit;
+    BtnCirclePocket: TSpeedButton;
+    BtnCircleOutline: TSpeedButton;
+    Label38: TLabel;
+    BtnSquareOutline: TSpeedButton;
+    BtnSquarePocket: TSpeedButton;
+    Label32: TLabel;
+    EditToolDia: TEdit;
+    Label33: TLabel;
+    UpDown1: TUpDown;
+    UpDown2: TUpDown;
+    UpDown3: TUpDown;
+    Gauge1: TGauge;
+    Label36: TLabel;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -254,7 +306,6 @@ type
     procedure HelpAbout1Execute(Sender: TObject);
     procedure SgFilesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
-    procedure SgFilesClick(Sender: TObject);
     procedure BtnCancelClick(Sender: TObject);
     procedure BitBtnClearFilesClick(Sender: TObject);
     procedure FileNew1Execute(Sender: TObject);
@@ -268,8 +319,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure JobOpenExecute(Sender: TObject);
     procedure TimerDrawElapsed(Sender: TObject);
-    procedure SgPensTopLeftChanged(Sender: TObject);
-    procedure ComboBoxTipExit(Sender: TObject);
     procedure ComboBoxGtipChange(Sender: TObject);
     procedure ComboBoxGdiaChange(Sender: TObject);
     procedure RunGcode(Sender: TObject);
@@ -294,8 +343,6 @@ type
     procedure BtnZcontactClick(Sender: TObject);
     procedure CheckTLCprobeClick(Sender: TObject);
     procedure BtnRescanClick(Sender: TObject);
-    procedure ComboBoxTipMouseLeave(Sender: TObject);
-    procedure ComboBoxTipKeyPress(Sender: TObject; var Key: Char);
     procedure BtnMoveFix2Click(Sender: TObject);
     procedure BtnMoveFix1Click(Sender: TObject);
     procedure BtnSetFix1Click(Sender: TObject);
@@ -310,7 +357,6 @@ type
     procedure BtnCancelMouseEnter(Sender: TObject);
     procedure BtnCancelMouseLeave(Sender: TObject);
     procedure BtnHomeOverrideClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure PanelAliveClick(Sender: TObject);
     procedure PanelReadyClick(Sender: TObject);
     procedure CheckToolChangeClick(Sender: TObject);
@@ -324,9 +370,35 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure pu_ProbetoolLengthCompClick(Sender: TObject);
     procedure BtnRunToolClick(Sender: TObject);
-    procedure pu_ToolEnableClick(Sender: TObject);
     procedure BtnMoveMillCenterClick(Sender: TObject);
     procedure BtnMoveZzeroClick(Sender: TObject);
+    procedure mt_Click(Sender: TObject);
+    procedure ms_Click(Sender: TObject);
+    procedure mbs_click(Sender: TObject);
+    procedure BtnUtilsSquareClick(Sender: TObject);
+    procedure ScrollUtilsFeedChange(Sender: TObject);
+    procedure BtnUtilsResetClick(Sender: TObject);
+    procedure BtnSetCornerClick(Sender: TObject);
+    procedure EditCornerKeyPress(Sender: TObject; var Key: Char);
+    procedure BtnSetRadiusClick(Sender: TObject);
+    procedure BtnUtilsCircleClick(Sender: TObject);
+    procedure BtnCircleOutlineClick(Sender: TObject);
+    procedure BtnCirclePocketClick(Sender: TObject);
+    procedure BtnSquareOutlineClick(Sender: TObject);
+    procedure BtnSquarePocketClick(Sender: TObject);
+    procedure EditRadiusKeyPress(Sender: TObject; var Key: Char);
+    procedure PageControl1DrawTab(Control: TCustomTabControl; TabIndex: Integer;
+      const Rect: TRect; Active: Boolean);
+    procedure PageControl1MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure UpDown1ChangingEx(Sender: TObject; var AllowChange: Boolean;
+      NewValue: Integer; Direction: TUpDownDirection);
+    procedure UpDown2ChangingEx(Sender: TObject; var AllowChange: Boolean;
+      NewValue: Integer; Direction: TUpDownDirection);
+    procedure UpDown3ChangingEx(Sender: TObject; var AllowChange: Boolean;
+      NewValue: Integer; Direction: TUpDownDirection);
+    procedure SgFilesExit(Sender: TObject);
+    procedure SgFilesClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -408,8 +480,9 @@ var
   ComPortUsed: Integer;
   JobSettingsPath: String;
 
-  grbl_mpos, grbl_wpos, old_grbl_wpos: T3dFloat;
-
+  grbl_mpos, grbl_wpos, old_grbl_wpos, grbl_wco: T3dFloat;
+  grbl_feed_ov, grbl_seek_ov, grbl_speed_ov: Integer;
+  grbl_feed, grbl_speed: Integer;
   MouseJogAction: Boolean;
   open_request, ftdi_was_open, com_was_open: boolean;
   WorkZeroX, WorkZeroY, WorkZeroZ: Double;  // Absolutwerte Werkstück-Null
@@ -421,7 +494,6 @@ var
   WorkZeroXdone, WorkZeroYdone, WorkZeroZdone, WorkZeroAllDone: Boolean;
 //  ProbedState: t_pstates;
 
-  FirstToolUsed: Integer = 1; // Erstes Benutztes Tool im Job, 0 = unused
   LastToolUsed: Integer = 1;  // Zuletzt Benutztes Tool im Job, 0 = unused
   ToolInSpindle: Integer = 1; // ATC-Tool in der Maschine, 0 = unused
   ResponseFaultCounter: Integer;
@@ -444,14 +516,60 @@ var
   gcsim_color: TColor;
   StopWatch: TStopwatch;
   StartupDone: Boolean = false;
+  SquareCorner_wpos, SquareCorner_mpos: T3dFloat;
+  InstantZ_end, InstantZ_inc: Double;
+  SquarePocket: Boolean;
+  SquareCornerManualEnter, SquareCornerSetToMpos: Boolean;
+  CirclePocket: Boolean;
+  CircleRadiusManualEnter, CircleRadiusSetToMpos: Boolean;
+  CircleRadius: Double;
+  CircleRadius_wpos, CircleRadius_mpos: T3dFloat;
 
-
- const
- // für Simulation
+const
+   // für Simulation
   c_zero_x = 50;
   c_zero_y = 50;
   c_zero_z = -25;
   c_numATCslots = 9;
+
+  SettingCodes_11: Array[0..35] of String[31] = (
+    'Step pulse time',
+    'Step idle delay',
+    'Step pulse invert',
+    'Step direction invert',
+    'Invert step enable pin',
+    'Invert limit pins',
+    'Invert probe pin',
+    'Status report options',
+    'Junction deviation',
+    'Arc tolerance',
+    'Report in inches',
+    'Soft limits enable',
+    'Hard limits enable',
+    'Homing cycle enable',
+    'Homing direction invert',
+    'Homing locate feed rate',
+    'Homing search seek rate',
+    'Homing switch debounce delay',
+    'Homing switch pull-off distance',
+    'Maximum spindle speed',
+    'Minimum spindle speed',
+    'Laser-mode enable',
+    'X-axis travel resolution',
+    'Y-axis travel resolution',
+    'Z-axis travel resolution',
+    'X-axis maximum rate',
+    'Y-axis maximum rate',
+    'Z-axis maximum rate',
+    'X-axis acceleration',
+    'Y-axis acceleration',
+    'Z-axis acceleration',
+    'X-axis maximum travel',
+    'Y-axis maximum travel',
+    'Z-axis maximum travel',
+    '(none)',
+    '(none)'
+    );
 
 implementation
 
@@ -601,6 +719,29 @@ begin
       CheckTLCprobe.Checked:= false;
     end;
   end;
+end;
+
+// #############################################################################
+
+procedure uncheck_ms;
+var i: Integer;
+begin
+  for i:= 0 to Form1.PopupMenuShape.Items.Count - 1 do
+    Form1.PopupMenuShape.Items[i].Checked:= false;
+end;
+
+procedure uncheck_mbs;
+var i: Integer;
+begin
+  for i:= 0 to Form1.PopupMenuBlockShape.Items.Count - 1 do
+    Form1.PopupMenuBlockShape.Items[i].Checked:= false;
+end;
+
+procedure uncheck_mtt;
+var i: Integer;
+begin
+  for i:= 0 to Form1.PopupMenuTooltip.Items.Count - 1 do
+    Form1.PopupMenuTooltip.Items[i].Checked:= false;
 end;
 
 
@@ -776,7 +917,6 @@ begin
   PlaySound('SYSTEMWELCOME', 0, SND_ASYNC);
   StopWatch:= TStopWatch.Create() ;
   Width:= Constraints.MaxWidth;
-  grbl_receveivelist:= TStringList.create;
   grbl_sendlist:= TStringList.create;
   grbl_is_connected:= false;
   grbl_delay_short:= 15;   // Könnte man von Baudrate abhängig machen
@@ -789,7 +929,6 @@ begin
   if not IsFormOpen('deviceselectbox') then
     deviceselectbox := Tdeviceselectbox.Create(Self);
   deviceselectbox.hide;
-
   grbl_ini:= TRegistry.Create;
   try
     grbl_ini.RootKey := HKEY_CURRENT_USER;
@@ -858,8 +997,6 @@ begin
 
   Combobox1.Parent := SgFiles;
   ComboBox1.Visible := False;
-  ComboboxTip.Parent := SgPens;
-  ComboBoxTip.Visible := False;
   SgFiles.Row:=1;
   SgFiles.Col:=4;
 
@@ -898,9 +1035,9 @@ begin
   PortOpenedCheck;
   EnableStatus;
   StartupDone:= true;
-  if Show3DPreview1.Checked then begin
+  if Show3DPreview1.Checked then
     Form4.FormReset;
- end;
+  BtnUtilsResetClick(Sender);
 end;
 
 // #############################################################################
@@ -992,9 +1129,11 @@ procedure TForm1.PageControl1Change(Sender: TObject);
 begin
   SgPens.Col:= 3;
   SgPens.Row:= 1;
+  Repaint;
 end;
 
-{procedure TForm1.PageControl1DrawTab(Control: TCustomTabControl;
+
+procedure TForm1.PageControl1DrawTab(Control: TCustomTabControl;
   TabIndex: Integer; const Rect: TRect; Active: Boolean);
 // PageControl1.OwnerDraw := True !
 var
@@ -1003,25 +1142,31 @@ var
   TabCaption: string;
 begin
   with Control.Canvas do begin
-    if TabIndex = 3 then begin
-      Font.Color := clred;
-    end;
-    if TabIndex = PageControl1.ActivePageIndex then
-      Brush.Color := clSilver
-    else
-      Brush.Color := clBtnFace;
+    if TabIndex = 4 then
+      Font.Color:= clteal;
+    if TabIndex = 3 then
+      Font.Color:= clgreen;
+    if Active then
+//      Brush.Color:= clwindow;
+      Brush.Color:= cl3Dlight;
+    FillRect(Rect);
 
     TabCaption := PageControl1.Pages[TabIndex].Caption;
     CaptionX := Rect.Left + ((Rect.Right - Rect.Left - TextWidth(TabCaption)) div 2);
     CaptionY := Rect.Top + ((Rect.Bottom - Rect.Top - TextHeight('Gg')) div 2);
 
-    FillRect(Rect);
     TextOut(CaptionX, CaptionY, TabCaption);
 //    TextRect(Rect, Rect.Left + 2, Rect.Top + 2, TabCaption);
   end;
 end;
-}
 
+
+
+procedure TForm1.PageControl1MouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  Repaint;
+end;
 
 // #############################################################################
 
@@ -1047,13 +1192,6 @@ begin
 end;
 
 //##############################################################################
-
-
-procedure TForm1.Button1Click(Sender: TObject);
-begin
-  Form1.SgFiles.Cells[8,2]:='TEST';
-end;
-
 //##############################################################################
 
 procedure TForm1.CheckBoxSimClick(Sender: TObject);
@@ -1074,6 +1212,379 @@ begin
     DeviceView.Font.Style:= [];
   end;
 end;
+
+// #############################################################################
+// ############################## UTILS PAGE ###################################
+// #############################################################################
+
+//  UtilsLLpt, SquareCorner: TpointFloat;
+//  UtilsFeed: Integer;
+//  InstantZ_start, InstantZ_end, InstantZ_inc: Double;
+
+// ######################### UTILS SQUARE ######################################
+
+procedure TForm1.BtnSetCornerClick(Sender: TObject);
+begin
+  SquareCorner_mpos:= grbl_mpos;
+  EditCornerX.Text:= 'MPOS';
+  EditCornerY.Text:= 'MPOS';
+  Memo1.Lines.Add('');
+  Memo1.Lines.Add('Upper right corner');
+  Memo1.Lines.Add('set to machine position');
+  Memo1.Lines.Add('X: ' + FormatFloat('000.00', SquareCorner_mpos.x)
+    + '   Y: ' + FormatFloat('000.00', SquareCorner_mpos.y));
+  SquareCornerManualEnter:= false;
+  SquareCornerSetToMpos:= true;
+end;
+
+
+procedure TForm1.BtnUtilsSquareClick(Sender: TObject);
+var
+  x1, x2, y1, y2, z, pocket_step: Double;
+  outline_only: Boolean;
+begin
+  Memo1.Lines.Add('');
+  if SquareCornerManualEnter then begin
+    if (not WorkZeroXdone) or (not WorkZeroYdone) then begin
+      Memo1.Lines.Add('##### Error: Machine XY not zeroed on part!');
+      exit;
+    end;
+    if (abs(grbl_wpos.x) > 2) or (abs(grbl_wpos.y) > 2) then begin
+      Memo1.Lines.Add('##### Error: Tool not near zero position!');
+      exit;
+    end;
+    SquareCorner_wpos.X:=StrToFloatDef(EditCornerX.Text,0);
+    SquareCorner_wpos.Y:=StrToFloatDef(EditCornerY.Text,0);
+    Memo1.Lines.Add('Square corner set manually');
+  end else begin
+    if not SquareCornerSetToMpos then begin
+      Memo1.Lines.Add('##### Error: Upper right corner not set!');
+      exit;
+    end;
+    // Maschinenkoordinaten gesetzt, ändern auf Werkstück
+    SquareCorner_wpos.X:= SquareCorner_mpos.X - grbl_mpos.x;
+    SquareCorner_wpos.Y:= SquareCorner_mpos.Y - grbl_mpos.y;
+    SquareCorner_wpos.Z:= SquareCorner_mpos.Z - grbl_mpos.z;
+    EditCornerX.Text:= FormatFloat('0.00', SquareCorner_wpos.X);
+    EditCornerY.Text:= FormatFloat('0.00', SquareCorner_wpos.Y);
+    WorkZeroXdone:= false;    // wurde überschrieben
+    WorkZeroYdone:= false;
+    Memo1.Lines.Add('Lower left square corner set to zero');
+  end;
+
+  if (SquareCorner_wpos.X >= 0) and  (SquareCorner_wpos.Y >= 0) then begin
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('Upper right corner set to');
+    Memo1.Lines.Add('X:' + FormatFloat('000.00', SquareCorner_wpos.x)
+      + '  Y:' + FormatFloat('000.00', SquareCorner_wpos.y));
+  end else begin
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('##### Error: Corner positions invalid!');
+    exit;
+  end;
+  WorkZeroZdone:= false;  // hat sich geändert!
+  BtnRunJob.Tag:= 1; // Run-Status, ForceToolPos verhindern
+  if not SquareCornerManualEnter then
+    grbl_offsXY(0,0);
+  grbl_offsZ(0);          // User hatte Werkstück-Oberfläche angefahren
+  grbl_moveZ(2, false);   // leicht anheben
+  SendListToGrbl;
+  spindle_on_off(true);
+
+  InstantZ_end:= -abs(StrToFloatDef(EditUtilsZend.Text,0));
+  InstantZ_inc:= abs(StrToFloatDef(EditUtilsZinc.Text,0));
+  pocket_step:= StrToFloatDef(EditToolDia.Text,2) * 0.75;
+  outline_only:= not SquarePocket;
+
+  z:= 0;
+  grbl_moveZ(2, false);
+  grbl_moveXY(0, 0, false);
+  grbl_moveSlowZ(0, false);
+  try
+    repeat
+      z:= z - InstantZ_inc;
+      if z < InstantZ_end then begin
+        z:= InstantZ_end;
+        InstantZ_inc:= 0;
+      end;
+      x1:= 0;
+      x2:= SquareCorner_wpos.X;
+      y1:= 0;
+      y2:= SquareCorner_wpos.Y;
+      grbl_moveXY(x1, y1, false);
+      SendListToGrbl;
+      repeat
+        grbl_millZF(z, 50);
+        grbl_millXYF(x1, y1, ScrollUtilsFeed.Position);
+        grbl_millXY(x2, y1);
+        grbl_millXY(x2, y2);
+        grbl_millXY(x1, y2);
+        grbl_millXY(x1, y1);
+        if isCancelled then
+          exit;  // "finally" wird trotzdem ausgeführt!
+        SendListToGrbl;
+
+        x2:= x2 - pocket_step;
+        y2:= y2 - pocket_step;
+        x1:= x1 + pocket_step;
+        y1:= y1 + pocket_step;
+      until (x1 > x2) or (y1 > y2) or outline_only;
+    until (z <= InstantZ_end);
+//    grbl_moveZ(InstantZ_start + job.z_penlift, false);
+    grbl_moveZ(2, false);
+    grbl_moveXY(0, 0, false);
+    grbl_moveSlowZ(0, false);
+    SendListToGrbl;
+  finally
+    WaitForIdle;
+    ExitJobMsg(false);
+    WorkZeroZdone:= false;  // hat sich geändert!
+    if not SquareCornerManualEnter then begin
+      WorkZeroXdone:= false;  // hat sich geändert!
+      WorkZeroYdone:= false;
+    end;
+  end;
+end;
+
+procedure TForm1.ScrollUtilsFeedChange(Sender: TObject);
+begin
+  LabelUtilsFeed.Caption:= 'Feed: ' + IntToStr(ScrollUtilsFeed.Position);
+end;
+
+procedure TForm1.EditCornerKeyPress(Sender: TObject; var Key: Char);
+begin
+  // Werte von Hand eingetragen
+  SquareCornerManualEnter:= true;
+  SquareCornerSetToMpos:= false;
+  if EditCornerX.Text = 'MPOS' then
+    EditCornerX.Text:= '';
+  if EditCornerY.Text = 'MPOS' then
+    EditCornerY.Text:= '';
+
+end;
+
+
+procedure TForm1.BtnSquareOutlineClick(Sender: TObject);
+begin
+  BtnSquareOutline.Visible:= false;
+  BtnSquarePocket.Visible:= true;
+  SquarePocket:= true;
+end;
+
+procedure TForm1.BtnSquarePocketClick(Sender: TObject);
+begin
+  BtnSquareOutline.Visible:= true;
+  BtnSquarePocket.Visible:= false;
+  SquarePocket:= false;
+end;
+
+// ######################### UTILS CIRCLE ######################################
+
+procedure TForm1.BtnSetRadiusClick(Sender: TObject);
+begin
+  CircleRadius_mpos:= grbl_mpos;
+  EditRadius.Text:= 'MPOS';
+  Memo1.Lines.Add('');
+  Memo1.Lines.Add('Circle radius (outer edge)');
+  Memo1.Lines.Add('set to machine position');
+  Memo1.Lines.Add('X: ' + FormatFloat('000.00', CircleRadius_mpos.x)
+    + '   Y: ' + FormatFloat('000.00', CircleRadius_mpos.y));
+  CircleRadiusManualEnter:= false;
+  CircleRadiusSetToMpos:= true;
+end;
+
+procedure TForm1.BtnUtilsCircleClick(Sender: TObject);
+var my_radius, z, pocket_step: Double;
+  outline_only: Boolean;
+  my_str: String;
+
+begin
+  Memo1.Lines.Add('');
+  if CircleRadiusManualEnter then begin
+    if (not WorkZeroXdone) or (not WorkZeroYdone) then begin
+      Memo1.Lines.Add('##### Error: Machine XY not zeroed on part!');
+      exit;
+    end;
+    if (abs(grbl_wpos.x) > 2) or (abs(grbl_wpos.y) > 2) then begin
+      Memo1.Lines.Add('##### Error: Tool not near zero position!');
+      exit;
+    end;
+    CircleRadius:=StrToFloatDef(EditRadius.Text,0);
+    Memo1.Lines.Add('Circle radius set manually');
+  end else begin
+    if not CircleRadiusSetToMpos then begin
+      Memo1.Lines.Add('##### Error: Circle radius (outer edge) not set!');
+      exit;
+    end;
+    // Maschinenkoordinaten gesetzt, ändern auf Werkstück
+    CircleRadius_wpos.X:= CircleRadius_mpos.X - grbl_mpos.x;
+    CircleRadius_wpos.Y:= CircleRadius_mpos.Y - grbl_mpos.y;
+    CircleRadius:= sqrt(sqr(CircleRadius_wpos.X) + sqr(CircleRadius_wpos.Y));
+    EditRadius.Text:= FormatFloat('0.00', CircleRadius);
+    WorkZeroXdone:= false;    // wurde überschrieben
+    WorkZeroYdone:= false;
+    Memo1.Lines.Add('Circle center set to zero');
+  end;
+
+  if (CircleRadius > 0) then begin
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('Circle radius set to: ' + FormatFloat('000.00', CircleRadius));
+  end else begin
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('##### Error: Radius invalid!');
+    exit;
+  end;
+
+  WorkZeroZdone:= true;  // hat sich geändert!
+  BtnRunJob.Tag:= 1;      // Run-Status, ForceToolPos verhindern
+
+  if not CircleRadiusManualEnter then
+    grbl_offsXY(0,0);     // User hatte Nullpunkt angefahren
+  grbl_offsZ(0);          // User hatte Werkstück-Oberfläche angefahren
+  grbl_moveZ(2, false);   // leicht anheben
+  SendListToGrbl;
+  spindle_on_off(true);
+
+  InstantZ_end:= -abs(StrToFloatDef(EditUtilsZend.Text,0));
+  InstantZ_inc:= abs(StrToFloatDef(EditUtilsZinc.Text,0));
+  pocket_step:= StrToFloatDef(EditToolDia.Text,2) * 0.75;
+  outline_only:= not CirclePocket;
+
+  z:= 0;
+  grbl_moveXY(CircleRadius, 0, false);
+  grbl_moveSlowZ(0, false);
+  try
+    repeat
+      z:= z - InstantZ_inc;
+      if z < InstantZ_end then begin
+        z:= InstantZ_end;
+        InstantZ_inc:= 0;
+      end;
+      my_radius:= CircleRadius;
+      grbl_moveXY(my_radius, 0, false);
+      SendListToGrbl;
+      repeat
+        grbl_millZF(z, 50);
+        grbl_millXYF(my_radius, 0, ScrollUtilsFeed.Position);
+        // ganzer Kreis
+        my_str:= 'G2 X' + FloatToSTrDot(my_radius) + 'Y0' + 'I'
+          + FloatToSTrDot(-my_radius) + 'J0';
+        grbl_addStr(my_str);
+        if isCancelled then
+          exit;  // "finally" wird trotzdem ausgeführt!
+        SendListToGrbl;
+        my_radius:= my_radius - pocket_step;
+      until (my_radius < 1.5) or outline_only;
+    until (z <= InstantZ_end);
+  //    grbl_moveZ(InstantZ_start + job.z_penlift, false);
+    grbl_moveZ(2, false);
+    grbl_moveXY(0, 0, false);
+    grbl_moveSlowZ(0, false);
+    SendListToGrbl;
+  finally
+    WaitForIdle;
+    ExitJobMsg(false);
+    WorkZeroZdone:= false;  // hat sich geändert!
+    if not CircleRadiusManualEnter then begin
+      WorkZeroXdone:= false;  // hat sich geändert!
+      WorkZeroYdone:= false;
+    end;
+  end;
+end;
+
+procedure TForm1.BtnCircleOutlineClick(Sender: TObject);
+begin
+  BtnCircleOutline.Visible:= false;
+  BtnCirclePocket.Visible:= true;
+  CirclePocket:= true;
+end;
+
+procedure TForm1.BtnCirclePocketClick(Sender: TObject);
+begin
+  BtnCircleOutline.Visible:= true;
+  BtnCirclePocket.Visible:= false;
+  CirclePocket:= false;
+end;
+
+procedure TForm1.EditRadiusKeyPress(Sender: TObject; var Key: Char);
+begin
+  CircleRadiusManualEnter:= true;
+  CircleRadiusSetToMpos:= false;
+end;
+
+procedure TForm1.BtnUtilsResetClick(Sender: TObject);
+begin
+  BtnCircleOutline.Visible:= true;
+  BtnCirclePocket.Visible:= false;
+  BtnSquareOutline.Visible:= true;
+  BtnSquarePocket.Visible:= false;
+  CirclePocket:= false;
+  SquarePocket:= false;
+  SquareCornerManualEnter:= false;
+  SquareCornerSetToMpos:= false;
+  CircleRadiusManualEnter:= false;
+  CircleRadiusSetToMpos:= false;
+  EditCornerX.Text:= '0,00';
+  EditCornerY.Text:= '0,00';
+  EditRadius.Text:= '0,00';
+  EditToolDia.Text:= '2,00';
+  UpDown1.Position:= 0;
+  UpDown2.Position:= 0;
+  UpDown3.Position:= 0;
+  if PageControl1.TabIndex = 4 then begin
+    Memo1.Lines.clear;
+    Memo1.Lines.Add('Corner/center reset');
+  end;
+end;
+
+
+procedure TForm1.UpDown1ChangingEx(Sender: TObject; var AllowChange: Boolean;
+  NewValue: Integer; Direction: TUpDownDirection);
+var new_val: Double;
+begin
+  new_val:= StrToFloatDef(EditToolDia.Text,2);
+  new_val:= RoundToDigits(new_val, 1);
+  if Direction = updUp then
+    new_val:= new_val + 0.5;
+  if Direction = updDown then
+    new_val:= new_val - 0.5;
+  if new_val < 0.5 then
+    new_val:= 0.5;
+  EditToolDia.Text:= FormatFloat('0.00',new_val);
+end;
+
+procedure TForm1.UpDown2ChangingEx(Sender: TObject; var AllowChange: Boolean;
+  NewValue: Integer; Direction: TUpDownDirection);
+var new_val: Double;
+begin
+  new_val:= StrToFloatDef(EditUtilsZend.Text,0);
+  new_val:= RoundToDigits(new_val, 1);
+  if Direction = updUp then
+    new_val:= new_val + 0.1;
+  if Direction = updDown then
+    new_val:= new_val - 0.1;
+  if new_val < 0 then
+    new_val:= 0;
+  EditUtilsZend.Text:= FormatFloat('0.00',new_val);
+end;
+
+procedure TForm1.UpDown3ChangingEx(Sender: TObject; var AllowChange: Boolean;
+  NewValue: Integer; Direction: TUpDownDirection);
+var new_val: Double;
+begin
+  new_val:= StrToFloatDef(EditUtilsZinc.Text,0.5);
+  new_val:= RoundToDigits(new_val, 1);
+  if Direction = updUp then
+    new_val:= new_val + 0.1;
+  if Direction = updDown then
+    new_val:= new_val - 0.1;
+  if new_val < 0.1 then
+    new_val:= 0.1;
+  EditUtilsZinc.Text:= FormatFloat('0.00',new_val);
+end;
+
+// #############################################################################
+// #############################################################################
 
 procedure TForm1.CheckTLCprobeClick(Sender: TObject);
 begin
@@ -1142,143 +1653,12 @@ end;
 
 // #############################################################################
 
-function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
-// liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
-// setzt pos_changed wenn sich Position änderte
+{$IFDEF GRBL_11}
+{$I decodestatus_11.inc}
+{$ELSE}
+{$I decodestatus_09.inc}
+{$ENDIF}
 
-// Format ab GRBL 0.9j:
-// <Idle,MPos:40.001,35.989,-19.999,WPos:40.001,35.989,-19.999>  3-stellig, 61 Zeichen
-// <Idle,MPos:40.00,35.98,-19.99,WPos:40.00,35.98,-19.99>  2-stellig 55 Zeichen
-// 1 Zeichen dauert bei 115200 Bd 1/11520 s = ca. 0,086 ms, d.h. 7 ms für gesamten Satz
-// 1 Zeichen dauert bei 19200  Bd 1/1920 s  = ca. 0,5 ms,   d.h. 35 ms für gesamten Satz
-
-var
-  my_str: String;
-  my_start_idx: Integer;
-  is_valid, is_jogging: Boolean;
-
-begin
-  result:= false;
-  pos_changed:= false;
-  if (pos('>', my_response) = 0) then begin  // nicht vollständig
-    inc(ResponseFaultCounter);
-    exit;
-  end;
-  if (my_response[1] = '<') then begin
-    my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
-    my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
-    my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
-  end else begin                             // nicht vollständig
-    inc(ResponseFaultCounter);
-    exit;
-  end;
-  is_valid:= false;
-  with Form1 do begin
-    grbl_receveivelist.clear;
-    grbl_receveivelist.CommaText:= my_response;
-    if grbl_receveivelist.Count < 2 then
-      exit;   // Meldung fehlerhaft
-    my_Str:= grbl_receveivelist[0];
-    if AliveCount >= 7 then
-      AliveIndicatorDirection:= false;
-    if AliveCount <= 0 then
-      AliveIndicatorDirection:= true;
-    if AliveIndicatorDirection then
-      inc(AliveCount)
-    else
-      dec(AliveCount);
-    ShowAliveState(LastAliveState);
-
-    if (my_Str = 'Idle') or (my_Str = 'Zero') then begin
-      PanelReady.Color:= clLime;
-      PanelReady.Font.Color:= clwhite;
-      is_valid:= true;
-      if (my_Str = 'Zero') then
-        MachineState:= zero
-      else
-        MachineState:= idle;
-    end else begin
-      PanelReady.Color:= $00004000;
-      PanelReady.Font.Color:= clgray;
-    end;
-
-    if (my_Str = 'Queue') or (my_Str =  'Hold') then begin
-      is_valid:= true;
-      PanelHold.Color:= clAqua;
-      PanelHold.Font.Color:= clwhite;
-      result:= true;
-      MachineState:= hold;
-    end else begin
-      PanelHold.Color:= $00400000;
-      PanelHold.Font.Color:= clgray;
-    end;
-
-    is_jogging:= AnsiContainsStr(my_Str,'Jog');
-    if (my_Str = 'Run') or is_jogging then begin
-      is_valid:= true;
-      PanelRun.Color:= clFuchsia;
-      PanelRun.Font.Color:= clwhite;
-      result:= true;
-      MachineState:= run;
-    end else begin
-      PanelRun.Color:= $00400040;
-      PanelRun.Font.Color:= clgray;
-    end;
-
-    if my_Str = 'Alarm' then begin
-      is_valid:= true;
-      PanelAlarm.Color:= clRed;
-      PanelAlarm.Font.Color:= clwhite;
-      MachineState:= alarm;
-      HomingPerformed:= false;
-    end else begin
-      PanelAlarm.Color:= $00000040;
-      PanelAlarm.Font.Color:= clgray;
-    end;
-    // keine gültige Statusmeldung?
-    if not is_valid then begin
-      inc(ResponseFaultCounter);
-      exit;
-    end;
-    if is_jogging then begin  // Kurzmeldung von GRBL-JOG 0.9j
-      if my_Str = 'JogX' then begin
-        grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[1]);
-        PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-      end;
-      if my_Str = 'JogY' then begin
-        grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[1]);
-        PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-      end;
-      if my_Str = 'JogZ' then begin
-        grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[1]);
-        PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-      end;
-    end else begin
-      my_start_idx:= grbl_receveivelist.IndexOf('MPos');
-      if my_start_idx >= 0 then begin
-        grbl_mpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-        grbl_mpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
-        grbl_mpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-        DisplayMachinePosition;
-      end;
-      my_start_idx:= grbl_receveivelist.IndexOf('WPos');
-      if my_start_idx >= 0 then begin
-        grbl_wpos.x:= StrDotToFloat(grbl_receveivelist[my_start_idx+1]);
-        grbl_wpos.y:= StrDotToFloat(grbl_receveivelist[my_start_idx+2]);
-        grbl_wpos.z:= StrDotToFloat(grbl_receveivelist[my_start_idx+3]);
-        DisplayWorkPosition;
-      end;
-
-    end;
-  end;
-
-  if (MachineState = run) or (old_grbl_wpos.X <> grbl_wpos.X)
-     or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
-    pos_changed:= true;
-    old_grbl_wpos:= grbl_wpos;
-    NeedsRedraw:= true;
-  end;
-end;
 
 procedure HandleZeroRequest;
 // wenn Zero-Button auf Maschinen-Panel gedrückt
@@ -1349,7 +1729,7 @@ begin
     s_receive: // Angefragten Status auslesen
       begin
         old_machine_state:= MachineState;
-        DecodeStatus(grbl_receiveStr(20), pos_changed); // muss eingetroffen sein
+        DecodeStatus(grbl_receiveStr(25), pos_changed); // muss eingetroffen sein
         if (MachineState = zero) then
           HandleZeroRequest;
         if (MachineState = alarm) and (old_machine_state <> alarm) then
@@ -1459,7 +1839,7 @@ procedure SendSingleCommandStr(my_command: String);
 begin
   if isGrblActive then begin
     DisableStatus;
-    SendReceive(my_command, 100);
+    SendReceive(my_command, 200);
     EnableStatus;
   end else begin
     Form1.Memo1.lines.add(my_command);
@@ -1498,7 +1878,7 @@ begin
     EnableStatus;   // Koordinaten-Abfrage freischalten
   end else
     ResetSimulation;
-  Form1.Memo1.lines.add('Done. Proceed with care!');
+  Form1.Memo1.lines.add('Proceed with care!');
 end;
 
 
@@ -1689,6 +2069,7 @@ begin
   GLSneedsATCupdateTimeout:= 0;
 end;
 
+
 procedure TForm1.Show3DPreview1Click(Sender: TObject);
 begin
   if isSimActive then
@@ -1698,7 +2079,7 @@ begin
     GLSneedsRedrawTimeout:= 0;
     GLSneedsATCupdateTimeout:= 0;
     Form4.Show;
-    GLSsetToolToATCidx(FirstToolUsed);
+    GLSsetToolToATCidx(ToolInSpindle);
     GLScenterBlock(final_bounds);
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
   end else
@@ -1707,11 +2088,53 @@ end;
 
 procedure TForm1.HelpAbout1Execute(Sender: TObject);
 begin
-  AboutBox.ProgName.Caption:= c_ProgNameStr;
-  AboutBox.VersionInfo.Caption:= c_VerStr;
+  AboutBox.ProgName.Caption:= c_ProgNameStr + c_VerStr;
+  AboutBox.VersionInfo.Caption:= c_Grbl_VerStr;
   Aboutbox.ShowModal;
 end;
 
+procedure TForm1.mbs_click(Sender: TObject);
+// Shapes im Block-Stringgrid!
+var my_shape: Tshape;
+begin
+  with SgBlocks do begin
+    my_shape:= TShape(PopupMenuBlockShape.Items.IndexOf(TMenuItem(Sender)));
+    final_array[HiliteBlock].shape:= my_shape;
+    Cells[4,row]:= ShapeArray[ord(my_shape)];
+    item_change(HiliteBlock);
+  end;
+end;
+
+procedure TForm1.ms_Click(Sender: TObject);
+begin
+  with SgPens do begin
+    job.pens[row-1].shape:= TShape(PopupMenuShape.Items.IndexOf(TMenuItem(Sender)));
+    Cells[col, row] := IntToStr(ord(job.pens[row-1].shape));
+  end;
+  apply_pen_change;
+  NeedsRedraw:= true;
+  GLSneedsRedrawTimeout:= 0;
+  GLSneedsATCupdateTimeout:= 0;
+end;
+
+
+procedure TForm1.mt_Click(Sender: TObject);
+begin
+  with SgPens do begin
+    job.pens[row-1].tooltip:= PopupMenuTooltip.Items.IndexOf(TMenuItem(Sender));
+    Cells[col, row] := IntToStr(job.pens[row-1].tooltip);
+    if job.pens[row-1].tooltip = 6 then begin
+      job.pens[row-1].shape:= drillhole;
+      Cells[9,row]:= IntToStr(ord(job.pens[Row-1].shape));
+    end;
+  end;
+  CalcTipDia;
+  apply_pen_change;
+  NeedsRedraw:= true;
+  GLSneedsRedrawTimeout:= 0;
+  GLSneedsATCupdateTimeout:= 0;
+
+end;
 
 procedure TForm1.pu_LoadFromATCslotClick(Sender: TObject);
 // Werkzeug aus Slot oder manuell aufnehmen
@@ -1823,7 +2246,7 @@ begin
     ClearAlarmlock;
   end else
     ResetSimulation;
-  Memo1.lines.add('Done. Proceed with care!');
+  Memo1.lines.add('Proceed with care!');
   HomingPerformed:= true;
   Memo1.lines.add('');
 end;
@@ -1909,37 +2332,11 @@ begin
   UpdateATCsg;
 end;
 
-
-procedure TForm1.pu_ToolEnableClick(Sender: TObject);
-var i: Integer;
-begin
-  pu_ToolEnable.Checked:= not pu_ToolEnable.Checked;
-  atcArray[sgATC.Row].enable:= pu_ToolEnable.Checked;
-  FirstToolUsed:= 1;
-  ToolInSpindle:= 1;
-  for i := 1 to c_numATCslots do
-    if atcArray[i].enable then begin
-      FirstToolUsed:= i;
-      ToolInSpindle:= i;
-      atcArray[i].inslot:= false;
-      GLSsetToolToATCidx(i);
-      break;
-    end;
-  if atcArray[FirstToolUsed].enable then
-    Form1.EditFirstToolDia.Text:= pen_description(atcArray[FirstToolUsed].pen)
-  else
-    Form1.EditFirstToolDia.Text:=  '(no tools, job empty)';
-  UpdateATCsg;
-  Form4.Refresh;
-  GLSsetATCandProbe;
-  sgATC.Row:= ToolInSpindle;
-end;
-
 procedure TForm1.sgATCMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 // Popup-Menu mit rechter Maustaste
 var pt: TPoint;
-  my_row, my_col: integer;
+  my_row, my_col, i, k: integer;
 begin
   sgATC.MouseToCell( X,Y, my_col, my_row );
   if my_row < 1 then
@@ -1947,25 +2344,29 @@ begin
   pt.X:= X;
   pt.Y:= Y;
   pt := sgATC.ClientToScreen(pt);
-  if (not CheckUseATC2.checked) and atcArray[my_row].enable then begin
-    GLSsetToolToATCidx(my_row);
-    ToolInSpindle:= my_row;
-  end;
-  sgATC.Row := my_row;
+  if my_row <> ToolInSpindle then // anderes Tool gewählt
+    WorkZeroZDone:= false;
   sgATC.Col := 1;
 
   if button = mbRight then begin
-    pu_ProbeToolLengthRef.Enabled:= my_row = FirstToolUsed;
-    if my_row = FirstToolUsed then begin // FirstToolUsed, Reference
+    pu_ProbeToolLengthRef.Enabled:= true;
+    if my_row = ToolInSpindle then begin // First Tool Used, Reference
       pu_ProbetoolLengthComp.Enabled:= false;
     end else begin
-      pu_ProbetoolLengthComp.Enabled:= atcArray[FirstToolUsed].TREFok;
+      pu_ProbetoolLengthComp.Enabled:= atcArray[my_row].TREFok;
     end;
     pu_LoadFromATCslot.Enabled:= not pu_ProbetoolLengthComp.Enabled;
-    pu_ToolEnable.Checked:= atcArray[my_row].enable;
     pu_LoadfromATCslot.Enabled:= CheckUseATC2.Checked;
     PopupMenuATC.Popup(pt.X, pt.Y);
   end;
+
+  ToolInSpindle := my_row;
+  k:= CountUsedATCtools;
+  for i:= 1 to k do      // atcArray[0] ist unbenutzt!
+    atcArray[i].inslot:= atcArray[i].used;
+  atcArray[ToolInSpindle].inslot:= false;
+  GLSsetToolToATCidx(ToolInSpindle);
+  GLSupdateATC;
   UpdateATCsg;
 end;
 
@@ -2045,8 +2446,6 @@ begin
     DoTLCandConfirm(true, 1);
 }
   NeedsRedraw:= true;
-  sgATC.Row:= FirstToolUsed;
-  ToolInSpindle:= FirstToolUsed;
   UpdateATCsg;
 end;
 
@@ -2102,8 +2501,7 @@ begin
 }
     end;
     NeedsRedraw:= true;
-    sgATC.Row:= FirstToolUsed;
-    ToolInSpindle:= FirstToolUsed;
+    sgATC.Row:= ToolInSpindle;
     UpdateATCsg;
   end;
 end;
@@ -2141,12 +2539,10 @@ begin
 }
     if MessageDlg('Manual Tool Change'
     + #13 + 'For this job, load spindle with:'
-    + #13 + #13 + pen_description(atcArray[FirstToolUsed].pen)
+    + #13 + #13 + pen_description(atcArray[ToolInSpindle].pen)
     + #13 + #13 + 'Click OK when tool has been changed.',
     mtConfirmation, mbOKCancel, 0) = mrCancel then
       exit;
-  ToolInSpindle:= FirstToolUsed; // first Tool
-  sgATC.row:= FirstToolUsed;
   if Form1.Show3DPreview1.checked then
     GLSupdateATC;
   InvalidateTLCs;

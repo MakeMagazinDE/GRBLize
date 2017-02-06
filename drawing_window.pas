@@ -15,7 +15,7 @@ type
   TForm2 = class(TForm)
     DrawingBox: TPaintBox;
     PopupMenuObject: TPopupMenu;
-    pu_enabled: TMenuItem;
+    pu_ObjectEnabled: TMenuItem;
     N1: TMenuItem;
     pu_online: TMenuItem;
     pu_inside: TMenuItem;
@@ -43,7 +43,6 @@ type
     Drill1: TMenuItem;
     pu_moveCenter1: TMenuItem;
     PopupMenuPoint: TPopupMenu;
-    pu_PointEnabled: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
@@ -79,7 +78,7 @@ type
         Shift: TShiftState; X, Y: Integer);
     procedure DrawingBoxMouseDown(Sender: TObject; Button: TMouseButton;
         Shift: TShiftState; X, Y: Integer);
-    procedure pu_enabledClick(Sender: TObject);
+    procedure pu_PathEnabledClick(Sender: TObject);
     procedure pu_radioClick(Sender: TObject);
     procedure pu_moveToolToPointClick(Sender: TObject);
     procedure pu_toolisatpointClick(Sender: TObject);
@@ -89,6 +88,7 @@ type
     procedure TrackBarZoomChange(Sender: TObject);
     procedure FormMouseWheel(Sender: TObject; Shift: TShiftState;
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+    procedure pu_ObjectenabledClick(Sender: TObject);
 
   private
     { Private-Deklarationen }
@@ -170,7 +170,7 @@ procedure UnHilite;
 begin
   HilitePen:=0;
   HiliteBlock:=-1;
-  HilitePath:=0;
+  HilitePath:=-1;
   HilitePoint:=-1;
 end;
 
@@ -194,7 +194,7 @@ begin
   for f:= 0 to length(final_array) - 1 do begin // penPathArray
     my_bounds:= final_array[f].bounds; // Bounds im Path #
     my_offset:= job.pens[final_array[f].pen].offset;
-    for p:= 0 to length(final_array[f].millings) - 1 do // Milling-#
+    for p:= 0 to length(final_array[f].millings) - 1 do // Milling-# im Block (Childs)
       for i:= 0 to length(final_array[f].millings[p]) - 1 do begin // Milling Path
         my_point:= final_array[f].millings[p,i]; // Point im Milling Path #
         my_offset:= job.pens[final_array[f].pen].offset;
@@ -477,32 +477,20 @@ begin
 end;
 
 // #############################################################################
+// alle Milling-Pfade oder alle Bohrungen eines Blocks zeichnen
+// #############################################################################
+procedure set_colors(is_enabled, is_highlited: Boolean; var my_pen_color,
+                 my_line_color, my_fill_color1, my_fill_color2: Tcolor);
 
-procedure draw_final_entry(my_final_entry: Tfinal; is_highlited: Boolean; var last_point: TPoint);
-// Eintrag aus finalem Array zeichnen einschließlich mill-Pfaden
-// liefert zuletzt gezeichnete Screen-Koordinaten zurück für nächsten Entry
 const
   c_disabled: Tcolor = $00202020;
 
-var i, p: Integer;
-  p1, p2, po1: Tpoint;
-  pmin, pmax: TPoint;
-  pf: TpointFloat;
-  my_pathlen, my_pathcount, my_radius: Integer;
-  my_pen_color, my_line_color, my_fill_color1, my_fill_color2, my_fill_color3: Tcolor;
-  vlen_ok: boolean;
-  is_hipoint: Boolean;
-  my_offset: TIntPoint;
-
 begin
-  if length(my_final_entry.outlines) = 0 then
-    exit;
-  my_pen_color:= job.pens[my_final_entry.pen].Color;
-  if my_final_entry.enable then begin
+  if is_enabled then begin
     if is_highlited and (HilitePoint < 0) then
-      my_line_color:= clWhite
-    else
-      my_line_color:= my_pen_color;
+        my_line_color:= clWhite
+      else
+        my_line_color:= my_pen_color;
   end else begin
     my_pen_color:= c_disabled;
     if is_highlited and (HilitePoint < 0) then
@@ -512,13 +500,42 @@ begin
   end;
   my_fill_color1:= colorDim(my_pen_color, 25);
   my_fill_color2:= colorDim(my_pen_color, 50);
-  my_fill_color3:= colorDim(my_pen_color, 90);
+end;
 
+procedure draw_final_entry(my_final_entry: Tfinal; is_highlited: Boolean; var last_point: TPoint);
+// Eintrag aus finalem Array zeichnen einschließlich mill-Pfaden
+// liefert zuletzt gezeichnete Screen-Koordinaten zurück für nächsten Entry
 
+var i, p: Integer;
+  p1, p2, po1: Tpoint;
+  pmin, pmax: TPoint;
+  pf: TpointFloat;
+  my_pathlen, my_pathcount, my_radius: Integer;
+  my_pen_color, my_line_color, my_fill_color1, my_fill_color2, my_fill_color3: Tcolor;
+  vlen_ok: boolean;
+  is_hipoint, has_multiple_millings: Boolean;
+  my_offset: TIntPoint;
+
+begin
+  if length(my_final_entry.outlines) = 0 then
+    exit;
+  my_pathcount:= length(my_final_entry.millings);
+  if my_pathcount > 0 then
+    has_multiple_millings:= my_pathcount > 1
+  else
+    has_multiple_millings:= false;
   my_radius:= round(job.pens[my_final_entry.pen].tipdia * Scale) div 2 + 1;
   if my_radius < 1 then
     my_radius:= 1;
   my_offset:= job.pens[my_final_entry.pen].offset;
+  if (not has_multiple_millings) or (not my_final_entry.enable) then begin
+    // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
+    my_pen_color:= job.pens[my_final_entry.pen].Color;
+    set_colors(my_final_entry.enable, is_highlited, my_pen_color,
+       my_line_color, my_fill_color1, my_fill_color2);
+    my_fill_color3:= colorDim(my_pen_color, 90);
+  end;
+
 
   with Form2.DrawingBitmap do begin
 
@@ -529,12 +546,18 @@ begin
     if my_final_entry.shape = drillhole then begin
       Canvas.Pen.Width := 1;
       Canvas.Pen.Mode:= pmCopy;
-      my_pathcount:= length(my_final_entry.millings);
       if my_pathcount > 0 then begin
         my_pathlen:= length(my_final_entry.millings[0]);
         if not get_bm_point(my_final_entry.millings[0], 0, my_offset, po1) then
           exit; // erster Punkt in po1
         p1:= po1;
+        if has_multiple_millings  then begin
+          my_pen_color:= job.pens[my_final_entry.pen].Color;
+          // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
+          set_colors(my_final_entry.enable, is_highlited, my_pen_color,
+             my_line_color, my_fill_color1, my_fill_color2);
+          my_fill_color3:= colorDim(my_pen_color, 90);
+        end;
         for i:= 0 to my_pathlen - 1 do begin
           if not get_bm_point(my_final_entry.millings[0], i, my_offset, p2) then
             break;
@@ -559,15 +582,20 @@ begin
 // Werkzeugweg mit Werkzeugdurchmesser malen, ggf. mit Pfeilen
 // -----------------------------------------------------------------------------
 
-    Canvas.Pen.Width := 1;
-    Canvas.Pen.Mode:= pmCopy;
     if Form2.CheckBoxToolpath.checked then begin
       my_pathcount:= length(my_final_entry.millings);
       if my_pathcount > 0 then begin
+        Canvas.Pen.Width := 1;
+        Canvas.Pen.Mode:= pmCopy;
         for p:= my_pathcount - 1 downto 0 do begin // innere Child-Pfade zuerst
           my_pathlen:= length(my_final_entry.millings[p]);
           if my_pathlen = 0 then
             continue;
+          if has_multiple_millings and my_final_entry.enable then begin
+            my_pen_color:= job.pens[my_final_entry.pen].Color;
+            set_colors(my_final_entry.milling_enables[p], is_highlited, my_pen_color,
+                 my_line_color, my_fill_color1, my_fill_color2);
+          end;
           if not get_bm_point(my_final_entry.millings[p], 0, my_offset, p1) then
             break;
           po1:= p1;
@@ -600,36 +628,41 @@ begin
 // Kontur/Outline malen
 // -----------------------------------------------------------------------------
 
-
-
-    Canvas.Pen.Width := 1;
-//    if (my_final_entry.shape <> contour) then begin
+    my_pathcount:= length(my_final_entry.outlines);
+    if my_pathcount = 0 then
+      exit;
+    for p:= my_pathcount - 1 downto 0 do begin // innere Child-Pfade zuerst
+      Canvas.Pen.Width := 1;
+      Canvas.Pen.Mode:= pmCopy;
       if my_final_entry.enable then
         Canvas.Pen.Style:= psSolid      // psDashDot , psDot
       else
         Canvas.Pen.Style:= psDot;       // psDashDot , psDot
-
-      Canvas.Pen.Color:= my_line_color; // Linienfarbe
-      Canvas.brush.Color:= my_fill_color3;
-      my_pathcount:= length(my_final_entry.outlines);
-      if my_pathcount = 0 then
-        exit;
-      for p:= my_pathcount - 1 downto 0 do begin // innere Child-Pfade zuerst
-        my_pathlen:= length(my_final_entry.outlines[p]);
-        if my_pathlen = 0 then
-          continue;
-        get_bm_point(my_final_entry.outlines[p], 0, my_offset, po1);
-        Canvas.moveto(po1.x, po1.y);        // zurück zum ersten Punkt
-        for i:= 1 to my_pathlen - 1 do begin
-          if not get_bm_point(my_final_entry.outlines[p], i, my_offset, p1) then
-            break;
-          Canvas.lineto(p1.x, p1.y);
-        end;
-        if my_final_entry.closed then begin
-          Canvas.lineto(po1.x, po1.y);        // zurück zum ersten Punkt
-        end;
+      if has_multiple_millings and my_final_entry.enable then begin
+        my_pen_color:= job.pens[my_final_entry.pen].Color;
+        set_colors(my_final_entry.milling_enables[p], is_highlited, my_pen_color,
+             my_line_color, my_fill_color1, my_fill_color2);
+        if my_final_entry.milling_enables[p] then
+          Canvas.Pen.Style:= psSolid      // psDashDot , psDot
+        else
+          Canvas.Pen.Style:= psDot;       // psDashDot , psDot
       end;
-//    end;
+      Canvas.Pen.Color:= my_line_color;  // Linienfarbe
+      Canvas.brush.Color:= colorDim(my_line_color, 90);
+      my_pathlen:= length(my_final_entry.outlines[p]);
+      if my_pathlen = 0 then
+        continue;
+      get_bm_point(my_final_entry.outlines[p], 0, my_offset, po1);
+      Canvas.moveto(po1.x, po1.y);        // zum ersten Punkt
+      for i:= 1 to my_pathlen - 1 do begin
+        if not get_bm_point(my_final_entry.outlines[p], i, my_offset, p1) then
+          break;
+        Canvas.lineto(p1.x, p1.y);
+      end;
+      if my_final_entry.closed then begin
+        Canvas.lineto(po1.x, po1.y);        // zurück zum ersten Punkt
+      end;
+    end;
     Canvas.Pen.Style:= psSolid;     // psDashDot , psDot
 
 // -----------------------------------------------------------------------------
@@ -671,6 +704,8 @@ begin
 
   end;
 end;
+
+// #############################################################################
 
 procedure draw_tool;
 
@@ -1029,8 +1064,21 @@ begin
 
     if (HiliteBlock >= 0) then begin
       uncheck_Popups;
-      pu_PointEnabled.Checked:= final_array[HiliteBlock].enable;
-      pu_Enabled.Checked:= final_array[HiliteBlock].enable;
+      if final_array[HiliteBlock].closed then begin
+        MenuItem4.Enabled:= true;
+        MenuItem6.Enabled:= true;
+      end else begin
+        MenuItem4.Enabled:= false;
+        MenuItem6.Enabled:= false;
+      end;
+      if (HilitePath >= 0) then begin
+        if length(final_array[HiliteBlock].millings) > 1 then
+          PopupMenuPoint.Items[0].Checked:= final_array[HiliteBlock].milling_enables[HilitePath]
+        else begin
+          PopupMenuPoint.Items[0].Checked:= final_array[HiliteBlock].enable;
+        end;
+      end;
+      PopupMenuObject.Items[0].Checked:= final_array[HiliteBlock].enable;
       PopupMenuPoint.Items[ord(final_array[HiliteBlock].shape)+2].Checked:= true;
       PopupMenuObject.Items[ord(final_array[HiliteBlock].shape)+2].Checked:= true;
       if HilitePoint >= 0 then
@@ -1085,15 +1133,32 @@ end;
 // #############################################################################
 // #############################################################################
 
-procedure TForm2.pu_enabledClick(Sender: TObject);
+procedure TForm2.pu_PathEnabledClick(Sender: TObject);
 begin
   if (HiliteBlock >= 0) then begin
     PopupMenuPoint.Items[0].Checked:= not PopupMenuPoint.Items[0].Checked;
-    final_array[HiliteBlock].enable:= PopupMenuPoint.Items[0].Checked;
-    NeedsRedraw:= true;
+    // Block hat mehrere Pfade. nur einzelnen Pfad behandeln
+    if (HilitePath >= 0) then
+      final_array[HiliteBlock].milling_enables[HilitePath]:= PopupMenuPoint.Items[0].Checked;
+    if length(final_array[HiliteBlock].millings) = 1 then
+      final_array[HiliteBlock].enable:= PopupMenuPoint.Items[0].Checked;
+    final_array[HiliteBlock].enable:= is_any_milling_enabled(final_array[HiliteBlock]);
     ListBlocks;
+    NeedsRedraw:= true;
   end;
 end;
+
+
+procedure TForm2.pu_ObjectEnabledClick(Sender: TObject);
+begin
+  if (HiliteBlock >= 0) then begin
+    PopupMenuObject.Items[0].Checked:= not PopupMenuObject.Items[0].Checked;
+    final_array[HiliteBlock].enable:= PopupMenuObject.Items[0].Checked;
+    ListBlocks;
+    NeedsRedraw:= true;
+  end;
+end;
+
 
 procedure TForm2.pu_RadioClick(Sender: TObject);
 var my_idx: Integer;
@@ -1111,7 +1176,6 @@ begin
     else
       final_array[HiliteBlock].closed:= final_array[HiliteBlock].was_closed;
     item_change(HiliteBlock);
-    ListBlocks;
     NeedsRedraw:= true;
     GLSneedsRedrawTimeout:= 2;
     GLSneedsATCupdateTimeout:= 3;

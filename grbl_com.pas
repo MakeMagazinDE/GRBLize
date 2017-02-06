@@ -131,7 +131,7 @@ var
   ftdi_sernum_arr, ftdi_desc_arr: Array[0..15] of String;
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
-  grbl_sendlist, grbl_receveivelist: TSTringList;
+  grbl_sendlist: TSTringList;
   grbl_checksema: boolean;
   grbl_delay_short, grbl_delay_long: Word;
   ComFile: THandle;
@@ -584,10 +584,9 @@ begin
     sleep(100);
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Grbl Startup Message (Version):');
-    Form1.Memo1.lines.add('=========================================');
     repeat
       my_str:= grbl_receiveStr(20);
-      if length(my_Str) > 1 then
+      if (length(my_Str) > 1) and (my_str <> '#Timeout') then
         Form1.Memo1.lines.add(my_str);
     until my_Str = '#Timeout';
     for i := 0 to 3 do begin
@@ -597,8 +596,6 @@ begin
       if MachineState <> none then
         break;
     end;
-    Form1.Memo1.lines.add(my_str);
-    Form1.Memo1.lines.add('=========================================');
     HomingPerformed:= false;
     case MachineState of
       alarm:
