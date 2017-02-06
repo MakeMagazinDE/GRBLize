@@ -1,0 +1,16 @@
+0	 (i)  Log subsystem started in elapsed time mode.
+0	 (i)  Logging [debug info (D), info (i), notices (M), warnings (W), errors (Er), fatal errors (!!)]
+0	 (i)  Buffered mode: False
+0	 (i)  Temporary rendering context created
+0	 (M)  Getting OpenGL entry points and extension
+16	 (M)  
+16	 (i)  OpenGL rendering context information:
+16	 (i)  Renderer     : ATI Radeon HD 3870
+16	 (i)  Vendor       : ATI Technologies Inc.
+16	 (i)  Version      : 3.3.11672 Compatibility Profile Context
+31	 (i)  GLSL version : 3.30
+31	 (M)  
+47	 (i)  Temporary rendering context destroyed
+125	 (M)  Getting OpenGL entry points and extension
+3594	 (i)  Logged fatal_errors: 0, errors: 0, warnings: 0, notices: 4, info: 10, debug: 0
+3609	 (i)  Log session shutdown
