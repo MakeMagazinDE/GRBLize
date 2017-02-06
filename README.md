@@ -10,6 +10,8 @@ Maker Media GmbH und c't, Heise Zeitschriften Verlag
 
 Erstellt mit Delphi XE8 Starter. Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)**. 
 
+**Derzeit gibt es [Delphi 10.1 Berlin Starter](https://www.embarcadero.com/de/products/delphi/starter/promotional-download) kostenlos!** 
+
 Ausführbare Datei (.EXE, Win32) im Verzeichnis 
 **[/bin](https://github.com/heise/GRBLize/tree/master/bin)**, benötigt 
 "default.job", ggf. die Beispiel-Plot-Dateien und gegebenenfalls ftd2xx.dll, 
@@ -27,7 +29,10 @@ auch GRBL 0.9j sowie GRBL auf Arduino und ähnlichen Boards.
 
 ###Version History
 
--1.4: Stark umgebaute Programmstruktur. CANCEL funktioniert endlich wie es soll. Ausgabe optimiert. ATC getestet. PCB Import stark vereinfacht. 
+- 1.5: Unterstützung für GRBL 1.1 kompilierbar, noch nicht vollständig getestet. 
+Binary ist für GRBL 0.9j. Korrekte Behandlung der File-XY-Offsets auch bei Roatation/Mirror, Pfade im 
+Drawing Window einzeln deaktivierbar. Instant-Mill-Funktionen für Kreise und Rechtecke ab Tool-Position.
+- 1.4: Stark umgebaute Programmstruktur. CANCEL funktioniert endlich wie es soll. Ausgabe optimiert. ATC getestet. PCB Import stark vereinfacht. 
 - 1.1b: Interface for pcb2gcode.exe in Utilities/Tools tab. Revised interpreter for excellon files. Added 2D G-Code and simple SVG import to interface with pcb2gcode.
 - 1.0b: Supports serial COM port as well as direct FTDI serial communications. Re-written robust protocol engine. New simulation for G-Codes as a finite elements model in 3 resolutions. Some bugs fixed. Suports GRBL 0.8x and new GRBL 0.9j. New on-screen jog pad for use with other boards than GRBL-JOG. Supports GRBL running on a plain Arduino.
 - 0.96d: On run, will keep Z up at park position height until first mill to clear work part. 
