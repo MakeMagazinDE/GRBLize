@@ -9,9 +9,13 @@ begin
   if com_isopen then begin
     COMSetup(trim(deviceselectbox.EditBaudrate.Text));
     Form1.DeviceView.Text:= 'Serial port ' + com_name;
+<<<<<<< HEAD:page_grblsetup.inc
     Form1.DeviceView.Font.Color:= clWindowText;
     Form1.DeviceView.Font.Style:= [];
     sleep(2000);  // Arduino Startup Time
+=======
+    mdelay(2000);  // Arduino Startup Time
+>>>>>>> remotes/origin/master:page_grblsetup.pas
   end;
 end;
 
@@ -34,11 +38,19 @@ begin
       Form1.DeviceView.Font.Color:= clWindowText;
       Form1.DeviceView.Font.Style:= [];
       ftdi_isopen:= true;
+<<<<<<< HEAD:page_grblsetup.inc
       sleep(500);  // Arduino Startup Time
     end;
 end;
 
 procedure PortOpenedCheck;
+=======
+      mdelay(500);  // Arduino Startup Time
+    end;
+end;
+
+procedure PortOpenedMsg;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
 begin
   if ftdi_isopen or com_isopen then
     grbl_is_connected:= grbl_checkResponse;
@@ -47,9 +59,21 @@ begin
     Form1.CheckBoxSim.Checked:= false;
     Form1.BtnConnect.Enabled:= false;
     Form1.BtnRescan.Enabled:= false;
+<<<<<<< HEAD:page_grblsetup.inc
     Form1.BtnRefreshGrblSettingsClick(nil);
   end;
   ResetToolflags;
+=======
+    EnableStatus;
+    Form1.Memo1.lines.add('Connected to GRBL');
+    Form1.BtnRefreshGrblSettingsClick(nil);
+    Form1.Memo1.lines.add('Ready - Home Cycle pending');
+  end else begin
+    Form1.Memo1.lines.add('Not connected to GRBL');
+  end;
+  ResetToolflags;
+  HomingPerformed:= false;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
 end;
 
 procedure TForm1.BtnRescanClick(Sender: TObject);
@@ -93,7 +117,11 @@ begin
       OpenFTDIport;
     end;
   end;
+<<<<<<< HEAD:page_grblsetup.inc
   PortOpenedCheck;
+=======
+  PortOpenedMsg;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
 end;
 
 procedure TForm1.BtnConnectClick(Sender: TObject);
@@ -102,7 +130,11 @@ begin
     OpenFTDIport
   else if com_was_open then
     OpenCOMport;
+<<<<<<< HEAD:page_grblsetup.inc
   PortOpenedCheck;
+=======
+  PortOpenedMsg;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
 end;
 
 procedure TForm1.BtnCloseClick(Sender: TObject);
@@ -165,7 +197,16 @@ begin
   if isGrblActive then
     with Form1.SgGrblSettings do begin
       DisableStatus;
+      grbl_checkResponse;
       Rowcount:= 2;
+<<<<<<< HEAD:page_grblsetup.inc
+=======
+      grbl_sendStr(#24, false);   // Reset CTRL-X
+      repeat
+        my_str:= grbl_receiveStr(100);  // Dummy
+        Application.ProcessMessages;
+      until pos('Grbl', my_str) > 0;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
       LEDbusy.Checked:= true;
       grbl_wait_for_timeout(100);
 
@@ -225,7 +266,11 @@ var i : Integer;
   my_str0, my_str1: String;
 
 begin
+<<<<<<< HEAD:page_grblsetup.inc
   if isGrblActive then begin
+=======
+  if grbl_is_connected then begin
+>>>>>>> remotes/origin/master:page_grblsetup.pas
     DisableStatus;
     grbl_checkResponse;
     with SgGrblSettings do begin
@@ -234,6 +279,10 @@ begin
         showmessage('GRBL settings are empty.');
         exit;
       end else for i:= 1 to Rowcount-1 do begin
+<<<<<<< HEAD:page_grblsetup.inc
+=======
+        Screen.cursor:= crHourglass;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
         LEDbusy.Checked:= true;
         if isWaitExit then
           break;
@@ -248,7 +297,11 @@ begin
       end;
     end;
     Progressbar1.Position:= 0;
+<<<<<<< HEAD:page_grblsetup.inc
     LEDbusy.Checked:= false;
+=======
+    Screen.cursor:= crDefault;
+>>>>>>> remotes/origin/master:page_grblsetup.pas
     BtnRefreshGrblSettingsClick(Sender);
     EnableStatus;  // automatische Upates freischalten
   end;
@@ -313,6 +366,7 @@ begin
   end;
 end;
 
+<<<<<<< HEAD:page_grblsetup.inc
 // #############################################################################
 // #############################################################################
 
@@ -384,3 +438,5 @@ begin
 end;
 
 
+=======
+>>>>>>> remotes/origin/master:page_grblsetup.pas

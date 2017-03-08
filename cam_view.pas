@@ -213,6 +213,7 @@ begin
 
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendListToGrbl;
+<<<<<<< HEAD
 
   WorkZeroX:= grbl_mpos.X + job.cam_x;
   JogX:= WorkZeroX;
@@ -220,6 +221,8 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
+=======
+>>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -241,6 +244,7 @@ begin
 
   grbl_offsXY(x, y);
   SendListToGrbl;
+<<<<<<< HEAD
 
   WorkZeroX:= grbl_mpos.X - x;
   JogX:= WorkZeroX;
@@ -249,6 +253,8 @@ begin
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;
+=======
+>>>>>>> remotes/origin/master
 end;
 
 // #############################################################################
@@ -268,6 +274,7 @@ begin
   end;
   x:= x - job.cam_x;
   y:= y - job.cam_y;
+<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up
@@ -278,12 +285,20 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
+=======
+  grbl_moveZ(0, true);  // move Z up
+  grbl_moveXY(x, y, false);
+  SendListToGrbl;
+  grbl_moveZ(job.cam_z_abs, true);
+  SendListToGrbl;
+>>>>>>> remotes/origin/master
 end;
 
 procedure TForm3.BtnMoveCamZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to part zero');
+<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up absolute
@@ -294,6 +309,12 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
+=======
+  grbl_moveZ(0, true);  // move Z up
+  grbl_moveXY(-job.cam_x,-job.cam_y, false);
+  grbl_moveZ(job.cam_z_abs, true);
+  SendListToGrbl;
+>>>>>>> remotes/origin/master
 end;
 
 procedure TForm3.BtnMoveToolPointClick(Sender: TObject);
@@ -307,6 +328,7 @@ begin
     Form1.Memo1.lines.add('Move tool to center');
     hilite_center_to(x,y);
   end;
+<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up absolute
@@ -323,6 +345,12 @@ begin
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
 
+=======
+  grbl_moveZ(0, true);  // move Z up absolute
+  grbl_moveXY(x, y, false);
+  SendListToGrbl;
+  grbl_moveZ(job.z_penlift, false);
+>>>>>>> remotes/origin/master
   SendListToGrbl;
 end;
 
@@ -330,6 +358,7 @@ procedure TForm3.BtnMoveToolZeroClick(Sender: TObject);
 begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to part zero');
+<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up absolute
@@ -345,6 +374,12 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
+=======
+  grbl_moveZ(0, true);  // move Z up absolute
+  grbl_moveXY(0,0, false);
+  grbl_moveZ(job.z_penlift, false);
+  SendListToGrbl;
+>>>>>>> remotes/origin/master
 end;
 
 // #############################################################################

@@ -2,6 +2,16 @@
 // ############################### FILES AND JOBS ##############################
 // #############################################################################
 
+<<<<<<< HEAD:page_job.inc
+=======
+
+procedure UpdateATCsg;   forward;
+procedure ResetATC;   forward;
+procedure ClearATC;   forward;
+
+procedure SetATCtoolFromJob(const pen_idx: Integer);   forward;
+
+>>>>>>> remotes/origin/master:page_job.pas
 
 procedure CalcTipDia;
 var j: Integer;
@@ -29,6 +39,7 @@ end;
 procedure PenGridListToJob;
 var i, j: Integer;
 begin
+  ClearATC;
   for i:= 0 to c_numOfFiles do
     job.fileDelimStrings[i]:= Form1.SgFiles.Rows[i+1].DelimitedText;
   for i := 1 to 32 do with Form1.SgPens do begin
@@ -50,11 +61,16 @@ begin
     CalcTipDia;
   end;
   NeedsRedraw:= true;
+<<<<<<< HEAD:page_job.inc
+=======
+  UpdateATCsg;
+>>>>>>> remotes/origin/master:page_job.pas
 end;
 
 procedure JobToPenGridList;
 var i: Integer;
 begin
+  ClearATC;
   for i := 0 to 31 do with Form1.SgPens do begin
     if i < 10 then
       Cells[0,i+1]:= 'P' + IntToStr(i)
@@ -81,6 +97,10 @@ begin
   Form1.SgPens.Repaint;
   for i:= 0 to c_numOfFiles do
     Form1.SgFiles.Rows[i+1].DelimitedText:= job.fileDelimStrings[i];
+<<<<<<< HEAD:page_job.inc
+=======
+  UpdateATCsg;
+>>>>>>> remotes/origin/master:page_job.pas
 end;
 
 // #############################################################################
@@ -122,8 +142,11 @@ begin
   UnHilite;
   setlength(final_array,0);
   NeedsRedraw:= true;
+<<<<<<< HEAD:page_job.inc
   ClearATCarray;
   UpdateATC;
+=======
+>>>>>>> remotes/origin/master:page_job.pas
   ListBlocks;
 end;
 
@@ -324,14 +347,21 @@ begin
   job.pens[tool_idx].tooltip:= 1;
   job.pens[tool_idx].tooltip:= 1;
   job.pens[tool_idx].speed:= 500;
+<<<<<<< HEAD:page_job.inc
   job.pens[tool_idx].force_closed:= true;
+=======
+>>>>>>> remotes/origin/master:page_job.pas
 end;
 
 Procedure OpenFilesInGrid;
 var
+<<<<<<< HEAD:page_job.inc
   i, pen_override: Integer;
   my_path, my_ext: String;
   use_excellon, file_was_changed: Boolean;
+=======
+  i, pen_override: Integer; my_path, my_ext: String; use_excellon: Boolean;
+>>>>>>> remotes/origin/master:page_job.pas
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -384,7 +414,10 @@ begin
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);
         SetPCBmillTool(9);
+<<<<<<< HEAD:page_job.inc
         job.pens[9].force_closed:= true;
+=======
+>>>>>>> remotes/origin/master:page_job.pas
       end else if (my_ext = '.SVG') then begin
         Cells[8, i]:= 'SVG'; // Remark
         svg_fileload(my_path, i-1, -1);
@@ -399,8 +432,12 @@ begin
     end;
   end;
 
+<<<<<<< HEAD:page_job.inc
   job.pens[0].enable:= false; // Tool 0 immer disabled
   for i:= 1 to 31 do begin
+=======
+  for i:= 0 to 31 do begin
+>>>>>>> remotes/origin/master:page_job.pas
     job.pens[i].enable:= job.pens[i].used;
   end;
 
@@ -408,6 +445,11 @@ begin
   apply_pen_change;
   NeedsRedraw:= true;
 
+<<<<<<< HEAD:page_job.inc
+=======
+  job.pens[0].used:= false;
+  job.pens[0].enable:= true;
+>>>>>>> remotes/origin/master:page_job.pas
   Form1.SgPens.Repaint;
   GLSneedsATCupdateTimeout:= 1;
   Form1.Memo1.lines.add('');
@@ -427,10 +469,16 @@ begin
   if FileExists(JobSettingsPath) then begin
     sl:= Tstringlist.Create;
     sl.LoadfromFile(JobSettingsPath);
+<<<<<<< HEAD:page_job.inc
     s:= sl.indexof('#Files');
     if s >= 0 then begin
       inc(s);
       my_row:= 1;
+=======
+    if sl.strings[0]='#Files' then begin
+      s:= 1;
+      my_row:= 0;
+>>>>>>> remotes/origin/master:page_job.pas
       for i := s to sl.Count-1 do begin
         if AnsiContainsStr(sl.strings[i],'#') then
           break;
@@ -439,11 +487,16 @@ begin
       end;
       Form1.SgFiles.Repaint;
       OpenFilesInGrid;
+<<<<<<< HEAD:page_job.inc
     end;
     s:= sl.indexof('#Pens');
     if s >= 0 then begin
       inc(s);
       my_row:= 1;
+=======
+      s:=i+1;
+      my_row:= 0;
+>>>>>>> remotes/origin/master:page_job.pas
       for i := s to sl.Count-1 do begin
         if AnsiContainsStr(sl.strings[i],'#') then
           break;
@@ -452,12 +505,18 @@ begin
       end;
       Form1.SgPens.Repaint;
       PenGridListToJob;
+<<<<<<< HEAD:page_job.inc
       apply_pen_change;
     end;
     s:= sl.indexof('#Defaults');
     if s >= 0 then begin
       inc(s);
       my_row:= 1;
+=======
+      param_change;
+      s:=i+1;
+      my_row:= 0;
+>>>>>>> remotes/origin/master:page_job.pas
       for i := s to sl.Count-1 do begin
         if AnsiContainsStr(sl.strings[i],'#') then
           break;
@@ -466,10 +525,14 @@ begin
         inc(my_row);
       end;
       Form1.SgJobDefaults.Repaint;
+<<<<<<< HEAD:page_job.inc
     end;
     s:= sl.indexof('#Blocks');
     if s >= 0 then begin
       inc(s);
+=======
+      s:=i+1;
+>>>>>>> remotes/origin/master:page_job.pas
       my_row:= 1;
       my_len:= length(final_array);
       for i := s to sl.Count-1 do begin
@@ -487,6 +550,7 @@ begin
         end;
       end;
       Form1.SgBlocks.Repaint;
+<<<<<<< HEAD:page_job.inc
     end;
     s:= sl.indexof('#PathEnables');
     if s >= 0 then begin
@@ -511,6 +575,9 @@ begin
     s:= sl.indexof('#Comment');
     if s >= 0 then begin
       inc(s);
+=======
+      s:=i+1;
+>>>>>>> remotes/origin/master:page_job.pas
       Form1.MemoComment.Clear;
       for i := s to sl.Count-1 do begin
         if AnsiContainsStr(sl.strings[i],'#') then
@@ -519,6 +586,7 @@ begin
       end;
     end;
     sl.Free;
+<<<<<<< HEAD:page_job.inc
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Job and block/path settings applied.');
   end else begin
@@ -546,6 +614,13 @@ begin
   ListBlocks;
   for i := 0 to high(final_array) do
     final_array[i].enable:= is_any_milling_enabled(final_array[i]);
+=======
+  end else begin
+    InitJob;
+    PenGridListToJob;
+  end;
+  ListBlocks;
+>>>>>>> remotes/origin/master:page_job.pas
 end;
 
 Procedure LoadIniFile;
@@ -678,6 +753,10 @@ begin
   JobSettingsPath:= '';
   draw_cnc_all;
   Form1.Caption:= c_ProgNameStr;
+<<<<<<< HEAD:page_job.inc
+=======
+  Form4.FormRefresh(nil);
+>>>>>>> remotes/origin/master:page_job.pas
 end;
 
 // #############################################################################
@@ -980,6 +1059,7 @@ begin
     exit;
   with SgFiles do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
+<<<<<<< HEAD:page_job.inc
     case Col of
       0:
         begin
@@ -1057,6 +1137,64 @@ begin
         end;
      end;
     job.fileDelimStrings[my_Row-1]:= Rows[my_Row].DelimitedText;
+=======
+    if (Row > 0) and (Col > 0)then begin
+      case Col of
+        1:
+          begin
+            R := SgFiles.CellRect(Col, Row);
+            org := self.ScreenToClient(self.ClientToScreen(R.TopLeft));
+            perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
+            with ComboBox1 do begin
+              SetBounds(org.X-10, org.Y-2, R.Right-R.Left+10, Form1.Height);
+              ItemIndex := Items.IndexOf('Pen '+SgFiles.Cells[Col, Row]);
+              if ItemIndex < 0 then
+                ItemIndex:= 1;
+              Show;
+              BringToFront;
+              SetFocus;
+              DroppedDown := true;
+            end;
+            exit;
+          end;
+        2:
+          begin
+            if Cells[2, Row] = '0°' then
+              Cells[2, Row]:= '90°'
+            else if Cells[2, Row] = '90°' then
+              Cells[2, Row]:= '180°'
+            else if Cells[2, Row] = '180°' then
+              Cells[2, Row]:= '270°'
+            else
+              Cells[2, Row]:= '0°';
+          end;
+        3:
+          begin
+            if Cells[3, Row] = 'ON' then
+              Cells[3, Row]:= 'OFF'
+            else
+              Cells[3, Row]:= 'ON';
+          end;
+        4,5,6, 8:
+          begin
+            Options:= Options + [goEditing, goAlwaysShowEditor];
+          end;
+        7:
+          begin
+            Cells[0, Row]:= '';
+            Cells[1, Row]:= '-1';
+            Cells[2, Row]:= '0°';
+            Cells[3, Row]:= 'OFF';
+            Cells[8,Row]:= '';
+            for i:= 0 to c_numOfPens do
+              job.pens[i].used:= false;
+          end;
+       end;
+      job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+      UnHilite;
+      OpenFilesInGrid;
+    end;
+>>>>>>> remotes/origin/master:page_job.pas
   end;
 end;
 
@@ -1065,6 +1203,11 @@ begin
   if (Key = #13) or (Key = #10) then
     with SgFiles do begin
       job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+<<<<<<< HEAD:page_job.inc
+=======
+      Options:= Options - [goEditing, goAlwaysShowEditor];
+      UnHilite;
+>>>>>>> remotes/origin/master:page_job.pas
       Repaint;
       OpenFilesInGrid;
     end;
@@ -1076,8 +1219,35 @@ begin
 end;
 
 procedure TForm1.SgFilesClick(Sender: TObject);
+<<<<<<< HEAD:page_job.inc
 begin
   SgFiles.Options:= SgFiles.Options - [goEditing, goAlwaysShowEditor];
+=======
+// wird nach Loslassen der Maustaste ausgeführt!
+var my_ext: String;
+begin
+  with SgFiles do begin
+    Options:= Options - [goEditing, goAlwaysShowEditor];
+    if (Row > 0) and (Col = 0) then begin
+      OpenFileDialog.FilterIndex:= 0;
+      if OpenFileDialog.Execute then
+        Cells[0, Row]:= OpenFileDialog.Filename
+      else
+        Cells[0, Row]:= '';
+      job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+      UnHilite;
+      my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
+      if (my_ext = '.GBR') then begin
+        sgFiles.Cells[0, Row]:= '';
+        ConvertedFileName:='';
+        GerberFileName:= OpenFileDialog.Filename;
+        GerberFileNumber:= Row;
+        FormGerber.ShowModal;
+      end else
+        OpenFilesInGrid;
+    end;
+  end;
+>>>>>>> remotes/origin/master:page_job.pas
 end;
 
 
