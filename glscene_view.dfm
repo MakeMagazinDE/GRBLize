@@ -41,8 +41,6 @@ object Form4: TForm4
     OnMouseDown = GLSceneViewer1MouseDown
     OnMouseMove = GLSceneViewer1MouseMove
     TabOrder = 0
-    ExplicitTop = 144
-    ExplicitHeight = 462
   end
   object Panel1: TPanel
     Left = 8
@@ -51,13 +49,8 @@ object Form4: TForm4
     Height = 97
     TabOrder = 1
     object LabelActive: TLabel
-<<<<<<< HEAD
       Left = 10
       Top = 71
-=======
-      Left = 16
-      Top = 79
->>>>>>> remotes/origin/master
       Width = 125
       Height = 13
       Caption = 'SIMULATION NOT ACTIVE'
@@ -67,10 +60,6 @@ object Form4: TForm4
       Font.Name = 'Tahoma'
       Font.Style = []
       ParentFont = False
-<<<<<<< HEAD
-=======
-      Visible = False
->>>>>>> remotes/origin/master
     end
     object CheckToolpathVisible: TCheckBox
       Left = 10

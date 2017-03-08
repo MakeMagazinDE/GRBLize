@@ -20,11 +20,7 @@ var
   show_drawing, show_3d: boolean;
 
 begin
-<<<<<<< HEAD:gcode_interpreter.inc
   GLSmillAtPos(xf0, yf0, zf0, gcsim_dia, true, true);
-=======
-  GLSsimMillAtPosMM(xf0, yf0, zf0, gcsim_dia, true, true);
->>>>>>> remotes/origin/master:gcode_interpreter.pas
   my_delay:= 5;
   if fast_move then begin
     int_scale:= gl_bresenham_scale div 4;  // gröbere Auflössung für Seeks
@@ -75,11 +71,7 @@ begin
       if show_drawing then
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
       if show_3d then
-<<<<<<< HEAD:gcode_interpreter.inc
         GLSmillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
-=======
-        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
->>>>>>> remotes/origin/master:gcode_interpreter.pas
       if (n mod 5 = 0) then begin
         if fast_move then
           mdelay(1)
@@ -108,11 +100,7 @@ begin
       if show_drawing then
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
       if show_3d then
-<<<<<<< HEAD:gcode_interpreter.inc
         GLSmillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
-=======
-        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
->>>>>>> remotes/origin/master:gcode_interpreter.pas
       if (n mod 5 = 0) then begin
         if fast_move then
           mdelay(1)
@@ -141,11 +129,7 @@ begin
       if show_drawing then
         SetDrawingToolPosMM(xx/int_scale, yy/int_scale, zz/int_scale);
       if show_3d then
-<<<<<<< HEAD:gcode_interpreter.inc
         GLSmillAtPos(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
-=======
-        GLSsimMillAtPosMM(xx/int_scale, yy/int_scale, zz/int_scale, gcsim_dia, false, true);
->>>>>>> remotes/origin/master:gcode_interpreter.pas
       if (n mod 5 = 0) then begin
         if fast_move then
           mdelay(1)
@@ -157,11 +141,7 @@ begin
         break;
     end;
   end;
-<<<<<<< HEAD:gcode_interpreter.inc
   GLSmillAtPos(xf1, yf1, zf1, gcsim_dia, false, true);
-=======
-  GLSsimMillAtPosMM(xf1, yf1, zf1, gcsim_dia, false, true);
->>>>>>> remotes/origin/master:gcode_interpreter.pas
 end;
 
 // #############################################################################
@@ -190,7 +170,6 @@ begin
   end;
   if (my_str[1] = '/') or (my_str[1] = '(') then // andere Kommentare
     exit;
-<<<<<<< HEAD:gcode_interpreter.inc
   if pos('G43', my_str) > 0 then // TLC cancel
     exit;
   if pos('G49', my_str) > 0 then // TLC cancel
@@ -199,14 +178,6 @@ begin
     exit;
   if pos('G4 P', my_str) > 0 then // dwell
     mdelay(500);
-=======
-  if pos('G43', my_str) > 0 then // straight probe
-    exit;
-  if pos('G49', my_str) > 0 then // TLC cancel
-    exit;
-  if pos('G38', my_str) > 0 then // TLC cancel
-    exit;
->>>>>>> remotes/origin/master:gcode_interpreter.pas
   is_offset:= (pos('G92', my_str) > 0);     // G92
   if pos('M5', my_str) > 0 then
     GLSspindle_on_off(false)
@@ -249,11 +220,6 @@ begin
       grbl_wpos.z:= z - WorkZeroZ
     else
       grbl_wpos.z:= z;
-<<<<<<< HEAD:gcode_interpreter.inc
-=======
-    if grbl_wpos.z < 0 then
-      gcsim_render_final:= true;
->>>>>>> remotes/origin/master:gcode_interpreter.pas
   end;
   idx:= pos('F', my_str);
   if idx > 0 then begin

@@ -273,17 +273,21 @@ begin
 
     my_pos:= 1;
 
-    if (my_line = '%') and FirstLine then begin
+ {
+ // @ Frank Kaiser: lädt Easy-PC-Dateien nicht
+    if (my_line = '%') then begin   //  and FirstLine
       FirstLine := false;
-      if Eof(my_ReadFile) then break
+      if Eof(my_ReadFile) then
+        break
       else begin
         Readln(my_ReadFile,my_line);
         ParseCommand(my_pos, my_line, my_val, my_char);
-        if (my_char <> 'M') or (my_val <> 48) then break;
+        if (my_char <> 'M') or (my_val <> 48) then
+          break;
         continue;
       end;
     end;
-
+}
     if AnsiContainsStr(my_line, 'INCH') then
       use_inches_in_drillfile:= true;
     if AnsiContainsStr(my_line, 'METRIC') then
@@ -292,8 +296,10 @@ begin
     ParseCommand(my_pos, my_line, my_val, my_char);
 
     if my_char = 'M' then begin
-      if my_val = 71 then use_inches_in_drillfile:= false;
-      if my_val = 72 then use_inches_in_drillfile:= true;
+      if my_val = 71 then
+        use_inches_in_drillfile:= false;
+      if my_val = 72 then
+        use_inches_in_drillfile:= true;
       continue;
     end;
 

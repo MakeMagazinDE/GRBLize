@@ -239,11 +239,7 @@ var
 // Wurde nichts (mehr) gefunden, ist Result = p_endofline.
 // POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
 // T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
-<<<<<<< HEAD
   function ParseLine(var position: Integer; const linetoparse: string;
-=======
-  function ParseLine(var position: Integer; var linetoparse: string;
->>>>>>> remotes/origin/master
                      var value: Double; var letters: String): T_parseReturnType;
 
 // Dekodiert einen einzelnes Befehlsbuchstaben/Wert-Paar, beginnend an Position
@@ -260,7 +256,6 @@ implementation
 
 uses grbl_player_main;
 
-<<<<<<< HEAD
 procedure enable_all_millings(var my_entry: Tfinal; enable_status: Boolean);
 // alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
 var i: Integer;
@@ -302,8 +297,6 @@ begin
   result:=zahl/multi;
 end;
 
-=======
->>>>>>> remotes/origin/master
 procedure ExecuteFile(const AFilename: String;
                  AParameter, ACurrentDir: String; AWait, AHide: Boolean);
 var
@@ -391,11 +384,7 @@ begin
   until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end);
 
   dec(position);   // Zeigt auf erstes relevantes Zeichen oder Ende
-<<<<<<< HEAD
   if position > my_end then
-=======
-  if position = my_end then
->>>>>>> remotes/origin/master
     exit;
 
   my_char := linetoparse[position]; // erstes relevantes Zeichen
@@ -417,11 +406,7 @@ begin
   end else if my_char in ['0'..'9', '.',  '+', '-', 'e', 'E'] then begin
     result:= p_number;
     for i:= position to my_end do begin
-<<<<<<< HEAD
       if not (linetoparse[i] in ['0'..'9', '.',  '+', '-', 'e', 'E']) then
-=======
-      if not (linetoparse[i] in ['0'..'9', '.',  '+', '-']) then
->>>>>>> remotes/origin/master
         break;
       my_str:= my_str+ linetoparse[i];
     end;
@@ -430,11 +415,8 @@ begin
   end;
 end;
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> remotes/origin/master
 function ParseCommand(var position: Integer; var linetoparse: string;
   var value: Double; var letter: char): boolean;
 // Dekodiert einen einzelnes Befehlsbuchstaben/Wert-Paar, beginnend an Position
@@ -557,7 +539,6 @@ begin
       setlength(blockArrays[fileID,b].outline, my_pathlen);
     end;// else
 //      blockArrays[fileID,b].closed:= false;
-<<<<<<< HEAD
     my_offset:= FileParamArray[fileID].offset;
     my_scale:= FileParamArray[fileID].scale;
     if FileParamArray[fileID].mirror then
@@ -578,12 +559,6 @@ begin
           my_offset.Y:= ny;
         end;
     end;
-=======
-
-    if (not my_file_entry.mirror) and (my_file_entry.rotate = deg0) then
-      continue;
-
->>>>>>> remotes/origin/master
     for p:= 0 to my_pathlen - 1 do begin
       my_pt:= blockArrays[fileID, b].outline_raw[p];
 
@@ -996,12 +971,9 @@ begin
   // Werkzeugkorrektur-Offsets für fertiges BlockArray
   for i:= 0 to high(final_array) do begin
     compile_milling(final_array[i]);
-<<<<<<< HEAD
 // alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
     enable_all_millings(final_array[i], final_array[i].enable);
   end;
-=======
->>>>>>> remotes/origin/master
   ListBlocks;
 end;
 

@@ -1,12 +1,9 @@
 program GRBLize;
-<<<<<<< HEAD
 
 
 
 
 
-=======
->>>>>>> remotes/origin/master
 uses
   Forms,
   ABOUT in 'ABOUT.PAS' {AboutBox},
@@ -29,12 +26,8 @@ uses
   Direct3D9 in 'DirectX\Direct3D9.pas',
   grbl_player_main in 'grbl_player_main.pas' {Form1},
   VFrames in 'VFrames.pas',
-<<<<<<< HEAD
   gerber_import in 'gerber_import.pas' {FormGerber},
   import_files in 'import_files.pas';
-=======
-  gerber_import in 'gerber_import.pas' {FormGerber};
->>>>>>> remotes/origin/master
 
 {$R *.res}
 

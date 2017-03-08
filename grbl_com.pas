@@ -7,11 +7,7 @@ unit grbl_com;
 interface
 
 //uses SysUtils, FTDIdll, FTDIchip, FTDItypes;
-<<<<<<< HEAD
 uses SysUtils, StrUtils, DateUtils, Windows, Classes, Forms, Controls, Menus, MMsystem,
-=======
-uses SysUtils, StrUtils, DateUtils, Windows, Classes, Forms, Controls, Menus,
->>>>>>> remotes/origin/master
   Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect;
 
 type
@@ -19,11 +15,7 @@ type
    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
   procedure mdelay(const Milliseconds: DWord);
-<<<<<<< HEAD
   procedure ShowAliveState(my_state: t_alivestates);
-=======
-  procedure ShowAliveState;
->>>>>>> remotes/origin/master
 
   function SetupFTDI: String;
   function InitFTDI(my_device:Integer; baud_str: String):String;
@@ -97,8 +89,6 @@ type
   // GCode-String G1 x,y,z mit abschließendem CR an GRBL senden, auf OK warten:
   procedure grbl_millXYZ(x, y, z: Double);
 
-  // Zum Startpunkt eines Pfades bewegen
-  procedure grbl_go_start_path(millpath: TPath; millpen: Integer; offset: TIntPoint);
   // kompletten einzelnen Pfad fräsen, zurück bis Anfang wenn Closed
   procedure grbl_millpath(millpath: TPath; millpen: Integer; offset: TIntPoint; is_closedpoly: Boolean);
 
@@ -228,18 +218,11 @@ begin
   end;
 end;
 
-<<<<<<< HEAD
 procedure ShowAliveState(my_state: t_alivestates);
 begin
   LastAliveState:= my_state;
   with Form1 do
     case my_state of
-=======
-procedure ShowAliveState;
-begin
-  with Form1 do
-    case AliveState of
->>>>>>> remotes/origin/master
       s_alive_responded:
         begin
           PanelAlive.Caption:='Resp OK';
@@ -333,11 +316,7 @@ begin
   else
     COMReceiveCount:= 0;
   if GettickCount mod 10 = 0 then
-<<<<<<< HEAD
     ShowAliveState(LastAliveState);
-=======
-    ShowAliveState;
->>>>>>> remotes/origin/master
 end;
 
 procedure COMRxClear;
@@ -412,11 +391,7 @@ var
   my_str: AnsiString;
   i: Integer;
   my_char: Char;
-<<<<<<< HEAD
   target_time, current_time: TLargeInteger;
-=======
-  target_time, display_time, current_time: TLargeInteger;
->>>>>>> remotes/origin/master
   has_timeout: Boolean;
 begin
   StopWatch.Start;
@@ -426,10 +401,6 @@ begin
   my_char:= #0;
   has_timeout:= timeout > 0;
   current_time:= StopWatch.GetCurrentMilliseconds;
-<<<<<<< HEAD
-=======
-  display_time:= current_time + 50;
->>>>>>> remotes/origin/master
   target_time := current_time + cardinal(timeout);
   repeat
     i:= COMReceiveCount;
@@ -438,7 +409,6 @@ begin
       if my_char >= #32 then
         my_str:= my_str + my_char;
     end else begin
-<<<<<<< HEAD
       if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
@@ -449,16 +419,6 @@ begin
     if (current_time > target_time) then begin
       my_str:= '[Timeout]';
     end;
-=======
-      Application.processmessages;
-    end;
-    current_time:= StopWatch.GetCurrentMilliseconds;
-  until (my_char= #10) or ((current_time > target_time) and has_timeout) or isWaitExit;
-  if has_timeout then begin
-    if (current_time > target_time) then begin
-      my_str:= '#Timeout';
-    end;
->>>>>>> remotes/origin/master
   end;
   Result:= my_str;
 end;
@@ -501,11 +461,7 @@ var
   my_str: AnsiString;
   i: Integer;
   my_char: AnsiChar;
-<<<<<<< HEAD
   target_time, current_time: TLargeInteger;
-=======
-  target_time, display_time, current_time: TLargeInteger;
->>>>>>> remotes/origin/master
   has_timeout: Boolean;
 
 begin
@@ -513,10 +469,6 @@ begin
   my_str:= '';
   has_timeout:= timeout > 0;
   current_time:= StopWatch.GetCurrentMilliseconds;
-<<<<<<< HEAD
-=======
-  display_time:= current_time + 100;
->>>>>>> remotes/origin/master
   target_time := current_time + cardinal(timeout);
   repeat
     i:= FTDIreceiveCount;
@@ -525,7 +477,6 @@ begin
       if my_char >= #32 then
         my_str:= my_str + my_char;
     end else begin
-<<<<<<< HEAD
       if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
@@ -536,16 +487,6 @@ begin
     if (current_time > target_time) then begin
       my_str:= '[Timeout]';
     end;
-=======
-      Application.processmessages;
-    end;
-    current_time:= StopWatch.GetCurrentMilliseconds;
-  until (my_char= #10) or ((current_time > target_time) and has_timeout) or isWaitExit;
-  if has_timeout then begin
-    if (current_time > target_time) then begin
-      my_str:= '#Timeout';
-    end;
->>>>>>> remotes/origin/master
   end;
   Result:= my_str;
 end;
@@ -591,17 +532,11 @@ end;
 
 function grbl_receiveStr(timeout: Integer): string;
 begin
-  if timeout = 0 then
-    AliveState:= s_alive_wait_indef
-  else
-    AliveState:= s_alive_wait_timeout;
   result:= '';
   if ftdi_isopen then
     result:= FTDIreceiveStr(timeout);
   if com_isopen then
     result:= COMReceiveStr(timeout);
-  AliveState:= s_alive_responded;
-  ShowAliveState;
 end;
 
 function grbl_sendStr(sendStr: String; my_getok: boolean): String;
@@ -665,7 +600,6 @@ begin
   my_str:= '';
   result:= false;
   if ftdi_isopen or com_isopen then begin
-<<<<<<< HEAD
     DisableStatus;
     grbl_rx_clear;
 {$IFDEF GRBL_11}
@@ -739,35 +673,6 @@ begin
       EnableStatus;
   end;
   ShowAliveState(s_alive_responded);
-=======
-    grbl_wait_for_timeout(50);
-    for i:= 0 to 3 do begin  // Anzahl Versuche
-      grbl_sendStr(#13,false);
-      my_str:= ansiuppercase(grbl_receiveStr(50));
-      if (my_str = 'OK') or (pos(my_str,'ALARM') > 0) or (pos(my_str,'ERROR') > 0) then
-        break;
-    end;
-    result:= (my_str = 'OK');
-  end else
-    result:= false;
-end;
-
-function grbl_checkResponse: Boolean;
-begin
-  AliveState:= s_alive_wait_timeout;
-  ShowAliveState;
-  grbl_sendlist.Clear;
-  grbl_sendStr('$X' + #13, false);
-  grbl_wait_for_timeout(50);
-  result:= false;
-  if grbl_resync then
-    result:= true
-  else
-    MessageDlg('No response or GRBL Resync failed.'
-      + #13 + 'Check if GRBL version matches setting in GRBL Defaults page.', mtWarning, [mbOK], 0);
-  AliveState:= s_alive_responded;
-  ShowAliveState;
->>>>>>> remotes/origin/master
 end;
 
 procedure grbl_addStr(my_str: String);
@@ -950,20 +855,6 @@ begin
   grbl_oldx:= x;
   grbl_oldy:= y;
   grbl_oldz:= z;
-end;
-
-procedure grbl_go_start_path(millpath: TPath; millpen: Integer; offset: TIntPoint);
-// kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
-var i, my_len, my_z_feed: Integer;
-  x, y: Double;
-begin
-  my_len:= length(millpath);
-  if my_len < 1 then
-    exit;
-  // Tool ist noch oben
-  x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-  y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-  grbl_moveXY(x,y, false);
 end;
 
 procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
@@ -1162,15 +1053,4 @@ begin
   end;
 end;
 
-<<<<<<< HEAD
-=======
-procedure grbl_wait_for_timeout(timeout: Integer);
-begin
-  if grbl_is_connected and (not Form1.CheckBoxSim.checked) then
-    repeat
-      Application.ProcessMessages;
-    until (grbl_receiveStr(timeout) = '#Timeout') or isEmergency;
-end;
-
->>>>>>> remotes/origin/master
 end.

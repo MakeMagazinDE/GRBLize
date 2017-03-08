@@ -88,10 +88,7 @@ type
     procedure TrackBarZoomChange(Sender: TObject);
     procedure FormMouseWheel(Sender: TObject; Shift: TShiftState;
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
-<<<<<<< HEAD
     procedure pu_ObjectenabledClick(Sender: TObject);
-=======
->>>>>>> remotes/origin/master
 
   private
     { Private-Deklarationen }
@@ -274,12 +271,6 @@ end;
 
 
 procedure set_drawing_scales;
-<<<<<<< HEAD
-=======
-var
-  my_fac: Integer;
-
->>>>>>> remotes/origin/master
 begin
   drawing_offset_x:= c_center_offs_x + bm_scroll.x;
   drawing_offset_y:= Form2.DrawingBox.Height + bm_scroll.y - c_center_offs_y;
@@ -1164,11 +1155,6 @@ begin
     final_array[HiliteBlock].enable:= is_any_milling_enabled(final_array[HiliteBlock]);
     ListBlocks;
     NeedsRedraw:= true;
-<<<<<<< HEAD
-=======
-    ListBlocks;
-    Form4.FormRefresh(Sender);
->>>>>>> remotes/origin/master
   end;
 end;
 
@@ -1232,7 +1218,6 @@ begin
   WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Manual Work/part Y zero');
-<<<<<<< HEAD
 
   grbl_offsXY(0, 0);
   SendListToGrbl;
@@ -1243,18 +1228,6 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
-=======
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-
-  WorkZeroX:= grbl_mpos.X;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y;
-  JogY:= WorkZeroY;
-
-  grbl_offsXY(0, 0);
-  SendListToGrbl;
->>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -1266,7 +1239,6 @@ begin
   Form1.Memo1.lines.add('Offset to point');
   hilite_to(x,y);
 
-<<<<<<< HEAD
   grbl_offsXY(x, y);
   SendListToGrbl;
 
@@ -1276,18 +1248,6 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
-=======
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
-
-  grbl_offsXY(x, y);
-  SendListToGrbl;
->>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -1299,7 +1259,6 @@ begin
   Form1.Memo1.lines.add('Offset tool to center');
   hilite_center_to(x,y);
 
-<<<<<<< HEAD
   grbl_offsXY(x, y);
   SendListToGrbl;
 
@@ -1309,17 +1268,6 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
-=======
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
-  grbl_offsXY(x, y);
-  SendListToGrbl;
->>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -1333,7 +1281,6 @@ begin
 
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendListToGrbl;
-<<<<<<< HEAD
 
   WorkZeroX:= grbl_mpos.X + job.cam_x;
   JogX:= WorkZeroX;
@@ -1341,8 +1288,6 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
-=======
->>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -1353,22 +1298,10 @@ begin
   Form1.Memo1.lines.add('Offset cam to point');
   hilite_to(x,y);
 
-<<<<<<< HEAD
-=======
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-
->>>>>>> remotes/origin/master
   x:= x - job.cam_x;
   y:= y - job.cam_y;
-
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
   grbl_offsXY(x, y);
   SendListToGrbl;
-<<<<<<< HEAD
 
   WorkZeroX:= grbl_mpos.X - x;
   JogX:= WorkZeroX;
@@ -1376,8 +1309,6 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
-=======
->>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -1389,22 +1320,10 @@ begin
   Form1.Memo1.lines.add('Offset cam to center');
   hilite_center_to(x,y);
 
-<<<<<<< HEAD
-=======
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-
->>>>>>> remotes/origin/master
   x:= x - job.cam_x;
   y:= y - job.cam_y;
-
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
   grbl_offsXY(x, y);
   SendListToGrbl;
-<<<<<<< HEAD
 
   WorkZeroX:= grbl_mpos.X - x;
   JogX:= WorkZeroX;
@@ -1412,8 +1331,6 @@ begin
   JogY:= WorkZeroY;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
-=======
->>>>>>> remotes/origin/master
   NeedsRedraw:= true;
 end;
 
@@ -1424,7 +1341,6 @@ begin
   WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to part zero');
-<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up
@@ -1440,17 +1356,6 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
-=======
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up absolute
-    grbl_moveXY(0,0, false);
-    SendListToGrbl;
-    if WorkZeroZdone then
-      grbl_moveZ(job.z_penlift, false);
-    SendListToGrbl;
-  end else
-    Form1.Memo1.lines.add('Part Zero not set - no action taken');
->>>>>>> remotes/origin/master
 end;
 
 procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
@@ -1460,7 +1365,6 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to point');
   hilite_to(x, y);
-<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up
@@ -1476,17 +1380,6 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
-=======
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up absolute
-    grbl_moveXY(x, y, false);
-    SendListToGrbl;
-    if WorkZeroZdone then
-      grbl_moveZ(job.z_penlift, false);
-    SendListToGrbl;
-  end else
-    Form1.Memo1.lines.add('Part Zero not set - no action taken');
->>>>>>> remotes/origin/master
 end;
 
 procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
@@ -1496,7 +1389,6 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move tool to center');
   hilite_center_to(x,y);
-<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up
@@ -1512,17 +1404,6 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
-=======
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up absolute
-    grbl_moveXY(x, y, false);
-    SendListToGrbl;
-    if WorkZeroZdone then
-      grbl_moveZ(job.z_penlift, false);
-    SendListToGrbl;
-  end else
-    Form1.Memo1.lines.add('Part Zero not set - no action taken');
->>>>>>> remotes/origin/master
 end;
 
 // #############################################################################
@@ -1532,7 +1413,6 @@ begin
   WaitForIdle;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to part zero');
-<<<<<<< HEAD
 
   if WorkZeroXdone and WorkZeroYdone then begin
     grbl_moveZ(0, true);  // move Z up absolute
@@ -1543,16 +1423,6 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
-=======
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(-job.cam_x,-job.cam_y, false);
-    if WorkZeroZdone then
-      grbl_moveZ(job.cam_z_abs, true);
-    SendListToGrbl;
-  end else
-    Form1.Memo1.lines.add('Part Zero not set - no action taken');
->>>>>>> remotes/origin/master
 end;
 
 procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
@@ -1562,7 +1432,6 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to point');
   hilite_to(x,y);
-<<<<<<< HEAD
   x:= x - job.cam_x;
   y:= y - job.cam_y;
 
@@ -1575,18 +1444,6 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
-=======
-  if WorkZeroXdone and WorkZeroYdone then begin
-    x:= x - job.cam_x;
-    y:= y - job.cam_y;
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(x, y, false);
-    SendListToGrbl;
-    grbl_moveZ(job.cam_z_abs, true);
-    SendListToGrbl;
-  end else
-    Form1.Memo1.lines.add('Part Zero not set - no action taken');
->>>>>>> remotes/origin/master
 end;
 
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
@@ -1595,7 +1452,6 @@ begin
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Move cam to center');
   hilite_center_to(x, y);
-<<<<<<< HEAD
   x:= x - job.cam_x;
   y:= y - job.cam_y;
 
@@ -1608,18 +1464,6 @@ begin
     Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
     PlaySound('SYSTEMHAND', 0, SND_ASYNC);
   end;
-=======
-  if WorkZeroXdone and WorkZeroYdone then begin
-    x:= x - job.cam_x;
-    y:= y - job.cam_y;
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(x, y, false);
-    SendListToGrbl;
-    grbl_moveZ(job.cam_z_abs, true);
-    SendListToGrbl;
-  end else
-    Form1.Memo1.lines.add('Part Zero not set - no action taken');
->>>>>>> remotes/origin/master
 end;
 
 // #############################################################################

@@ -1,6 +1,6 @@
 // Version für GRBL 1.1
 
-function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
+function DecodeStatus(my_response: String): Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
 // setzt pos_changed wenn sich Position änderte
 
@@ -12,29 +12,45 @@ function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
 // 1 Zeichen dauert bei 19200  Bd 1/1920 s  = ca. 0,5 ms,   d.h. 35 ms für gesamten Satz
 
 var
-  my_str: String;
   i: Integer;
-  is_valid, is_jogging: Boolean;
+  is_valid: Boolean;
   sl_fields, sl_values: TSTringList;
+  pins_received: Boolean;
 begin
-  sl_fields:= TStringList.Create;
-  sl_values:= TStringList.Create;
-  result:= false;
-  pos_changed:= false;
   try
-    if (pos('>', my_response) = 0) then begin  // nicht vollständig
-      inc(ResponseFaultCounter);
+    result:= false;
+    if length(my_response) < 1 then
+      exit;
+    if (pos('[', my_response) > 0) then begin
+      if AnsiContainsStr(my_response, 'Timeout') then begin
+        inc(StatusFaultCounter);  // nicht vollständig
+        Form1.LabelResponse.Caption:= my_response;
+        exit;
+      end;
+      Form1.LabelResponse.Caption:= my_response;
+      Form1.Memo1.lines.add('');
+      Form1.Memo1.lines.add('GRBL message:');
+      Form1.Memo1.lines.add(my_response);
+      grbl_wait_for_timeout(10);
+      exit;
+    end else if (pos('>', my_response) = 0) then begin
+      inc(StatusFaultCounter);  // nicht vollständig
+      Form1.LabelResponse.Caption:= my_response;
       exit;
     end;
+    sl_fields:= TStringList.Create;
+    sl_values:= TStringList.Create;
     if (my_response[1] = '<') then begin
-      my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
+       my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
-    end else begin                             // nicht vollständig
-      inc(ResponseFaultCounter);
+    end else begin
+      inc(StatusFaultCounter);  // nicht vollständig
+      Form1.LabelResponse.Caption:= my_response;
       exit;
     end;
     is_valid:= false;
+
     with Form1 do begin
       sl_fields.delimiter:= '|';
       sl_fields.DelimitedText:= my_response;
@@ -50,22 +66,19 @@ begin
       else
         dec(AliveCount);
       ShowAliveState(LastAliveState);
-
-      my_Str:= sl_fields[0];
-      if (my_Str = 'Idle') or (my_Str = 'Zero') then begin
+      sl_values.CommaText:= sl_fields[0];
+       if (sl_values[0] = 'Idle') then begin
         PanelReady.Color:= clLime;
         PanelReady.Font.Color:= clwhite;
         is_valid:= true;
-        if (my_Str = 'Zero') then
-          MachineState:= zero
-        else
-          MachineState:= idle;
+        MachineState:= idle;
       end else begin
         PanelReady.Color:= $00004000;
         PanelReady.Font.Color:= clgray;
       end;
 
-      if (my_Str = 'Queue') or (my_Str =  'Hold') then begin
+      if (sl_values[0] = 'Hold') then begin
+      // Kann Hold:0 oder Hold:1 sein
         is_valid:= true;
         PanelHold.Color:= clAqua;
         PanelHold.Font.Color:= clwhite;
@@ -76,8 +89,7 @@ begin
         PanelHold.Font.Color:= clgray;
       end;
 
-      is_jogging:= AnsiContainsStr(my_Str,'Jog');
-      if (my_Str = 'Run') or is_jogging then begin
+      if (sl_values[0] = 'Run') or (sl_values[0] = 'Jog') then begin
         is_valid:= true;
         PanelRun.Color:= clFuchsia;
         PanelRun.Font.Color:= clwhite;
@@ -88,7 +100,7 @@ begin
         PanelRun.Font.Color:= clgray;
       end;
 
-      if my_Str = 'Alarm' then begin
+      if AnsiUpperCase(sl_values[0]) = 'ALARM' then begin
         is_valid:= true;
         PanelAlarm.Color:= clRed;
         PanelAlarm.Font.Color:= clwhite;
@@ -101,7 +113,8 @@ begin
 
       // keine gültige Statusmeldung?
       if not is_valid then begin
-        inc(ResponseFaultCounter);
+        inc(StatusFaultCounter);
+        Form1.LabelResponse.Caption:= my_response;
         exit;
       end;
 
@@ -109,6 +122,7 @@ begin
 // oder    <Idle|MPos:0.000,0.000,0.000|FS:0,0|Ov:100,100,100>
 // oder    <Idle|MPos:0.000,0.000,0.000|FS:0,0>
 // Doppelpunkt ist jetzt Komma, String davor zählt als values-Feld mit
+      pins_received:= false;
       for i := 1 to sl_fields.count - 1 do begin
         sl_values.clear;
         sl_values.delimiter:= ',';
@@ -140,15 +154,25 @@ begin
           grbl_seek_ov:= StrToIntDef(sl_values[2], 100);
           grbl_speed_ov:= StrToIntDef(sl_values[3], 100);
         end;
+        if (sl_values.count > 1) and (sl_values[0] = 'Pn') then begin
+          Form1.PanelPinState.Caption:= 'Limits: ' + sl_values[1];
+          Form1.PanelPinState.color:= clred;
+          pins_received:= true;
+        end;
+      end;
+      if not pins_received then begin
+        Form1.PanelPinState.Caption:= '';
+        Form1.PanelPinState.color:= $00000040;
       end;
     end;
   finally
     sl_fields.free;
     sl_values.free;
+    Form1.LabelStatusFaults.Caption:= 'StatusFaults: ' + IntToStr(StatusFaultCounter);
   end;
   if (MachineState = run) or (old_grbl_wpos.X <> grbl_wpos.X)
      or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
-    pos_changed:= true;
+    result:= true;
     old_grbl_wpos:= grbl_wpos;
     NeedsRedraw:= true;
   end;
