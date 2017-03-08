@@ -14,16 +14,19 @@ File_11=TSourceModule,'E:\Dropbox\GRBLize_XE8\glscene_view.pas',0,1,876,2,902,0,
 
 [Modules]
 Module0=E:\Dropbox\GRBLize_XE8\page_job.inc
-Module1=E:\Dropbox\GRBLize_XE8\drill_import.inc
-Module2=E:\Dropbox\GRBLize_XE8\import_files.pas
-Module3=E:\Dropbox\GRBLize_XE8\page_run.inc
-Module4=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
-Module5=default.htm
+Module1=default.htm
+Module2=E:\Dropbox\GRBLize_XE8\drill_import.inc
+Module3=E:\Dropbox\GRBLize_XE8\import_files.pas
+Module4=E:\Dropbox\GRBLize_XE8\page_run.inc
+Module5=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
 Count=6
 EditWindowCount=1
 
 [E:\Dropbox\GRBLize_XE8\page_job.inc]
 ModuleType=TSourceModule
+
+[default.htm]
+ModuleType=TURLModule
 
 [E:\Dropbox\GRBLize_XE8\drill_import.inc]
 ModuleType=TSourceModule
@@ -40,9 +43,6 @@ ModuleType=TSourceModule
 ModuleType=TSourceModule
 FormState=1
 FormOnTop=0
-
-[default.htm]
-ModuleType=TURLModule
 
 [EditWindow0]
 ViewCount=6
