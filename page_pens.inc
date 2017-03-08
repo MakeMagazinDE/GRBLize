@@ -143,10 +143,10 @@ var
   my_row, my_col: integer;
 begin
   SgPens.MouseToCell( X,Y, my_col, my_row );
-  SgPens.Col := my_col;
-  SgPens.Row := my_row;
   if (my_row < 1) or (my_col < 1) then
     exit;
+  SgPens.Col := my_col;
+  SgPens.Row := my_row;
   UnHilite;
   with SgPens do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];

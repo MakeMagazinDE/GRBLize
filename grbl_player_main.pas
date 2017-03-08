@@ -3,6 +3,12 @@ unit grbl_player_main;
 // oder GRBL 0.9j mit DEFINE GRBL115
 { $DEFINE GRBL_11}
 
+{$IFDEF GRBL_11}
+  {.$EXTENSION 11.exe}
+{$ELSE}
+  {.$EXTENSION 09.exe}
+{$ENDIF}
+
 interface
 
 uses
@@ -16,7 +22,7 @@ uses
 
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.5a';
+  c_VerStr: String = '1.5c';
   c_unloadATCstr: String = 'M8';
   c_loadATCstr: String = 'M9';
 {$IFDEF GRBL_11}
@@ -26,6 +32,12 @@ const
 {$ENDIF}
 
 type
+  TPOVControl = record   // Joystick control
+    up,down,left,right:boolean;
+    raw: Integer;
+    active: Boolean;
+  end;
+
   TForm1 = class(TForm)
     MainMenu1: TMainMenu;
     File1: TMenuItem;
@@ -36,7 +48,7 @@ type
     FileExitItem: TMenuItem;
     Edit0: TMenuItem;
     CutItem: TMenuItem;
-    CopyItem: TMenuItem;                                                               
+    CopyItem: TMenuItem;
     PasteItem: TMenuItem;
     Help1: TMenuItem;
     HelpAboutItem: TMenuItem;
@@ -208,7 +220,6 @@ type
     BtnMoveMillCenter: TSpeedButton;
     BtnZcontact: TSpeedButton;
     Label9: TLabel;
-    LabelFaults: TLabel;
     Bevel2: TBevel;
     Label14: TLabel;
     Label21: TLabel;
@@ -265,8 +276,14 @@ type
     UpDown1: TUpDown;
     UpDown2: TUpDown;
     UpDown3: TUpDown;
-    Gauge1: TGauge;
     Label36: TLabel;
+    Label19: TLabel;
+    LabelJoyInfo: TLabel;
+    LabelJoySend: TLabel;
+    BtnReloadAll: TButton;
+    PanelPinState: TPanel;
+    LabelStatusFaults: TLabel;
+    LabelResponse: TLabel;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -326,8 +343,6 @@ type
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure CheckBoxSimClick(Sender: TObject);
     procedure BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure BitBtnJogMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure BtnLoadGrblSetupClick(Sender: TObject);
     procedure BtnSaveGrblSetupClick(Sender: TObject);
@@ -399,6 +414,8 @@ type
       NewValue: Integer; Direction: TUpDownDirection);
     procedure SgFilesExit(Sender: TObject);
     procedure SgFilesClick(Sender: TObject);
+    procedure BtnReloadAllClick(Sender: TObject);
+
 
   private
     { Private declarations }
@@ -414,7 +431,46 @@ type
       property Checked: Boolean read IsOn write SetLED;
     end;
 
-  function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
+  { TGamepad - A wrapper class for the Windows-Joystick-API}
+  TGamepad = class
+    private
+      FRange:integer;
+      FDeadZone:integer;
+      function GetButton(index:integer):boolean;
+      function GetX:integer;
+      function GetY:integer;
+      function GetZ:integer;
+      function GetR:integer;
+      function GetU:integer;
+      function GetV:integer;
+      function GetAnalogActive:Boolean;
+      function GetPOV:TPOVControl;
+      procedure UpdateDeviceNr(nr:cardinal);
+    protected
+      Device:TJoyInfoEx;
+      DeviceInfo:TJoyCaps;
+      FDeviceNr:Cardinal;
+      CenterX,CenterY,CenterZ:Integer;
+      CenterR,CenterU,CenterV:Integer;
+    public
+      property DeviceNr:Cardinal read FDeviceNr write UpdateDeviceNr;
+      procedure Update;
+      procedure Calibrate;
+      constructor Create;
+      property X:integer read GetX;
+      property Y:integer read GetY;
+      property Z:integer read GetZ;
+      property R:integer read GetR;
+      property U:integer read GetU;
+      property V:integer read GetV;
+      property IsAnalogActive:Boolean read GetAnalogActive;
+      property Range:integer read FRange write FRange;
+      property DeadZone:integer read FDeadZone write FDeadZone;
+      property POV:TPOVControl read GetPov;
+      property Buttons[index:integer]:boolean read GetButton;
+  end;
+
+  function DecodeStatus(my_response: String): Boolean;
   procedure DisplayMachinePosition;
   procedure DisplayWorkPosition;
 
@@ -442,15 +498,14 @@ type
   function isGrblActive: Boolean;
 
   function ManualToolchange(atc_idx_old, atc_idx_new: Integer; do_tlc: boolean): Boolean;
-  function ChangeATCtool(atc_idx_old, atc_idx_new: Integer; do_tlc: boolean): Boolean;
-  function UnloadATCtool(atc_idx: Integer): boolean;
-  function LoadATCtool(atc_idx: Integer; do_tlc: boolean): boolean;
+  procedure ChangeATCtool(atc_idx_old, atc_idx_new: Integer; do_tlc: boolean);
+  procedure UnloadATCtool(atc_idx: Integer);
+  procedure LoadATCtool(atc_idx: Integer; do_tlc: boolean);
   procedure OpenFilesInGrid;
   procedure ForceToolPositions(x, y, z: Double);
 
   procedure AutoAssignATCtoolsToJob;
-  procedure UpdateATCsg;
-  procedure ResetATC;
+  procedure UpdateATC;
   procedure ClearATCarray;
   procedure InvalidateTLCs;
   procedure ClearAlarmLock;
@@ -496,12 +551,12 @@ var
 
   LastToolUsed: Integer = 1;  // Zuletzt Benutztes Tool im Job, 0 = unused
   ToolInSpindle: Integer = 1; // ATC-Tool in der Maschine, 0 = unused
-  ResponseFaultCounter: Integer;
+  StatusFaultCounter: Integer = 0;
   SpindleRunning: Boolean;
 
   TimerBlinkToggle: Boolean;
 
-  StatusTimerState: t_rstates; // (none, status, response);
+//  StatusTimerState: t_rstates; // (none, status, response);
   MachineState: t_mstates;  // (idle, run, hold, alarm)GRBL ist in Ruhe wenn state_idle
 
   LastResponseStr:String;
@@ -525,6 +580,10 @@ var
   CircleRadius: Double;
   CircleRadius_wpos, CircleRadius_mpos: T3dFloat;
 
+  JoyPad: TGamepad;
+  JoyPadWasActive: Boolean = false;
+  SavedPortnameForSim: String;
+
 const
    // für Simulation
   c_zero_x = 50;
@@ -535,8 +594,8 @@ const
   SettingCodes_11: Array[0..35] of String[31] = (
     'Step pulse time',
     'Step idle delay',
-    'Step pulse invert',
-    'Step direction invert',
+    'Step pulse invert mask',
+    'Step direction invert mask',
     'Invert step enable pin',
     'Invert limit pins',
     'Invert probe pin',
@@ -547,7 +606,7 @@ const
     'Soft limits enable',
     'Hard limits enable',
     'Homing cycle enable',
-    'Homing direction invert',
+    'Homing direction invert mask',
     'Homing locate feed rate',
     'Homing search seek rate',
     'Homing switch debounce delay',
@@ -579,6 +638,7 @@ uses import_files, Clipper, About, bsearchtree, cam_view, gerber_import;
 
 // #############################################################################
 // #############################################################################
+{$I joypad.inc}
 
 function isCancelled: Boolean;
 begin
@@ -625,8 +685,6 @@ begin
   end;
   IsOn:= led_on;
 end;
-
-//##############################################################################
 
 procedure DisplayMachinePosition;
 begin
@@ -841,7 +899,7 @@ begin
     LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
   end;
   InvalidateTLCs;
-  UpdateATCsg;
+  UpdateATC;
 end;
 
 procedure ForceToolPositions(x, y, z: Double);
@@ -914,7 +972,13 @@ var
 begin
   StartupDone:= false;
   Show;
-  PlaySound('SYSTEMWELCOME', 0, SND_ASYNC);
+  Memo1.lines.Clear;
+{$IFDEF GRBL_11}
+  Memo1.lines.add('GRBLize for GRBL 1.1');
+  Memo1.lines.add('with joystick/gamepad support');
+{$ELSE}
+  Memo1.lines.add('GRBLize for GRBL 0.9');
+{$ENDIF}
   StopWatch:= TStopWatch.Create() ;
   Width:= Constraints.MaxWidth;
   grbl_sendlist:= TStringList.create;
@@ -930,6 +994,7 @@ begin
     deviceselectbox := Tdeviceselectbox.Create(Self);
   deviceselectbox.hide;
   grbl_ini:= TRegistry.Create;
+  JoyPad := TGamepad.Create;
   try
     grbl_ini.RootKey := HKEY_CURRENT_USER;
     grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr,true);
@@ -939,10 +1004,16 @@ begin
       Left:= grbl_ini.ReadInteger('MainFormLeft');
     if grbl_ini.ValueExists('MainFormPage') then
       PageControl1.ActivePageIndex:= grbl_ini.ReadInteger('MainFormPage');
-    if grbl_ini.ValueExists('SettingsPath') then
-      JobSettingsPath:= grbl_ini.ReadString('SettingsPath')
-    else
-      JobSettingsPath:= ExtractFilePath(Application.ExeName)+'default.job';
+
+
+    if ParamStr(1) <> '' then begin
+      JobSettingsPath:= ParamStr(1);
+    end else begin
+      if grbl_ini.ValueExists('SettingsPath') then
+        JobSettingsPath:= grbl_ini.ReadString('SettingsPath')
+      else
+        JobSettingsPath:= ExtractFilePath(Application.ExeName)+'default.job';
+    end;
     if grbl_ini.ValueExists('FTDIdeviceSerial') then
       ftdi_serial:= grbl_ini.ReadString('FTDIdeviceSerial')
     else
@@ -953,7 +1024,6 @@ begin
       ftdi_was_open:= false;
     if grbl_ini.ValueExists('DrawingFormVisible') then
       ShowDrawing1.Checked:= grbl_ini.ReadBool('DrawingFormVisible');
-
     if grbl_ini.ValueExists('CamFormVisible') then
       ShowSpindleCam1.Checked:= grbl_ini.ReadBool('CamFormVisible');
 
@@ -1019,7 +1089,7 @@ begin
     BtnConnect.SetFocus;
   end else
     BtnRescan.SetFocus;
-  UpdateATCsg;
+  UpdateATC;
   if FileExists(JobSettingsPath) then
     OpenJobFile
   else
@@ -1027,17 +1097,21 @@ begin
   SetToolChangeChecks(job.toolchange_pause);
   ResetCoordinates;
   ResetToolflags;
+  Form1.Memo1.lines.add('');
   ResetSimulation;
   if ftdi_was_open then
     OpenFTDIport
   else if com_was_open then
     OpenCOMport;
+  SavedPortnameForSim:= DeviceView.Text;
   PortOpenedCheck;
   EnableStatus;
   StartupDone:= true;
   if Show3DPreview1.Checked then
     Form4.FormReset;
   BtnUtilsResetClick(Sender);
+  grbl_sendStr(#$85, false);  // Jog Cancel
+  grbl_sendStr(#$90, false);  // Feed Reset
 end;
 
 // #############################################################################
@@ -1198,6 +1272,8 @@ procedure TForm1.CheckBoxSimClick(Sender: TObject);
 begin
   ResetToolflags;
   if isSimActive then begin
+    SavedPortnameForSim:= DeviceView.Text;
+    ResetSimulation;
     ResetCoordinates;
     Form4.FormReset;
     GLSsetATCandProbe;
@@ -1210,6 +1286,7 @@ begin
     EnableStatus;
     DeviceView.Font.Color:= clWindowText;
     DeviceView.Font.Style:= [];
+    DeviceView.Text:= SavedPortnameForSim;
   end;
 end;
 
@@ -1622,7 +1699,6 @@ begin
 
   // weniger aktuelle Sachen updaten
   if TimerBlinkToggle then begin
-    LabelFaults.Caption:= 'ResponseFaults: ' + IntToStr(ResponseFaultCounter);
     LabelWorkX.Caption:= FormatFloat('000.00', WorkZeroX);
     LabelWorkY.Caption:= FormatFloat('000.00', WorkZeroY);
     LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
@@ -1663,7 +1739,7 @@ end;
 procedure HandleZeroRequest;
 // wenn Zero-Button auf Maschinen-Panel gedrückt
 var my_str, my_response: String;
-    pos_changed: Boolean;
+
 begin
   Form1.Memo1.lines.add('');
   if HomingPerformed then with Form1 do begin
@@ -1686,10 +1762,10 @@ begin
     PlaySound('SYSTEMEXCLAMATION', 0, SND_ASYNC);
 
     my_str:= 'G94';
-    my_response:= uppercase(grbl_sendStr(my_str + #13, true));
+    my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
     Form1.Memo1.lines.add(my_str);
     my_str:= 'G92 X0 Y0 Z'+FloatToStrDot(job.z_gauge);
-    my_response:= uppercase(grbl_sendStr(my_str + #13, true));
+    my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
     Form1.Memo1.lines.add(my_str);
     WorkZeroXdone:= true;
     WorkZeroYdone:= true;
@@ -1697,7 +1773,7 @@ begin
 
     InvalidateTLCs;
     repeat
-      DecodeStatus(grbl_statusStr, pos_changed); // muss eingetroffen sein
+      DecodeStatus(grbl_statusStr); // muss eingetroffen sein
     until MachineState <> zero;
     TimerStatus.Enabled:= true;
   end else
@@ -1706,44 +1782,89 @@ end;
 
 // #############################################################################
 
+function get_AppDefaults_int(sg_row: Integer): Integer;
+begin
+  result:= 0;
+  with Form1.SgAppDefaults do begin
+    if RowCount < 44 then
+      exit;
+    result:= StrToIntDef(Cells[1,sg_row],0);
+  end;
+end;
+
+function get_AppDefaults_str(sg_row: Integer): String;
+begin
+  result:= '';
+  with Form1.SgAppDefaults do begin
+    if RowCount < 44 then
+      exit;
+    result:= Cells[1,sg_row];
+  end;
+end;
+
+function joy_get_swapped_z: Integer;
+begin
+  result:= 0;
+  with Form1.SgAppDefaults do begin
+  if RowCount < 44 then
+    exit;
+  if Cells[1,39] = 'R' then
+    result := JoyPad.R
+  else if Cells[1,39] = 'U' then
+    result := JoyPad.U
+  else if Cells[1,39] = 'V' then
+    result := JoyPad.V
+  else
+    result := JoyPad.Z;
+  end;
+end;
+
+procedure joy_wait_btn_release(btn_idx: Integer);
+begin
+  DisableStatus;
+  while JoyPad.Buttons[btn_idx] do
+    JoyPad.update;
+  EnableStatus;
+end;
+
+
 procedure TForm1.TimerStatusElapsed(Sender: TObject);
 // alle 25 ms aufgerufen. Statemachine, über Semaphoren gesteuert.
-var pos_changed: Boolean;
+type
+  TprioDir = (dir_none, dir_x, dir_y, dir_z);
+const
+  c_jp_feedscale = 50;
+var
+  i: integer;
   old_machine_state: t_mstates;
-begin
-  if isJobRunning or isEmergency then begin
-    StatusTimerState:= s_reset;
-    exit;
-  end;
-  if isSimActive then
-    StatusTimerState:= s_sim;
-  case StatusTimerState of
-    s_reset: // Zurücksetzen
-      StatusTimerState:= s_request;
-    s_request: // Koordinaten anfragen
-      begin
-        grbl_rx_clear; // letzte Antwort verwerfen
-        grbl_sendStr('?', false);   // neuen Status anfordern
-        StatusTimerState:= s_receive;
-      end;
-    s_receive: // Angefragten Status auslesen
-      begin
-        old_machine_state:= MachineState;
-        DecodeStatus(grbl_receiveStr(25), pos_changed); // muss eingetroffen sein
-        if (MachineState = zero) then
-          HandleZeroRequest;
-        if (MachineState = alarm) and (old_machine_state <> alarm) then
-          Form1.Memo1.lines.add('ALARM state, reset machine and perform home cycle');
-        if (MachineState = hold) and (old_machine_state <> hold) then
-          Form1.Memo1.lines.add('HOLD state, press CONTINUE or click READY panel');
+{$IFDEF GRBL_11}
+  btn_idx, feed, feed_old, z_temp: integer;
+  feed_v: TIntPoint; // Feed-Vektor
+  my_str, feed_str: String;
+  fast_jog, jog_sent: boolean;
+{$ENDIF}
 
-        ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
-        StatusTimerState:= s_request;
-      end;
-    s_sim:
-      StatusTimerState:= s_reset;
-  else
-    StatusTimerState:= s_reset;
+begin
+  try
+    if isJobRunning or isEmergency then
+      exit;
+    if isSimActive then
+      exit;
+    TimerStatus.Tag:= 1;
+    grbl_rx_clear; // letzte Antwort verwerfen
+    grbl_sendRealTimeCmd('?');   // neuen Status anfordern
+    old_machine_state:= MachineState;
+    DecodeStatus(grbl_receiveStr(25)); // muss eingetroffen sein
+    if (MachineState = zero) then
+      HandleZeroRequest;
+    if (MachineState = alarm) and (old_machine_state <> alarm) then
+      Form1.Memo1.lines.add('ALARM state, reset machine and perform home cycle');
+    if (MachineState = hold) and (old_machine_state <> hold) then
+      Form1.Memo1.lines.add('HOLD state, press CONTINUE or click READY panel');
+    ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+{$I joypad_handling.inc}
+  finally
+    TimerStatus.Tag:= 0;
   end;
 end;
 
@@ -1752,18 +1873,14 @@ end;
 procedure DisableStatus;
 // Maschinenstatus-Timer sicher abschalten
 begin
-{  repeat
-    Application.ProcessMessages;
-  until StatusTimerState = s_reset;
-}
+  if Form1.TimerStatus.Tag > 0 then
+    sleep(25);
   Form1.TimerStatus.Enabled:= false;
-  grbl_wait_for_timeout(30);  // etwas länger als Timer zum Beenden braucht
 end;
 
 procedure EnableStatus;
 // Maschinenstatus-Timer einschalten
 begin
-  StatusTimerState:= s_reset;
   Form1.TimerStatus.Enabled:= true;
 end;
 
@@ -1774,10 +1891,13 @@ end;
 
 procedure WaitForIdle;
 // Warte auf Idle
+var pos_changed: Boolean;
 begin
   if isGrblActive then
     while (MachineState = run) do begin // noch beschäftigt?
       sleep(50);
+      if not Form1.TimerStatus.enabled then
+        DecodeStatus(grbl_statusStr);
       Application.processmessages;
       if isCancelled or isEmergency or isWaitExit then
         break;
@@ -1787,16 +1907,17 @@ end;
 function ResponseMsg(my_str:String): boolean;
 // dekodiert Antwort von GRBL (normalerweise 'ok') und zeigt ggf. Meldungszeile
 begin
-  result:= ansiuppercase(my_str) = 'OK';
+  result:= AnsiUpperCase(my_str) = 'OK';
   if (not result) and (length(my_str) > 0) then begin
-    if ansiuppercase(my_str) = '#TIMEOUT' then
-      Form1.Memo1.lines.add('WARNING: Timeout, command may be ignored')
-    else if my_str[1] = '[' then
+    if AnsiContainsStr(my_str, '>') then
+      exit; // war eine im Timer angeforderte Statusmeldung
+    if AnsiContainsStr(my_str, '[') then
       Form1.Memo1.lines.add('GRBL response: ' + my_str)
     else
       Form1.Memo1.lines.add('WARNING: unexpected response "' + my_str + '"');
   end;
 end;
+
 
 function SendReceive(my_cmd: String; my_timeout: Integer): String;
 // bei abgeschaltetem Status senden und empfangen
@@ -1870,7 +1991,7 @@ begin
   if isGrblActive then begin
     ResetToolflags;
     DisableStatus;  // Koordinaten-Abfrage abschalten
-    grbl_sendStr(#24, false);   // Reset
+    grbl_sendRealTimeCmd(#24);   // Reset
     sleep(100);
     grbl_wait_for_timeout(50);
     grbl_sendStr('$X'+#13, false);   // Clear Lock
@@ -1892,15 +2013,15 @@ begin
     Memo1.lines.add('Cancel Job');
     Memo1.lines.add('=========================================');
     Memo1.lines.add('Feed hold, wait for stop...');
-    grbl_sendStr('!', false);   // Feed Hold
+    grbl_sendRealTimeCmd('!');   // Feed Hold
     mdelay(100);
     grbl_rx_clear; // letzte Antwort verwerfen
     repeat
-      DecodeStatus(grbl_statusStr, pos_changed);
+      pos_changed:= DecodeStatus(grbl_statusStr);
     until (not pos_changed) and (MachineState = hold) or isEmergency;
     mdelay(100);
     Memo1.lines.add('Reset GRBL');
-    grbl_sendStr(#24, false);   // Reset CTRL-X, Maschine steht
+    grbl_sendRealTimeCmd(#24);   // Reset CTRL-X, Maschine steht
     sleep(200);
     Form1.Memo1.lines.add(grbl_receiveStr(20));
     Form1.Memo1.lines.add(grbl_receiveStr(20));
@@ -1910,7 +2031,7 @@ begin
     SpindleRunning:= false;
     SendActive:= false;
     Memo1.lines.add('Feed release');
-    grbl_sendStr('~', false);   // Feed Hold löschen
+    grbl_sendRealTimeCmd('~');   // Feed Hold löschen
     grbl_rx_clear; // letzte Antwort verwerfen
     Memo1.lines.add('Unlock Alarm State');
     grbl_sendStr('$X' + #13, false);   // Unlock
@@ -2191,8 +2312,8 @@ begin
   Memo1.lines.add('WARNING: Emergency Stop');
   Memo1.lines.add('=========================================');
   // E-Stop ausführen
-  if isSimActive then begin
-    grbl_sendStr(#24, false);   // Soft Reset CTRL-X, Stepper sofort stoppen
+  if not isSimActive then begin
+    grbl_sendRealTimeCmd(#24);   // Soft Reset CTRL-X, Stepper sofort stoppen
     sleep(200);
     Form1.Memo1.lines.add(grbl_receiveStr(20));
     Form1.Memo1.lines.add(grbl_receiveStr(20));
@@ -2211,13 +2332,16 @@ begin
     Memo1.lines.add('Reset GRBL Simulation');
   end;
   HomingPerformed:= false;
-  ResetATC;
+  ClearATCarray;
+  UpdateATC;
   Memo1.lines.add('Done. Please re-run Home Cycle.');
   Memo1.lines.add('');
 end;
 
 procedure TForm1.BtnCancelClick(Sender: TObject);
 begin
+  grbl_sendRealTimeCmd(#$85);  // Jog Cancel
+  grbl_sendRealTimeCmd(#$90);  // Feed Reset
   if not isJobRunning then
     exit;
   BtnCancel.tag:= 1;
@@ -2292,7 +2416,7 @@ procedure TForm1.PanelReadyClick(Sender: TObject);
 begin
   // Clear HOLD runtime cmd
   Memo1.lines.add('Machine CONTINUE, Receive resumed');
-  grbl_sendStr('~', false);
+  grbl_sendRealTimeCmd('~');
   PanelAlive.tag := 0;
   Memo1.lines.add('Clear HOLD state');
   if isGrblActive then
@@ -2309,7 +2433,7 @@ begin
     else
       ChangeATCtool(ToolInSpindle, sgATC.Row, true);
   end;
-  UpdateATCsg;
+  UpdateATC;
 end;
 
 procedure TForm1.pu_ProbeToolLengthRefClick(Sender: TObject);
@@ -2329,7 +2453,7 @@ begin
   InvalidateTLCs;
   NewG43Offset(0);
   DoTLCandConfirm(false, sgATC.Row); // erstes Tool im Array = 1!
-  UpdateATCsg;
+  UpdateATC;
 end;
 
 procedure TForm1.sgATCMouseDown(Sender: TObject; Button: TMouseButton;
@@ -2363,18 +2487,18 @@ begin
   ToolInSpindle := my_row;
   k:= CountUsedATCtools;
   for i:= 1 to k do      // atcArray[0] ist unbenutzt!
-    atcArray[i].inslot:= atcArray[i].used;
-  atcArray[ToolInSpindle].inslot:= false;
+    atcArray[i].isInSpindle:= false;
+  atcArray[ToolInSpindle].isInSpindle:= true;
   GLSsetToolToATCidx(ToolInSpindle);
   GLSupdateATC;
-  UpdateATCsg;
+  UpdateATC;
 end;
 
 procedure TForm1.PanelHoldClick(Sender: TObject);
 begin
   // Set HOLD runtime cmd
   Memo1.lines.add('Machine HOLD');
-  grbl_sendStr('!', false);
+  grbl_sendRealTimeCmd('!');
 end;
 
 
@@ -2391,6 +2515,11 @@ begin
   PanelAlive.tag := 1;
   Memo1.lines.add('WARNING: Receive cancelled');
   Memo1.lines.add('Click READY panel to resume');
+end;
+
+procedure TForm1.BtnReloadAllClick(Sender: TObject);
+begin
+  OpenFilesInGrid;
 end;
 
 
@@ -2446,7 +2575,7 @@ begin
     DoTLCandConfirm(true, 1);
 }
   NeedsRedraw:= true;
-  UpdateATCsg;
+  UpdateATC;
 end;
 
 procedure TForm1.BtnZeroAllClick(Sender: TObject);
@@ -2502,7 +2631,7 @@ begin
     end;
     NeedsRedraw:= true;
     sgATC.Row:= ToolInSpindle;
-    UpdateATCsg;
+    UpdateATC;
   end;
 end;
 
@@ -2656,14 +2785,19 @@ begin
   NeedsRedraw:= true;
 end;
 
-procedure StartJogAction(sender: TObject; tag: Integer);
+procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
 var dx, dy, dz: Double;
+  f: Integer;
+  first_loop_done: boolean;
 begin
+  if isSimActive then
+    exit;
   WaitForIdle;
-  dx:= 0;
-  dy:= 0;
-  dz:= 0;
-  case tag of   // Welcher Jog-Button?
+  dx := 0;
+  dy := 0;
+  dz := 0;
+  case (Sender as TBitBtn).tag of   // Welcher Jog-Button?
     0: dx:= 0.1;
     1: dx:= 1;
     2: dx:= 10;
@@ -2683,12 +2817,40 @@ begin
     24: dz:= -1;
     25: dz:= -10;
   end;
-  MouseJogAction := True;
+{$IFDEF GRBL_11}
+  if (abs(dx)>5) or (abs(dy)>5) or (abs(dz)>5) then
+    f:= get_AppDefaults_int(37) // JogSpeed Fast
+  else
+    if (abs(dx)>0.5) or (abs(dy)>0.5) or (abs(dz)>0.5) then
+      f:= get_AppDefaults_int(38) // JogSpeed Slow
+    else
+      f:= get_AppDefaults_int(38) div 5;
+
+  if dx > 0 then
+    SendSingleCommandStr('$J=G53 X' + FloatToStrDot(job.table_x) + 'F'+ IntToStr(f));
+  if dx < 0 then
+    SendSingleCommandStr('$J=G53 X1 F'+ IntToStr(f));
+
+  if dy > 0 then
+    SendSingleCommandStr('$J=G53 Y' + FloatToStrDot(job.table_y) + 'F'+ IntToStr(f));
+  if dy < 0 then
+    SendSingleCommandStr('$J=G53 Y1 F'+ IntToStr(f));
+
+  if dz > 0 then
+    SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
+  if dz < 0 then
+    SendSingleCommandStr('$J=G53 Z' + FloatToStrDot(-job.table_z) + 'F'+ IntToStr(f div 3));
+
+  while GetAsyncKeyState(VK_LBUTTON) < 0 do begin
+    Application.ProcessMessages;
+    sleep(25);
+  end;
+  grbl_sendRealTimeCmd(#$85);   // Jog Cancel
+
+{$ELSE}
   //my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
-{
   first_loop_done:= false;
   repeat
-}
     JogX:= grbl_mpos.X + dx;
     JogY:= grbl_mpos.Y + dy;
     JogZ:= grbl_mpos.Z + dz;
@@ -2698,32 +2860,15 @@ begin
       SendSingleCommandStr('G0 G53 Y' + FloatToStrDot(JogY));
     if dz <> 0 then
       SendSingleCommandStr('G0 G53 Z' + FloatToStrDot(JogZ));
-{
     if not first_loop_done then
       mdelay(300)
     else
-      mdelay(my_delay);
+      mdelay(100);
     first_loop_done:= true;
-  until MouseJogAction = False; // stop when cancelled
-}
+  until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
   NeedsRedraw:= true;
+{$ENDIF}
+
 end;
-
-
-procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-begin
-  WaitForIdle;
-  if HomingPerformed then
-    StartJogAction(Sender, (Sender as TBitBtn).Tag);
-end;
-
-procedure TForm1.BitBtnJogMouseUp(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-begin
-  MouseJogAction := False; // cancel notification
-end;
-
 
 end.
-

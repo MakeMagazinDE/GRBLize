@@ -421,30 +421,26 @@ begin
       temp_brush_color:= Canvas.Brush.Color;
       draw_arrow(p1, p2, vlen_ok, false); // lang genug, Pfeile malen
       Canvas.Brush.Color:= temp_brush_color;
-    end else begin
-      Canvas.moveto(p1.x, p1.y);
-      Canvas.lineto(p2.x, p2.y);
     end;
     Canvas.Pen.Color:= temp_pen_color;
     Canvas.Pen.Style:= psSolid;      // psDashDot , psDot
   end;
 end;
 
-procedure draw_toolvec(p1, p2: TPoint; enable, is_hipath, is_hipoint: Boolean;
+procedure draw_toolvec(p1, p2: TPoint; enable, is_hipath: Boolean;
   line_color, fill_color1, fill_color2: Tcolor; radius: Integer);
 begin
   with Form2.DrawingBitmap do begin
     Canvas.Pen.Width := 1;
-    if is_hipoint then begin
-      Canvas.Pen.Color:= clWhite;        // ggf. Hilite einzeln
-    end else begin
-      Canvas.Pen.Color:= line_color;   // ggf. Hilite gesamt, sonst normal
-    end;
+    Canvas.Pen.Color:= line_color;   // ggf. Hilite gesamt, sonst normal
     if is_hipath then
       fill_color2:= fill_color2 or clgray;
     draw_move(p1, p2, fill_color2, enable, false);
 
-    Canvas.brush.Color:= fill_color1;  // Kreisfüllung
+    if is_hipath then
+      Canvas.brush.Color:= clgray      // Kreisfüllung
+    else
+      Canvas.brush.Color:= fill_color1;   // Kreisfüllung
     if radius < 3 then
       Canvas.ellipse(p2.x-2, p2.y-2, p2.x+2, p2.y+2)
     else
@@ -464,15 +460,6 @@ begin
     Canvas.lineto(p2.x, p2.y);
     Canvas.Pen.Mode := pmCopy;
     Canvas.Pen.Width := 1;
-    if is_hipoint then begin
-      Canvas.Pen.Width := 2;
-      Canvas.Pen.Color:= clred;
-      Canvas.ellipse(p2.x-8, p2.y-8, p2.x+8, p2.y+8);
-      Canvas.Pen.Width := 3;
-      Canvas.Pen.Color:= clWhite;
-      Canvas.ellipse(p2.x-5, p2.y-5, p2.x+5, p2.y+5);
-      Canvas.Pen.Width := 1;
-    end;
   end;
 end;
 
@@ -483,17 +470,17 @@ procedure set_colors(is_enabled, is_highlited: Boolean; var my_pen_color,
                  my_line_color, my_fill_color1, my_fill_color2: Tcolor);
 
 const
-  c_disabled: Tcolor = $00202020;
+  c_disabled: Tcolor = $00404040;
 
 begin
   if is_enabled then begin
-    if is_highlited and (HilitePoint < 0) then
+    if is_highlited then
         my_line_color:= clWhite
       else
         my_line_color:= my_pen_color;
   end else begin
     my_pen_color:= c_disabled;
-    if is_highlited and (HilitePoint < 0) then
+    if is_highlited then
       my_line_color:= clsilver
     else
       my_line_color:= c_disabled;
@@ -513,27 +500,24 @@ var i, p: Integer;
   my_pathlen, my_pathcount, my_radius: Integer;
   my_pen_color, my_line_color, my_fill_color1, my_fill_color2, my_fill_color3: Tcolor;
   vlen_ok: boolean;
-  is_hipoint, has_multiple_millings: Boolean;
+  has_multiple_millings: Boolean;
   my_offset: TIntPoint;
 
 begin
   if length(my_final_entry.outlines) = 0 then
     exit;
   my_pathcount:= length(my_final_entry.millings);
-  if my_pathcount > 0 then
-    has_multiple_millings:= my_pathcount > 1
-  else
-    has_multiple_millings:= false;
+  has_multiple_millings:= my_pathcount > 1;
   my_radius:= round(job.pens[my_final_entry.pen].tipdia * Scale) div 2 + 1;
   if my_radius < 1 then
     my_radius:= 1;
   my_offset:= job.pens[my_final_entry.pen].offset;
-  if (not has_multiple_millings) or (not my_final_entry.enable) then begin
+  if (my_final_entry.shape = drillhole) or (not has_multiple_millings) or (not my_final_entry.enable) then begin
     // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
     my_pen_color:= job.pens[my_final_entry.pen].Color;
     set_colors(my_final_entry.enable, is_highlited, my_pen_color,
        my_line_color, my_fill_color1, my_fill_color2);
-    my_fill_color3:= colorDim(my_pen_color, 90);
+    my_fill_color3:= colorDim(my_pen_color, 80);
   end;
 
 
@@ -551,13 +535,6 @@ begin
         if not get_bm_point(my_final_entry.millings[0], 0, my_offset, po1) then
           exit; // erster Punkt in po1
         p1:= po1;
-        if has_multiple_millings  then begin
-          my_pen_color:= job.pens[my_final_entry.pen].Color;
-          // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
-          set_colors(my_final_entry.enable, is_highlited, my_pen_color,
-             my_line_color, my_fill_color1, my_fill_color2);
-          my_fill_color3:= colorDim(my_pen_color, 90);
-        end;
         for i:= 0 to my_pathlen - 1 do begin
           if not get_bm_point(my_final_entry.millings[0], i, my_offset, p2) then
             break;
@@ -565,13 +542,21 @@ begin
           if my_final_entry.enable then
             draw_move(p1, p2, my_fill_color2, true, false);
           Canvas.Pen.Mode := pmCopy;
-          is_hipoint:= is_highlited and (HilitePoint = i) and (HilitePath = 0);
-          draw_toolvec(p2, p2, my_final_entry.enable, is_highlited, is_hipoint,
-              my_line_color, my_fill_color2, my_fill_color3, my_radius);
+          draw_toolvec(p2, p2, my_final_entry.enable, is_highlited,
+                my_line_color, my_fill_color2, my_fill_color3, my_radius);
+          if is_highlited and (HilitePath = 0) and (HilitePoint = i) then begin
+            Canvas.Pen.Width := 2;
+            Canvas.Pen.Color:= clred;
+            Canvas.ellipse(p2.x-8, p2.y-8, p2.x+8, p2.y+8);
+            Canvas.Pen.Width := 3;
+            Canvas.Pen.Color:= clWhite;
+            Canvas.ellipse(p2.x-5, p2.y-5, p2.x+5, p2.y+5);
+            Canvas.Pen.Width := 1;
+          end;
           p1:= p2;
         end;
         if my_final_entry.enable then begin
-          draw_move(last_point, po1, clgray, true, false); // Seek-Linie zum ersten Punkt
+//          draw_move(last_point, po1, clgray, true, false); // Seek-Linie zum ersten Punkt
           last_point:= p2;                          // neuer letzter Punkt
         end;
       end;
@@ -602,8 +587,7 @@ begin
           for i:= 0 to my_pathlen - 1 do begin
             if not get_bm_point(my_final_entry.millings[p], i, my_offset, p2) then
               break;
-            is_hipoint:= is_highlited and (HilitePoint = i) and (HilitePath = p);
-            draw_toolvec(p1, p2, my_final_entry.enable, is_highlited, is_hipoint,
+            draw_toolvec(p1, p2, my_final_entry.enable, is_highlited,
               my_line_color, my_fill_color1, my_fill_color2, my_radius);
             p1:= p2;
           end; // for points
@@ -611,8 +595,7 @@ begin
           if my_final_entry.closed then begin
           // letzte Verbindung zum 1. Punkt po1
             p2:= po1;
-            is_hipoint:= is_highlited and (HilitePoint = 0) and (HilitePath = p);
-            draw_toolvec(p1, p2, my_final_entry.enable, is_highlited, is_hipoint,
+            draw_toolvec(p1, p2, my_final_entry.enable, is_highlited,
               my_line_color, my_fill_color1, my_fill_color2, my_radius);
           end;  // if closed
         end;    // for my_pathcount
@@ -640,12 +623,14 @@ begin
         Canvas.Pen.Style:= psDot;       // psDashDot , psDot
       if has_multiple_millings and my_final_entry.enable then begin
         my_pen_color:= job.pens[my_final_entry.pen].Color;
-        set_colors(my_final_entry.milling_enables[p], is_highlited, my_pen_color,
-             my_line_color, my_fill_color1, my_fill_color2);
-        if my_final_entry.milling_enables[p] then
-          Canvas.Pen.Style:= psSolid      // psDashDot , psDot
-        else
-          Canvas.Pen.Style:= psDot;       // psDashDot , psDot
+        if p <= high(my_final_entry.milling_enables) then begin
+          set_colors(my_final_entry.milling_enables[p], is_highlited, my_pen_color,
+               my_line_color, my_fill_color1, my_fill_color2);
+          if my_final_entry.milling_enables[p] then
+            Canvas.Pen.Style:= psSolid      // psDashDot , psDot
+          else
+            Canvas.Pen.Style:= psDot;       // psDashDot , psDot
+        end;
       end;
       Canvas.Pen.Color:= my_line_color;  // Linienfarbe
       Canvas.brush.Color:= colorDim(my_line_color, 90);
@@ -657,6 +642,18 @@ begin
       for i:= 1 to my_pathlen - 1 do begin
         if not get_bm_point(my_final_entry.outlines[p], i, my_offset, p1) then
           break;
+        if is_highlited and (HilitePath = p) then begin
+          if HilitePoint = i then begin
+            Canvas.Pen.Width := 2;
+            Canvas.Pen.Color:= clred;
+            Canvas.ellipse(p1.x-8, p1.y-8, p1.x+8, p1.y+8);
+            Canvas.Pen.Width := 3;
+            Canvas.Pen.Color:= clWhite;
+            Canvas.ellipse(p1.x-5, p1.y-5, p1.x+5, p1.y+5);
+          end;
+          Canvas.Pen.Color:= clWhite;
+          Canvas.Pen.Width := 1;
+        end;
         Canvas.lineto(p1.x, p1.y);
       end;
       if my_final_entry.closed then begin
@@ -917,9 +914,19 @@ begin
       Width:= grbl_ini.ReadInteger('DrawingFormWidth');
     if grbl_ini.ValueExists('DrawingFormHeight') then
       Height:= grbl_ini.ReadInteger('DrawingFormHeight');
+    if grbl_ini.ValueExists('DrawShowDirections') then
+      CheckBoxDirections.Checked:= grbl_ini.ReadBool('DrawShowDirections');
+    if grbl_ini.ValueExists('DrawShowDimensions') then
+      CheckBoxDimensions.Checked:= grbl_ini.ReadBool('DrawShowDimensions');
+    if grbl_ini.ValueExists('DrawShowToolpath') then
+      CheckBoxToolPath.Checked:= grbl_ini.ReadBool('DrawShowToolpath');
   finally
     grbl_ini.Free;
   end;
+  if Top > Screen.Height-50 then
+    Top:= round((Screen.Height-Height)/2);
+  if Left > Screen.Width-50 then
+    Left:= round((Screen.Width-Width)/2);
 
   DrawingBitmap:= TBitmap.create;
   DrawingBitmap.Height:= 800;
@@ -943,6 +950,9 @@ begin
     grbl_ini.WriteInteger('DrawingFormLeft',Left);
     grbl_ini.WriteInteger('DrawingFormWidth',Width);
     grbl_ini.WriteInteger('DrawingFormHeight',Height);
+    grbl_ini.WriteBool('DrawShowDirections', Form2.CheckBoxDirections.Checked);
+    grbl_ini.WriteBool('DrawShowDimensions', Form2.CheckBoxDimensions.Checked);
+    grbl_ini.WriteBool('DrawShowToolpath', Form2.CheckBoxToolPath.Checked);
   finally
     grbl_ini.Free;
   end;

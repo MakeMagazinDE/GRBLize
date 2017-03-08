@@ -122,7 +122,8 @@ begin
   UnHilite;
   setlength(final_array,0);
   NeedsRedraw:= true;
-  ResetATC;
+  ClearATCarray;
+  UpdateATC;
   ListBlocks;
 end;
 
@@ -194,7 +195,7 @@ end;
 procedure InitAppdefaults;
 begin
   with Form1.SgAppDefaults do begin
-    RowCount:= 37;
+    RowCount:= 45;
     Rows[0].DelimitedText:= 'Parameter,Value';
     Rows[1].DelimitedText:= '"Tool Change in Job",OFF';
     Rows[2].DelimitedText:= '"Tool Change Position X absolute",10';
@@ -232,6 +233,14 @@ begin
     Rows[34].DelimitedText:='"Fixture 2 Zero Z","-25,00"';
     Rows[35].DelimitedText:='"ATC tool release Cmd","M8"';
     Rows[36].DelimitedText:='"ATC tool clamp Cmd","M9"';
+    Rows[37].DelimitedText:='"Joypad Feed fast","2000"';
+    Rows[38].DelimitedText:='"Joypad Feed slow","500"';
+    Rows[39].DelimitedText:='"Joypad Z axis (R, U, V or Z)",Z';
+    Rows[40].DelimitedText:='"Joypad Fast Jog Button",4';
+    Rows[41].DelimitedText:='"Joypad ZeroAll Button",0';
+    Rows[42].DelimitedText:='"Joypad FloodToggle Button",2';
+    Rows[43].DelimitedText:='"Joypad SpindleToggle Button",3';
+    Rows[44].DelimitedText:='"Joypad FeedHold Button",1';
   end;
   ClearFiles;
   Form1.Memo1.lines.add('Job/application default settings applied');
@@ -315,11 +324,14 @@ begin
   job.pens[tool_idx].tooltip:= 1;
   job.pens[tool_idx].tooltip:= 1;
   job.pens[tool_idx].speed:= 500;
+  job.pens[tool_idx].force_closed:= true;
 end;
 
 Procedure OpenFilesInGrid;
 var
-  i, pen_override: Integer; my_path, my_ext: String; use_excellon: Boolean;
+  i, pen_override: Integer;
+  my_path, my_ext: String;
+  use_excellon, file_was_changed: Boolean;
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -327,6 +339,7 @@ begin
   for i:= 0 to 31 do begin
     job.pens[i].used:= false;
     job.pens[i].enable:= false;
+    job.pens[i].force_closed:= false;
   end;
   with Form1.SgFiles do begin
     for i:= 1 to c_numOfFiles +1 do begin
@@ -345,6 +358,8 @@ begin
       my_path:= Cells[0,i];
       my_ext:= AnsiUpperCase(ExtractFileExt(my_path));
       if my_ext = '' then
+        continue;
+      if not FileExists(my_path) then
         continue;
       FileParamArray[i-1].isdrillfile := (my_ext = '.DRL');
       FileParamArray[i-1].enable:= true;
@@ -369,6 +384,7 @@ begin
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);
         SetPCBmillTool(9);
+        job.pens[9].force_closed:= true;
       end else if (my_ext = '.SVG') then begin
         Cells[8, i]:= 'SVG'; // Remark
         svg_fileload(my_path, i-1, -1);
@@ -394,13 +410,16 @@ begin
 
   Form1.SgPens.Repaint;
   GLSneedsATCupdateTimeout:= 1;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('Mill/drill files (re)loaded.');
 end;
 
 Procedure OpenJobFile;
 var
 // mySaveFile: File of Tjob;
  sl, sl_p: TstringList;
- i, j, k, s, my_len, my_row: Integer;
+ i, j, k, s, my_len, my_row, my_date: Integer;
+ my_path, my_datestr: String;
 
 begin
   ResetToolFlags;
@@ -479,12 +498,13 @@ begin
           break;
         sl_p.Clear;
         sl_p.CommaText:= sl.strings[i];
-        if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
-          for k := 0 to sl_p.Count-1 do
-            if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
-              final_array[j].milling_enables[k]:= sl_p[k] = '1';
-          inc(j);
-        end;
+        if j <= high(final_array) then
+          if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
+            for k := 0 to sl_p.Count-1 do
+              if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
+                final_array[j].milling_enables[k]:= sl_p[k] = '1';
+            inc(j);
+          end;
       end;
       sl_p.Free;
     end;
@@ -499,9 +519,29 @@ begin
       end;
     end;
     sl.Free;
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('Job and block/path settings applied.');
   end else begin
     InitJob;
     PenGridListToJob;
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('Job reset and initialized.');
+  end;
+  // sind Files noch aktuell?
+  for i:= 1 to c_numOfFiles +1 do begin
+    my_path:= Form1.SgFiles.Cells[0,i];
+    if (length(my_path) < 4) or (not FileExists(my_path)) then
+      continue;
+    my_date:= FileAge(Form1.SgFiles.Cells[0,i]);
+    if my_date <> StrToIntDef(Form1.SgFiles.Cells[9,i],0) then begin
+      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+      Form1.Memo1.lines.add('');
+      Form1.Memo1.lines.add('WARNING: One or more mill/drill file(s)');
+      Form1.Memo1.lines.add('have been changed since last job was saved.');
+      Form1.Memo1.lines.add('All mill paths will be rebuild and enabled!');
+      OpenFilesInGrid;
+      break;
+    end;
   end;
   ListBlocks;
   for i := 0 to high(final_array) do
@@ -549,16 +589,24 @@ procedure SaveJob;
 var
 // mySaveFile: File of Tjob;
  sl: TstringList;
- i, p: Integer;
- block_str: String;
+ i, p, my_date: Integer;
+ block_str, my_filename: String;
 
 begin
   JobToPenGridList;
   sl:= Tstringlist.Create;
   sl.clear;
   sl.Add('#Files');
-  for i:= 1 to Form1.SgFiles.Rowcount - 1 do
+  for i:= 1 to Form1.SgFiles.Rowcount - 1 do begin
+    my_filename:= Form1.SgFiles.Cells[0,i];
+    // Letztes Änderungsdatum einsetzen und abspeichern
+    if (length(my_filename) > 3) and FileExists(my_filename) then begin
+      my_date:= FileAge(Form1.SgFiles.Cells[0,i]);
+//      Form1.SgFiles.Cells[9,i]:= DateToStr(FileDateToDateTime(my_date));
+      Form1.SgFiles.Cells[9,i]:= IntToStr(my_date);
+    end;
     sl.Add(Form1.SgFiles.Rows[i].CommaText);
+  end;
   sl.Add('#Pens');
   for i:= 1 to Form1.SgPens.Rowcount - 1 do
     sl.Add(Form1.SgPens.Rows[i].CommaText);

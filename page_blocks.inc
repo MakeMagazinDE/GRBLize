@@ -5,7 +5,7 @@
 function ListBlocks: boolean;
 // Listet Blocks im Path-Tab
 // und stellt fest, ob Teile außerhalb des Werkstücks sind; liefert TRUE wenn ja
-var i, j, k, my_len, my_millingcount, my_row, my_pathcount: Integer;
+var i, j, my_len, my_millingcount, my_row, my_pathcount: Integer;
 //  my_entry: Tfinal;
   x1, y1, x2, y2: Double;
   out_of_work: Boolean;
@@ -100,7 +100,7 @@ begin
         Rowcount:= Rowcount + 1;
       end;
       Rowcount:= Rowcount - 1;
-      Col:= 1;
+      Col:= 2;
       if (HiliteBlock >= 0) and (HiliteBlock < RowCount - 1) then
         Row:= HiliteBlock + 1
       else
@@ -208,9 +208,8 @@ end;
 procedure TForm1.SgBlocksMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-  my_bool: Boolean;
   my_shape: Tshape;
-  my_row, my_col: integer;
+  my_row, my_col, my_top: integer;
 begin
   SgBlocks.MouseToCell( X,Y, my_col, my_row );
   if (my_row < 1) or (my_col < 1) then
@@ -219,13 +218,14 @@ begin
   SgBlocks.Row := my_row;
   with SgBlocks do begin
     HiliteBlock:= my_Row - 1;
-    my_bool:= false;
     if my_col = 2 then begin
+      my_top:=SgBlocks.toprow;
       final_array[my_row-1].enable:= not final_array[my_row-1].enable;
       enable_all_millings(final_array[my_row-1], final_array[my_row-1].enable);
       ListBlocks;
       GLSneedsRedrawTimeout:= 1;
       AutoAssignATCtoolsToJob;
+      SgBlocks.toprow:= my_top;
     end else if (my_col = 4) and (my_row > 0) then begin
       perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
       uncheck_mbs;

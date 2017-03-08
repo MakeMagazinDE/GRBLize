@@ -168,6 +168,7 @@ begin
       Rowcount:= 2;
       LEDbusy.Checked:= true;
       grbl_wait_for_timeout(100);
+
       Rows[0].text:= my_str;
 
       grbl_sendStr('$$' + #13, false);
