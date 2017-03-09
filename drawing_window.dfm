@@ -111,8 +111,6 @@ object Form2: TForm2
       Width = 105
       Height = 17
       Caption = 'Show Directions'
-      Checked = True
-      State = cbChecked
       TabOrder = 3
       OnClick = CheckBoxDirectionsClick
     end

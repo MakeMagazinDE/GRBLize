@@ -8,7 +8,7 @@ interface
 
 //uses SysUtils, FTDIdll, FTDIchip, FTDItypes;
 uses SysUtils, StrUtils, DateUtils, Windows, Classes, Forms, Controls, Menus, MMsystem,
-  Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect;
+  Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect, app_defaults;
 
 type
   TFileBuffer = Array of byte;
@@ -36,6 +36,8 @@ type
 
   // GCode-String oder Char an GRBL senden, auf OK warten wenn my_getok = TRUE
   function grbl_sendStr(sendStr: String; my_getok: boolean): String;
+  function grbl_sendWithShortTimeout(my_cmd: String): String;
+  procedure grbl_sendRealTimeCmd(my_cmd: char);
 
   // GCode-String oder Char an GRBL senden, auf OK warten und Antwort in Memo-Feld eintragen
   procedure grbl_addStr(my_str: String);
@@ -415,7 +417,7 @@ begin
   until (my_char= #10) or ((current_time > target_time) and has_timeout) or isWaitExit;
   if has_timeout then begin
     if (current_time > target_time) then begin
-      my_str:= '#Timeout';
+      my_str:= '[Timeout]';
     end;
   end;
   Result:= my_str;
@@ -483,7 +485,7 @@ begin
   until (my_char= #10) or ((current_time > target_time) and has_timeout) or isWaitExit;
   if has_timeout then begin
     if (current_time > target_time) then begin
-      my_str:= '#Timeout';
+      my_str:= '[Timeout]';
     end;
   end;
   Result:= my_str;
@@ -508,6 +510,7 @@ end;
 // #############################################################################
 // Abhängig davon, ob FTDI oder COM benutzt wird, entsprechende Routine aufrufen
 // #############################################################################
+
 
 function grbl_receiveCount: Integer;
 // gibt Anzahl der Zeichen im Empfangspuffer zurück
@@ -548,6 +551,26 @@ begin
     result:= COMsendStr(sendStr, my_getok);
 end;
 
+
+function grbl_SendWithShortTimeout(my_cmd: String): String;
+// bei abgeschaltetem Status senden und empfangen
+begin
+  if isGRBLactive then begin
+    grbl_SendStr(my_cmd + #13, false);
+    result:= grbl_receiveStr(25);
+  end else
+    result:= '';
+end;
+
+procedure grbl_SendRealTimeCmd(my_cmd: char);
+// my_cmd wird bedingungslos gesendet, sobal eine Schnittstelle offen ist
+begin
+  if ftdi_isopen then
+    FTDIsendStr(my_cmd, false);
+  if com_isopen then
+    COMsendStr(my_cmd, false);
+end;
+
 // #############################################################################
 // #############################################################################
 
@@ -558,44 +581,84 @@ begin
       if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
-    until (grbl_receiveStr(timeout) = '#Timeout') or isEmergency or isWaitExit;
+    until (grbl_receiveStr(timeout) = '[Timeout]') or isEmergency or isWaitExit;
 end;
 
 
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
 begin
-  grbl_sendStr('?', false); // Status anfordern
+  grbl_SendRealTimeCmd('?'); // Status anfordern
   grbl_statusStr:= grbl_receiveStr(100);
 end;
 
 function grbl_checkResponse: Boolean;
 var my_str: AnsiString;
-  i: Integer;
-  pos_changed: Boolean;
+  i, my_btn: Integer;
+  sl_options: TSTringList;
+
 begin
   ShowAliveState(s_alive_wait_timeout);
   my_str:= '';
   result:= false;
+  InitMachineOptions;
   if ftdi_isopen or com_isopen then begin
     DisableStatus;
     grbl_rx_clear;
-    grbl_sendStr(#24, false);   // Soft Reset CTRL-X, Stepper sofort stoppen
+{$IFDEF GRBL_11}
+    grbl_SendRealTimeCmd(#$D0);  // Enable device #0
+{$ENDIF}
+    grbl_SendRealTimeCmd(#24);   // Soft Reset CTRL-X, Stepper sofort stoppen
     sleep(100);
     Form1.Memo1.lines.add('');
-    Form1.Memo1.lines.add('Grbl Startup Message (Version):');
+    Form1.Memo1.lines.add('Grbl Startup Message and Version Info:');
+    grbl_sendStr('$I' + #13, false);
+    sl_options:= TStringList.Create;
     repeat
       my_str:= grbl_receiveStr(20);
-      if (length(my_Str) > 1) and (my_str <> '#Timeout') then
+      if (length(my_Str) > 1) and (my_str <> '[Timeout]') then begin
         Form1.Memo1.lines.add(my_str);
-    until my_Str = '#Timeout';
+        // get Option list from GRBL 1.1
+        if AnsiContainsStr(my_str, 'OPT:') then begin
+          sl_options.CommaText:= StringReplace(my_str,':',',',[rfReplaceAll]);
+          if AnsiContainsStr(sl_options[1], 'H') then
+            MachineOptions.SingleAxisHoming:= true;
+          if AnsiContainsStr(sl_options[1], 'M') then
+            MachineOptions.MistCoolant:= true;
+          if AnsiContainsStr(sl_options[1], 'H') then
+            MachineOptions.SingleAxisHoming:= true;
+          if AnsiContainsStr(sl_options[1], 'Z') then //  HOMING_FORCE_SET_ORIGIN
+            MachineOptions.HomingOrigin:= true;
+          // parse GRBL compile options
+          for i:= 1 to sl_options.Count-1 do begin
+             if sl_options[i] =  'SPI_SR' then
+              MachineOptions.SPI:= true;
+             if sl_options[i] =  'SPI_DISP' then
+              MachineOptions.Display:= true;
+             if sl_options[i] =  'PANEL' then
+              MachineOptions.Panel:= true;
+          end;
+        end;
+      end;
+
+    until my_Str = '[Timeout]';
     for i := 0 to 3 do begin
       my_str:= grbl_statusStr;
       MachineState:= none;
-      DecodeStatus(my_str, pos_changed);
+      DecodeStatus(my_str);
       if MachineState <> none then
         break;
     end;
+    sl_options.Free;
+
+    if MachineOptions.HomingOrigin <> get_AppDefaults_bool(45) then begin
+      my_btn := MessageDlg('GRBL compile option HOMING_FORCE_SET_ORIGIN'
+      + #13 + 'detected. Should I set positive machine space in App Defaults? ',
+      mtConfirmation, mbYesNo, 0);
+
+    end;
+    // Positive Maschinenrichtung?
+
     HomingPerformed:= false;
     case MachineState of
       alarm:
@@ -619,7 +682,7 @@ begin
       idle:
         begin
           grbl_wait_for_timeout(50);
-          grbl_sendStr(#13,false);
+          grbl_SendRealTimeCmd(#13);
           my_str:= ansiuppercase(grbl_receiveStr(20));
           if (pos('OK',my_str) > 0) then begin
             result:= true;
@@ -636,8 +699,8 @@ begin
     else begin
         PlaySound('SYSTEMHAND', 0, SND_ASYNC);
         Form1.Memo1.lines.add('');
-        Form1.Memo1.lines.add('ERROR: Communication fault - no response.');
-        Form1.Memo1.lines.add('Press RESET on machine panel.');
+        Form1.Memo1.lines.add('ERROR: Communication fault');
+        Form1.Memo1.lines.add('Invalid response or wrong GRBL version.');
         Form1.Memo1.lines.add('Try connecting again.');
         Form1.BtnCloseClick(nil);
       end;

@@ -2,7 +2,7 @@ unit import_files;
 
 interface
 uses
-  SysUtils, StrUtils, Windows, Classes, Forms, Controls, Menus,
+  SysUtils, StrUtils, Windows, Classes, Forms, Controls, Menus, MMSystem,
   Math, StdCtrls, Graphics, FileCtrl, Dialogs, Clipper;
 
 const
@@ -62,12 +62,13 @@ const
     z_inc: Double;
     atc: Integer;
     tooltip: Integer;
+    force_closed: Boolean;
   end;
 
   Tatc_record = record
 //    enable: boolean; // ... und Pen ist eingeschaltet
     used: boolean; // ... und Pen ist eingeschaltet
-    inslot: boolean; // Flag wird von Wechsler-Routine aktualisiert
+    isInSpindle: boolean; // Flag wird von Wechsler-Routine aktualisiert
     pen: Integer;
     TREFok: boolean;
     TLCok: boolean;
@@ -78,8 +79,8 @@ const
   Tblock_record = record
     enable: boolean;
     pen: Integer;
-    fileID: Integer;
-    closed: boolean;    // closed Polygon (TRUE) oder offener Linienpfad (FALSE)
+    fileID: Integer;   // von welchem File?
+    closed: boolean;   // closed Polygon (TRUE) oder offener Linienpfad (FALSE)
     isChild: boolean;  // hat einen Parent
     parentID: Integer;  // -1 wenn kein Parent gefunden, sonst Block-#
     isParent: boolean;  // hat eine ChildList
@@ -94,6 +95,7 @@ const
     pen: Integer;
     shape: Tshape;
     closed: Boolean;
+    fileID: Integer;   // von welchem File?
     was_closed: Boolean;
     bounds: Tbounds;
     outlines: Tpaths;
@@ -187,6 +189,7 @@ const
       );
 
 var
+  jp_old: TIntPoint;
   job: Tjob;
   use_inches_in_drillfile: Boolean;
   FileParamArray: Array[0..c_numOfFiles] of Tfile_param;
@@ -236,7 +239,7 @@ var
 // Wurde nichts (mehr) gefunden, ist Result = p_endofline.
 // POSITION zeigt zum Schluss auf das Zeichen NACH dem letzten gültigen Wert.
 // T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
-  function ParseLine(var position: Integer; var linetoparse: string;
+  function ParseLine(var position: Integer; const linetoparse: string;
                      var value: Double; var letters: String): T_parseReturnType;
 
 // Dekodiert einen einzelnes Befehlsbuchstaben/Wert-Paar, beginnend an Position
@@ -353,7 +356,7 @@ begin
   StrDotToFloat:= StrToFloatDef(my_str,0,my_Settings);
 end;
 
-function ParseLine(var position: Integer; var linetoparse: string;
+function ParseLine (var position: Integer; const linetoparse: string;
   var value: Double; var letters: String): T_parseReturnType;
 // Zerlegt String nach Zahlen und Buchtstaben(ketten),
 // beginnt my_line an Position my_pos nach Buchstaben oder Zahlen anbzusuchen.
@@ -400,10 +403,10 @@ begin
     end;
     position:= i;
     letters:= my_str;
-  end else if my_char in ['0'..'9', '.',  '+', '-'] then begin
+  end else if my_char in ['0'..'9', '.',  '+', '-', 'e', 'E'] then begin
     result:= p_number;
     for i:= position to my_end do begin
-      if not (linetoparse[i] in ['0'..'9', '.',  '+', '-']) then
+      if not (linetoparse[i] in ['0'..'9', '.',  '+', '-', 'e', 'E']) then
         break;
       my_str:= my_str+ linetoparse[i];
     end;
@@ -411,6 +414,8 @@ begin
     value:= StrDotToFloat(my_str);
   end;
 end;
+
+
 
 function ParseCommand(var position: Integer; var linetoparse: string;
   var value: Double; var letter: char): boolean;
@@ -777,7 +782,10 @@ begin
     // diese Werte liegen seit Import fest:
     final_array[i].enable:= my_block.enable;
     final_array[i].pen:= my_block.pen;
-    final_array[i].closed:= my_block.closed;
+    if job.pens[my_block.pen].force_closed then
+      final_array[i].closed:= true  // ist ein Gerber-Import
+    else
+      final_array[i].closed:= my_block.closed;
     final_array[i].was_closed:= my_block.closed;
     final_array[i].bounds:= my_block.bounds;
 
@@ -797,14 +805,16 @@ procedure make_final_array(fileID: Integer);
 var i, c, p, m: Integer;
   my_len: Integer;
 begin
+  
   for p:= 0 to length(blockArrays[fileID])-1 do begin    // Parent-Loop (p)
-    if not blockArrays[fileID, p].closed then
-      continue;                                 // ist nur eine Linie
     if blockArrays[fileID, p].parentID >= 0 then
       continue;                                 // ist bereits Parent
-    if not blockArrays[fileID, p].enable  then
-      continue;                               // nicht aktiv
-
+    if not blockArrays[fileID, p].enable then
+      continue;                                 // nicht aktiv
+    if not blockArrays[fileID, p].closed then
+      continue;                                 // nicht geschlossen
+    if job.pens[blockArrays[fileID,0].pen].Shape in [drillhole, contour] then
+      continue;                                 // ist bereits Parent
     // Child-Objekte erstellen
     for c:= 0 to length(blockArrays[fileID])-1 do begin  // Child-Loop (c)
       if p = c then
@@ -875,7 +885,7 @@ begin
   try
     if (my_final_entry.shape = drillhole) or (my_final_entry.shape = contour) then begin
       my_final_entry.millings:= my_final_entry.outlines;
-      exit;
+      exit; // weiter mit finally...
     end;
     my_radius:= job.pens[my_final_entry.pen].tipdia * (c_hpgl_scale div 2);  // = mm * 40plu / 2
     my_dia:= job.pens[my_final_entry.pen].tipdia/2;
@@ -974,7 +984,6 @@ begin
     compile_milling(final_array[arr_idx]);
   ListBlocks;
 end;
-
 
 end.
 

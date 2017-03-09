@@ -2,45 +2,12 @@
 // ################################## A T C ####################################
 // #############################################################################
 
-procedure UpdateATCsg;
-var i: Integer;
-  my_str: String;
-begin
-  with Form1 do begin
-    sgATC.rowcount:= c_numATCslots + 1;
-    for i:= 1 to c_numATCslots do begin
-      if atcArray[i].pen = 0 then
-        my_str:='(undefined)'
-      else
-        my_str:= pen_description(atcArray[i].pen);
-      if i = ToolInSpindle then
-          my_str:= my_str + ' (in spindle) '
-      else if ((not atcArray[i].inslot) and Form1.CheckUseATC2.checked) then
-        my_str:= my_str + ' (empty) ';
-
-      sgATC.cells[0,i]:= IntToStr(i);
-      sgATC.cells[1,i]:= my_str;
-      if atcArray[i].TREFok then
-        sgATC.cells[2,i]:= 'REF ' + FormatFloat('0.00', atcArray[i].TLCref)
-      else
-        if atcArray[i].TLCok then
-          sgATC.cells[2,i]:= 'TLC ' + FormatFloat('0.00', atcArray[i].TLCdelta)
-        else
-          sgATC.cells[2,i]:= ''
-    end;
-    sgATC.cells[0,0]:= 'Slot';
-    sgATC.cells[1,0]:= 'Tool/Description';
-    sgATC.cells[2,0]:= 'REF/TLC';
-    sgATC.Col:= 1;
-  end;
-end;
-
 
 procedure SetATCslot(const pen_idx: Integer; atc_idx: integer);
 begin
   if atc_idx > c_numATCslots then
     atc_idx:= c_numATCslots; // invalid or manual
-  atcArray[atc_idx].inslot:= true;
+  atcArray[atc_idx].isInSpindle:= (ToolInSpindle = atc_idx);
   atcArray[atc_idx].used:= true;
   if (atc_idx > 0) then
     atcArray[atc_idx].pen:= pen_idx;
@@ -54,7 +21,7 @@ begin
   Form1.sgATC.RowCount:= c_numATCslots + 2;
   for i:= 0 to c_numATCslots do begin
     atcArray[i].used:= false;
-    atcArray[i].inslot:= false;
+    atcArray[i].isInSpindle:= false;
     atcArray[i].TREFok:= false;
     atcArray[i].TLCok:= false;
     atcArray[i].TLCdelta:= 0.0;
@@ -103,8 +70,8 @@ begin
   end;
   JobToPenGridList;
   ToolInSpindle:= 1;
-  atcArray[ToolInSpindle].inslot:= false; // ist in der Maschine
-  UpdateATCsg;
+  atcArray[ToolInSpindle].isInSpindle:= true; // ist in der Maschine
+  UpdateATC;
   Form1.sgATC.Col:= 1;
   Form1.sgATC.Row:= 1;
   Form1.EditFirstToolDia.Text:= pen_description(atcArray[ToolInSpindle].pen);
@@ -112,13 +79,40 @@ begin
   ForceToolPositions(grbl_wpos.x, grbl_wpos.y, grbl_wpos.z);
 end;
 
-
-procedure ResetATC;
+procedure UpdateATC;
+var i: Integer;
+  my_str: String;
 begin
-  ClearATCarray;
-  UpdateATCsg;
+  with Form1 do begin
+    sgATC.rowcount:= c_numATCslots + 1;
+    for i:= 1 to c_numATCslots do begin
+      if atcArray[i].pen = 0 then
+        my_str:='(undefined)'
+      else
+        my_str:= pen_description(atcArray[i].pen);
+      if i = ToolInSpindle then begin
+          my_str:= my_str + ' (in spindle) ';
+          atcArray[i].isInSpindle:= true;
+      end;
+      sgATC.cells[0,i]:= IntToStr(i);
+      sgATC.cells[1,i]:= my_str;
+      if atcArray[i].TREFok then
+        sgATC.cells[2,i]:= 'REF ' + FormatFloat('0.00', atcArray[i].TLCref)
+      else
+        if atcArray[i].TLCok then
+          sgATC.cells[2,i]:= 'TLC ' + FormatFloat('0.00', atcArray[i].TLCdelta)
+        else
+          sgATC.cells[2,i]:= ''
+    end;
+    sgATC.cells[0,0]:= 'Slot';
+    sgATC.cells[1,0]:= 'Tool/Description';
+    sgATC.cells[2,0]:= 'REF/TLC';
+    sgATC.Col:= 1;
+  end;
   GLSneedsATCupdateTimeout:= 1;
 end;
+
+
 
 procedure TForm1.sgATCDrawCell(Sender: TObject; ACol, ARow: Integer;
   Rect: TRect; State: TGridDrawState);
@@ -207,6 +201,10 @@ begin
         + #13 + #13 + 'All tools must have same length since TLC is disabled.'
         + #13 + 'Click YES when done, CANCEL to abort job.',
           mtConfirmation, [mbYes, mbCancel], 0);
+
+  if Form1.Show3DPreview1.checked and (my_dlg_result = mrYES) then
+    GLSsetToolToATCidx(atc_idx_new);
+
   if Form1.CheckTLCprobe.checked and (my_dlg_result = mrYES) then begin
     if do_tlc then
       if DoTLCandConfirm(false, atc_idx_new) then begin
@@ -222,19 +220,16 @@ begin
   end;
 
   for i:= 0 to c_numATCslots do
-    atcArray[i].inslot:= atcArray[i].used;
+    atcArray[i].isInSpindle:= false;
   if (my_dlg_result = mrYES) then begin
     ToolInSpindle:= atc_idx_new;
-    if Form1.Show3DPreview1.checked then
-      GLSupdateATC;
-    GLSsetToolToATCidx(atc_idx_new);
-    UpdateATCsg;
+    UpdateATC;
     Form1.sgATC.Col:= 1;
     Form1.sgATC.row:= atc_idx_new;
   end;
 end;
 
-function UnloadATCtool(atc_idx: Integer): boolean;
+procedure UnloadATCtool(atc_idx: Integer);
 // Werkzeug ablegen, Spannzange offen lassen
 // liefert TRUE wenn erfolgreich
 // tool_idx zählt ab 1
@@ -242,19 +237,8 @@ var my_atc_x, my_atc_y: Double;
   atc_pos_idx: Integer;
 
 begin
-  result:= true;
   atc_pos_idx:= atc_idx - 1;
   spindle_on_off(false);
-  if atcArray[atc_idx].inslot then begin
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-    Form1.Memo1.lines.add('');
-    Form1.Memo1.lines.add('ERROR: Unloading tool');
-    Form1.Memo1.lines.add('ATC Slot #' + IntToStr(atc_idx)
-    +' is occupied.');
-    Form1.Memo1.lines.add('No action taken. Job cancelled.');
-    result:= false;
-    exit;
-  end;
   my_atc_x:= job.atc_zero_x + (atc_pos_idx * job.atc_delta_x);
   my_atc_y:= job.atc_zero_y + (atc_pos_idx * job.atc_delta_y);
   Form1.Memo1.lines.add('');
@@ -264,13 +248,11 @@ begin
   SendListToGrbl;
   grbl_moveZ(job.atc_pickup_z + 10, true);  // move Z down
   grbl_addStr('G4 P0'); // dwell
-  grbl_addStr(Form1.SgAppDefaults.cells[1,35]);  // Ausblasen
+  grbl_addStr(get_AppDefaults_str(35));  // Ausblasen
   SendListToGrbl;
-  atcArray[atc_idx].inslot:= true;
+  atcArray[atc_idx].isInSpindle:= false;
 //    atcArray[tool_idx].tool_pen:= tool_idx;
   grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
-  if ToolInSpindle >= 1 then
-    atcArray[atc_idx]:= atcArray[ToolInSpindle];
   if Form1.Show3DPreview1.Checked then begin
     GLSupdateATC;
     GLSsetToolDia(0, 0);
@@ -279,38 +261,18 @@ begin
   grbl_moveZ(0, true);     // move Z up
   SendListToGrbl;
   ToolInSpindle:= 0; // kein Tool
-  UpdateATCsg;
+  UpdateATC;
   Form1.sgATC.Col:= 1;
   Form1.sgATC.Row:= atc_idx;
 end;
 
-function LoadATCtool(atc_idx: Integer; do_tlc: boolean): boolean;
+procedure LoadATCtool(atc_idx: Integer; do_tlc: boolean);
 var my_atc_x, my_atc_y: Double;
   atc_pos_idx: Integer;
 begin
 // Neues Werkzeug aufnehmen, tool_idx zählt ab 1
-  result:= true;
   atc_pos_idx:= atc_idx - 1;
-  if (ToolInSpindle = atc_idx) then begin
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-    Form1.Memo1.lines.add('');
-    Form1.Memo1.lines.add('ATC tool #'+IntToStr(atc_idx)+ ' already loaded');
-    result:= true;
-    exit;
-  end;
   spindle_on_off(false);
-  if not atcArray[atc_idx].inslot then begin
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-    Form1.Memo1.lines.add('');
-    Form1.Memo1.lines.add('ERROR: Loading tool');
-    Form1.Memo1.lines.add('ATC Slot #' + IntToStr(atc_idx)
-    +' is empty.');
-    Form1.Memo1.lines.add('No action taken. Job cancelled.');
-    result:= false;
-    exit;
-  end;
-  if ToolInSpindle >= 1 then
-    UnloadATCtool(ToolInSpindle);
   my_atc_x:= job.atc_zero_x + (atc_pos_idx * job.atc_delta_x);
   my_atc_y:= job.atc_zero_y + (atc_pos_idx * job.atc_delta_y);
   Form1.Memo1.lines.add('');
@@ -321,11 +283,11 @@ begin
   grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
   grbl_addStr('G4 P0'); // dwell
   SendListToGrbl;
-  grbl_addStr(Form1.SgAppDefaults.cells[1,36]);   // Tool aufnehmen
+  grbl_addStr(get_AppDefaults_str(36));   // Tool aufnehmen
   grbl_addStr('G4 P1'); // dwell
-  atcArray[atc_idx].inslot:= false;
   grbl_moveZ(0, true);  // move Z up
   SendListToGrbl;
+  atcArray[atc_idx].isInSpindle:= true;
   if Form1.Show3DPreview1.Checked then begin
     GLSupdateATC;
     GLSsetToolToATCidx(atc_idx);
@@ -333,18 +295,17 @@ begin
   if do_tlc then
     DoTLCandConfirm(false, atc_idx);
   ToolInSpindle:= atc_idx;
-  UpdateATCsg;
+  UpdateATC;
   Form1.sgATC.Col:= 1;
   Form1.sgATC.row:= atc_idx;
 end;
 
-function ChangeATCtool(atc_idx_old, atc_idx_new: Integer; do_tlc: boolean): boolean;
+procedure ChangeATCtool(atc_idx_old, atc_idx_new: Integer; do_tlc: boolean);
+// Liefert OK wenn erfolgreich
 begin
-  result:= true;
-  if atc_idx_old = atc_idx_new then
-    exit;
-  result:= false;
-  if UnloadATCtool(atc_idx_old) then
-    result:= LoadATCtool(atc_idx_new, do_tlc);
+  if atc_idx_old <> atc_idx_new then begin
+    UnloadATCtool(atc_idx_old);
+    LoadATCtool(atc_idx_new, do_tlc);
+  end;
 end;
 

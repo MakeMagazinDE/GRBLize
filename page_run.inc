@@ -67,11 +67,11 @@ begin
     exit;
   WaitForIdle;
   if switch_on then begin
-    SendSingleCommandStr('M3');
+    SendSingleCommandStr('M3S1000');
     Form1.Memo1.lines.add('Spindle ON, acceleration wait '+ IntToStr(job.spindle_wait) + ' sec');
   end else begin
     if isCancelled then
-      SendSingleCommandStr('M5')
+      SendSingleCommandStr('M5')  // Liste senden abgeschaltet!
     else begin
       grbl_addstr('G4 P0');
       grbl_addstr('M5');
@@ -142,7 +142,7 @@ end;
 
 
 function probe_z: double;
-var my_zval1, my_zval2: Double;
+var my_zval1, my_zval2, TargetZ: Double;
   pos_changed: Boolean;
   my_cmd, my_response: String;
 begin
@@ -166,7 +166,13 @@ begin
       DisableStatus;
 
       // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
-      my_cmd:= 'G38.2 Z' + FloatToStrDot(my_zval1 - 25) + ' F200';
+
+      TargetZ := my_zval1 - 25;                          // auf max. Z begrenzen
+      if -job.table_z > TargetZ then
+        TargetZ := -job.table_z;
+      my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F200';
+
+
       my_response:= SendReceive(my_cmd, 0);
       grbl_receiveStr(25); // 'ok'
       if pos('ALARM', ansiuppercase(my_response)) = 0 then
@@ -184,7 +190,12 @@ begin
       SendReceiveAndDwell('G0 G53 Z' + FloatToStrDot(my_zval1 + 2));
 
       // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
-      my_cmd:= 'G38.2 Z' + FloatToStrDot(grbl_mpos.Z - 25) + ' F50';
+
+      TargetZ := my_zval1 - 1;                          // auf max. Z begrenzen
+      if -job.table_z > TargetZ then
+        TargetZ := -job.table_z;
+      my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F50';
+
       my_response:= SendReceive(my_cmd, 0);
       grbl_receiveStr(25); // 'ok'
       if pos('ALARM', ansiuppercase(my_response)) = 0 then
@@ -215,7 +226,7 @@ begin
       SendReceiveAndDwell('G0 G53 Z0');  // Z up
       // Workaround für GRBL-JOG mit Zero-Eingang als Limit-Switch:
       repeat
-        DecodeStatus(grbl_statusStr, pos_changed);
+        DecodeStatus(grbl_statusStr);
       until MachineState < zero;
       EnableStatus;
     end else if isSimActive then begin
@@ -316,7 +327,7 @@ begin
       atcArray[atc_idx].TLCdelta:= MposOnFixedProbe - MposOnFixedProbeReference;
       NewG43Offset(atcArray[atc_idx].TLCdelta);
     end;
-    UpdateATCsg;
+    UpdateATC;
   end;
 end;
 
@@ -477,10 +488,11 @@ var i, atc_idx, my_len, atc_from_pens, my_btn, my_pen: Integer;
   my_entry: Tfinal;
   my_used_tools_count: Integer;
 begin
-  BtnRunJob.enabled:= false;
-  BtnRunTool.enabled:= false;
-  BtnRunGcode.enabled:= false;
   try
+    BtnRunJob.enabled:= false;
+    BtnRunTool.enabled:= false;
+    BtnRunGcode.enabled:= false;
+    SgATC.enabled:= false;
     DefaultsGridListToJob;
     PenGridListToJob;
     if machine_busy_msg then
@@ -557,28 +569,23 @@ begin
         SendSingleCommandStr('G0 G53 Z0'); // move Z up
         GLSclearPathNodes;
         if CheckUseATC2.checked then begin
-// automatischer Werkzeugwechsel
+// automatischer Werkzeugwechsel, zum Ende erstes Werkzeug wiederaufnehmen
           if atc_idx >= my_used_tools_count then
-            if not ChangeATCtool(atc_idx, 1, true) then // zurück zum ersten Tool
-              exit;
-          if not ChangeATCtool(atc_idx, atc_idx + 1, true) then
-            exit;
+            ChangeATCtool(atc_idx, 1, true) // zurück zum ersten Tool
+          else
+            ChangeATCtool(atc_idx, atc_idx + 1, true); // nächstes Tool der Liste
         end else begin
-// manueller Werkzeugwechsel
-          if atc_idx >= my_used_tools_count then
-            if not ManualToolchange(atc_idx, 1, true) then // zurück zum ersten Tool
+// manueller Werkzeugwechsel, zum Ende Werkzeug belassen
+          if atc_idx < my_used_tools_count then
+            if not ManualToolchange(atc_idx, atc_idx + 1, true) then // OK für nächstes Tool?
               exit;
-          if not ManualToolchange(atc_idx, atc_idx + 1, true) then
-            exit;
         end;
-
-        LEDbusy.Checked:= true;
-        spindle_on_off(true);
-        grbl_moveZ(0, true);
-        grbl_moveXY(0, 0, false);
-//        grbl_moveXY(final_bounds_mm.mid.x, final_bounds_mm.mid.y, false);
-        grbl_moveZ(job.z_penlift, false);
-        SendListToGrbl;
+        if atc_idx < my_used_tools_count then begin
+        // noch nicht fertig, Spindel starten und Ausgangsposition
+          LEDbusy.Checked:= true;
+          spindle_on_off(true);
+          SendSingleCommandStr('G0 G53 Z0');
+        end;
       end;
     end; // for loop
 
@@ -594,6 +601,7 @@ begin
       SendSingleCommandStr('G0 X0 Y0'); // Work Zero
     end;
   finally
+    SgATC.enabled:= true;
     ExitJobMsg(true);
   end;
 end;

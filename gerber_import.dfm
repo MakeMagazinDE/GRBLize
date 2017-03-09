@@ -224,9 +224,11 @@ object FormGerber: TFormGerber
   end
   object OpenFileDialog: TOpenDialog
     Filter = 
-      'Vector/Drill Files|*.plt;*.hpgl; *.hpg;*.pen;*.drl;*.svg|G-Code ' +
-      'Files|*.tap; *.dat; *.nc?; *.gc?; *.ngc|GRBL Setup|*.grb|Gerber ' +
-      'Files|*.gbr|All Files|*.*'
+       'Vector/Drill Files|*.plt;*.hpgl; *.hpg;*.pen;*.svg|' +
+       'G-Code Files|*.tap; *.dat; *.nc?; *.gc?; *.ngc|' +
+       'GRBL Setup|*.grb|' +
+       'Gerber Files|*.gbr;*.drl;*.drd|' +
+       'All Files|*.*'
     FilterIndex = 0
     Options = [ofFileMustExist, ofEnableSizing]
     Left = 664

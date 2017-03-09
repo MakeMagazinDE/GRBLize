@@ -895,18 +895,18 @@ begin
         my_spacetext.Material.FrontProperties.Emission.Color:= clrBlack;
         my_spacetext.Material.FrontProperties.Ambient.Color:= clrGray25;
         my_spacetext.Material.FrontProperties.Diffuse.Color:= clrBlack;
-      end;
-      if atcArray[i+1].inslot then begin
-        my_cylinder:= TGLCylinder(GLDummyCubeATCtools.AddNewChild(TGLCylinder)); // Bohrlochmitte erstellen
-        my_cylinder.PitchAngle:= 90;
-        my_cylinder.position.x:= i * job.atc_delta_x / c_GLscale;
-        my_cylinder.position.y:= i * job.atc_delta_y / c_GLscale;
-        my_cylinder.position.z:= 0;
-        my_cylinder.TopRadius:= my_dia / c_GLscale / 2 + 0.02;
-        my_cylinder.BottomRadius:= my_dia / c_GLscale / 2 + 0.02;
-        my_cylinder.Material.FrontProperties.Diffuse.AsWinColor:= my_color;
-        my_cylinder.Material.FrontProperties.Emission.Color:= clrGray25;
-        my_cylinder.Material.FrontProperties.Ambient.Color:= clrGray15;
+        if not atcArray[i+1].isInSpindle then begin
+          my_cylinder:= TGLCylinder(GLDummyCubeATCtools.AddNewChild(TGLCylinder)); // Bohrlochmitte erstellen
+          my_cylinder.PitchAngle:= 90;
+          my_cylinder.position.x:= i * job.atc_delta_x / c_GLscale;
+          my_cylinder.position.y:= i * job.atc_delta_y / c_GLscale;
+          my_cylinder.position.z:= 0;
+          my_cylinder.TopRadius:= my_dia / c_GLscale / 2 + 0.02;
+          my_cylinder.BottomRadius:= my_dia / c_GLscale / 2 + 0.02;
+          my_cylinder.Material.FrontProperties.Diffuse.AsWinColor:= my_color;
+          my_cylinder.Material.FrontProperties.Emission.Color:= clrGray25;
+          my_cylinder.Material.FrontProperties.Ambient.Color:= clrGray15;
+        end;
       end;
     end;
   end;

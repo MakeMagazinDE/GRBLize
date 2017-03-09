@@ -87,7 +87,6 @@ end;
 // ################################## FILES ####################################
 // #############################################################################
 
-
 procedure ClearFiles;
 var i: Integer;
 begin
@@ -122,7 +121,8 @@ begin
   UnHilite;
   setlength(final_array,0);
   NeedsRedraw:= true;
-  ResetATC;
+  ClearATCarray;
+  UpdateATC;
   ListBlocks;
 end;
 
@@ -194,7 +194,7 @@ end;
 procedure InitAppdefaults;
 begin
   with Form1.SgAppDefaults do begin
-    RowCount:= 37;
+    RowCount:= 46;
     Rows[0].DelimitedText:= 'Parameter,Value';
     Rows[1].DelimitedText:= '"Tool Change in Job",OFF';
     Rows[2].DelimitedText:= '"Tool Change Position X absolute",10';
@@ -232,6 +232,15 @@ begin
     Rows[34].DelimitedText:='"Fixture 2 Zero Z","-25,00"';
     Rows[35].DelimitedText:='"ATC tool release Cmd","M8"';
     Rows[36].DelimitedText:='"ATC tool clamp Cmd","M9"';
+    Rows[37].DelimitedText:='"Joypad Feed fast","2000"';
+    Rows[38].DelimitedText:='"Joypad Feed slow","500"';
+    Rows[39].DelimitedText:='"Joypad Z axis (R, U, V or Z)",Z';
+    Rows[40].DelimitedText:='"Joypad Fast Jog Button",4';
+    Rows[41].DelimitedText:='"Joypad ZeroAll Button",0';
+    Rows[42].DelimitedText:='"Joypad FloodToggle Button",2';
+    Rows[43].DelimitedText:='"Joypad SpindleToggle Button",3';
+    Rows[44].DelimitedText:='"Joypad FeedHold Button",1';
+    Rows[45].DelimitedText:='"Positive Machine Space",OFF';
   end;
   ClearFiles;
   Form1.Memo1.lines.add('Job/application default settings applied');
@@ -261,48 +270,48 @@ begin
     if RowCount < 3 then begin
       InitAppdefaults;
     end;
-    job.toolchange_pause:= Cells[1,1] = 'ON';
+    job.toolchange_pause:= get_AppDefaults_bool(1);
 
-    job.toolchange_x:= StrToFloatDef(Cells[1,2], 0);
-    job.toolchange_y:= StrToFloatDef(Cells[1,3], 0);
-    job.toolchange_z:= StrToFloatDef(Cells[1,4], 0);
+    job.toolchange_x:= get_AppDefaults_float(2);
+    job.toolchange_y:= get_AppDefaults_float(3);
+    job.toolchange_z:= get_AppDefaults_float(4);
 
-    job.parkposition_on_end:= Cells[1,5] = 'ON';
+    job.parkposition_on_end:= get_AppDefaults_bool(5);
 
-    job.park_x:= StrToFloatDef(Cells[1,6], 0);
-    job.park_y:= StrToFloatDef(Cells[1,7], 0);
-    job.park_z:= StrToFloatDef(Cells[1,8], 0);
+    job.park_x:= get_AppDefaults_float(6);
+    job.park_y:= get_AppDefaults_float(7);
+    job.park_z:= get_AppDefaults_float(8);
 
-    job.cam_x:= StrToFloatDef(Cells[1,9], 0);
-    job.cam_y:= StrToFloatDef(Cells[1,10], 0);
-    job.cam_z_abs:= StrToFloatDef(Cells[1,11], 0);
+    job.cam_x:= get_AppDefaults_float(9);
+    job.cam_y:= get_AppDefaults_float(10);
+    job.cam_z_abs:= get_AppDefaults_float(11);
 
-    job.use_fixed_probe:= Cells[1,12] = 'ON';
-    job.probe_x:= StrToFloatDef(Cells[1,13], 0);
-    job.probe_y:= StrToFloatDef(Cells[1,14], 0);
-    job.probe_z:= StrToFloatDef(Cells[1,15], 0);
+    job.use_fixed_probe:= get_AppDefaults_bool(12);
+    job.probe_x:= get_AppDefaults_float(13);
+    job.probe_y:= get_AppDefaults_float(14);
+    job.probe_z:= get_AppDefaults_float(15);
 
     job.use_part_probe:= Cells[1,16] = 'ON';
-    job.probe_z_gauge:= StrToFloatDef(Cells[1,17], 0);
+    job.probe_z_gauge:= get_AppDefaults_float(17);
 
-    job.invert_z:= Cells[1,18] = 'ON';
-    job.spindle_wait:= StrToIntDef(Cells[1,19], 3);
-    job.atc_enabled:= Cells[1,20] = 'ON';
-    job.atc_zero_x:= StrToFloatDef(Cells[1,21], 50);
-    job.atc_zero_y:= StrToFloatDef(Cells[1,22], 20);
-    job.atc_pickup_z:= StrToFloatDef(Cells[1,23], -20);
-    job.atc_delta_x:= StrToFloatDef(Cells[1,24], 20);
-    job.atc_delta_y:= StrToFloatDef(Cells[1,25], 0);
-    job.table_x:= StrToFloatDef(Cells[1,26],200);
-    job.table_y:= StrToFloatDef(Cells[1,27],200);
-    job.table_z:= StrToFloatDef(Cells[1,28],60);
+    job.invert_z:= get_AppDefaults_bool(18);
+    job.spindle_wait:= get_AppDefaults_int(19);
+    job.atc_enabled:= get_AppDefaults_bool(20);
+    job.atc_zero_x:= get_AppDefaults_float(21);
+    job.atc_zero_y:= get_AppDefaults_float(22);
+    job.atc_pickup_z:= get_AppDefaults_float(23);
+    job.atc_delta_x:= get_AppDefaults_float(24);
+    job.atc_delta_y:= get_AppDefaults_float(25);
+    job.table_x:= get_AppDefaults_float(26);
+    job.table_y:= get_AppDefaults_float(27);
+    job.table_z:= get_AppDefaults_float(28);
 
-    job.fix1_x:= StrToFloatDef(Cells[1,29],200);
-    job.fix1_y:= StrToFloatDef(Cells[1,30],200);
-    job.fix1_z:= StrToFloatDef(Cells[1,31],60);
-    job.fix2_x:= StrToFloatDef(Cells[1,32],200);
-    job.fix2_y:= StrToFloatDef(Cells[1,33],200);
-    job.fix2_z:= StrToFloatDef(Cells[1,34],60);
+    job.fix1_x:= get_AppDefaults_float(29);
+    job.fix1_y:= get_AppDefaults_float(30);
+    job.fix1_z:= get_AppDefaults_float(31);
+    job.fix2_x:= get_AppDefaults_float(32);
+    job.fix2_y:= get_AppDefaults_float(33);
+    job.fix2_z:= get_AppDefaults_float(34);
   end;
 end;
 
@@ -315,11 +324,14 @@ begin
   job.pens[tool_idx].tooltip:= 1;
   job.pens[tool_idx].tooltip:= 1;
   job.pens[tool_idx].speed:= 500;
+  job.pens[tool_idx].force_closed:= true;
 end;
 
 Procedure OpenFilesInGrid;
 var
-  i, pen_override: Integer; my_path, my_ext: String; use_excellon: Boolean;
+  i, pen_override: Integer;
+  my_path, my_ext: String;
+  use_excellon, file_was_changed: Boolean;
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -327,6 +339,7 @@ begin
   for i:= 0 to 31 do begin
     job.pens[i].used:= false;
     job.pens[i].enable:= false;
+    job.pens[i].force_closed:= false;
   end;
   with Form1.SgFiles do begin
     for i:= 1 to c_numOfFiles +1 do begin
@@ -346,10 +359,12 @@ begin
       my_ext:= AnsiUpperCase(ExtractFileExt(my_path));
       if my_ext = '' then
         continue;
-      FileParamArray[i-1].isdrillfile := (my_ext = '.DRL');
+      if not FileExists(my_path) then
+        continue;
+      FileParamArray[i-1].isdrillfile := (my_ext = '.DRL') or (my_ext = '.DRD');
       FileParamArray[i-1].enable:= true;
       pen_override:= StrToIntDef(Cells[1, i], -1);
-      if (my_ext = '.DRL') then begin
+      if FileParamArray[i-1].isdrillfile then begin
         Cells[8, i]:= 'Drill'; // Replace Pen
         use_excellon:= job.use_excellon_dia and (pen_override < 0);
         drill_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1), use_excellon);
@@ -369,6 +384,7 @@ begin
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);
         SetPCBmillTool(9);
+        job.pens[9].force_closed:= true;
       end else if (my_ext = '.SVG') then begin
         Cells[8, i]:= 'SVG'; // Remark
         svg_fileload(my_path, i-1, -1);
@@ -394,13 +410,16 @@ begin
 
   Form1.SgPens.Repaint;
   GLSneedsATCupdateTimeout:= 1;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('Mill/drill files (re)loaded.');
 end;
 
 Procedure OpenJobFile;
 var
 // mySaveFile: File of Tjob;
  sl, sl_p: TstringList;
- i, j, k, s, my_len, my_row: Integer;
+ i, j, k, s, my_len, my_row, my_date: Integer;
+ my_path, my_datestr: String;
 
 begin
   ResetToolFlags;
@@ -479,12 +498,13 @@ begin
           break;
         sl_p.Clear;
         sl_p.CommaText:= sl.strings[i];
-        if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
-          for k := 0 to sl_p.Count-1 do
-            if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
-              final_array[j].milling_enables[k]:= sl_p[k] = '1';
-          inc(j);
-        end;
+        if j <= high(final_array) then
+          if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
+            for k := 0 to sl_p.Count-1 do
+              if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
+                final_array[j].milling_enables[k]:= sl_p[k] = '1';
+            inc(j);
+          end;
       end;
       sl_p.Free;
     end;
@@ -499,9 +519,29 @@ begin
       end;
     end;
     sl.Free;
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('Job and block/path settings applied.');
   end else begin
     InitJob;
     PenGridListToJob;
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('Job reset and initialized.');
+  end;
+  // sind Files noch aktuell?
+  for i:= 1 to c_numOfFiles +1 do begin
+    my_path:= Form1.SgFiles.Cells[0,i];
+    if (length(my_path) < 4) or (not FileExists(my_path)) then
+      continue;
+    my_date:= FileAge(Form1.SgFiles.Cells[0,i]);
+    if my_date <> StrToIntDef(Form1.SgFiles.Cells[9,i],0) then begin
+      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+      Form1.Memo1.lines.add('');
+      Form1.Memo1.lines.add('WARNING: One or more mill/drill file(s)');
+      Form1.Memo1.lines.add('have been changed since last job was saved.');
+      Form1.Memo1.lines.add('All mill paths will be rebuild and enabled!');
+      OpenFilesInGrid;
+      break;
+    end;
   end;
   ListBlocks;
   for i := 0 to high(final_array) do
@@ -549,16 +589,24 @@ procedure SaveJob;
 var
 // mySaveFile: File of Tjob;
  sl: TstringList;
- i, p: Integer;
- block_str: String;
+ i, p, my_date: Integer;
+ block_str, my_filename: String;
 
 begin
   JobToPenGridList;
   sl:= Tstringlist.Create;
   sl.clear;
   sl.Add('#Files');
-  for i:= 1 to Form1.SgFiles.Rowcount - 1 do
+  for i:= 1 to Form1.SgFiles.Rowcount - 1 do begin
+    my_filename:= Form1.SgFiles.Cells[0,i];
+    // Letztes Änderungsdatum einsetzen und abspeichern
+    if (length(my_filename) > 3) and FileExists(my_filename) then begin
+      my_date:= FileAge(Form1.SgFiles.Cells[0,i]);
+//      Form1.SgFiles.Cells[9,i]:= DateToStr(FileDateToDateTime(my_date));
+      Form1.SgFiles.Cells[9,i]:= IntToStr(my_date);
+    end;
     sl.Add(Form1.SgFiles.Rows[i].CommaText);
+  end;
   sl.Add('#Pens');
   for i:= 1 to Form1.SgPens.Rowcount - 1 do
     sl.Add(Form1.SgPens.Rows[i].CommaText);
@@ -942,7 +990,7 @@ begin
             job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
             UnHilite;
             my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
-            if (my_ext = '.GBR') then begin
+            if (my_ext = '.GBR') or (my_ext = '.GBL') or (my_ext = '.GTL') then begin
               sgFiles.Cells[0, Row]:= '';
               ConvertedFileName:='';
               GerberFileName:= OpenFileDialog.Filename;

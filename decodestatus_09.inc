@@ -1,6 +1,6 @@
 // Version für GRBL 0.9j und 0.9ks
 
-function DecodeStatus(my_response: String; var pos_changed: Boolean): Boolean;
+function DecodeStatus(my_response: String): Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
 // setzt pos_changed wenn sich Position änderte
 
@@ -17,12 +17,11 @@ var
   sl_values: TSTringList;
 
 begin
-  sl_values:= TStringList.Create;
-  result:= false;
-  pos_changed:= false;
   try
+    sl_values:= TStringList.Create;
+    result:= false;
     if (pos('>', my_response) = 0) then begin  // nicht vollständig
-      inc(ResponseFaultCounter);
+      inc(StatusFaultCounter);
       exit;
     end;
     if (my_response[1] = '<') then begin
@@ -30,7 +29,7 @@ begin
       my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
     end else begin                             // nicht vollständig
-      inc(ResponseFaultCounter);
+      inc(StatusFaultCounter);
       exit;
     end;
     is_valid:= false;
@@ -67,7 +66,6 @@ begin
         is_valid:= true;
         PanelHold.Color:= clAqua;
         PanelHold.Font.Color:= clwhite;
-        result:= true;
         MachineState:= hold;
       end else begin
         PanelHold.Color:= $00400000;
@@ -79,7 +77,6 @@ begin
         is_valid:= true;
         PanelRun.Color:= clFuchsia;
         PanelRun.Font.Color:= clwhite;
-        result:= true;
         MachineState:= run;
       end else begin
         PanelRun.Color:= $00400040;
@@ -98,7 +95,7 @@ begin
       end;
       // keine gültige Statusmeldung?
       if not is_valid then begin
-        inc(ResponseFaultCounter);
+        inc(StatusFaultCounter);
         exit;
       end;
       if is_jogging then begin  // Kurzmeldung von GRBL-JOG 0.9j
@@ -138,7 +135,7 @@ begin
 
   if (MachineState = run) or (old_grbl_wpos.X <> grbl_wpos.X)
      or (old_grbl_wpos.Y <> grbl_wpos.Y) then begin
-    pos_changed:= true;
+    result:= true;
     old_grbl_wpos:= grbl_wpos;
     NeedsRedraw:= true;
   end;
