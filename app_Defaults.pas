@@ -7,6 +7,7 @@ uses Classes, Grids;
 
 type
   T_machine_options = record   // Ausstattungsdetails
+    NewGrblVersion: boolean;
     SPI: Boolean;
     Display: Boolean;
     Panel: Boolean;
@@ -32,6 +33,7 @@ function get_AppDefaults_bool(sg_row: Integer): boolean;
 function get_AppDefaults_int(sg_row: Integer): Integer;
 function get_AppDefaults_str(sg_row: Integer): String;
 procedure set_AppDefaults_int(sg_row, new_val: Integer);
+procedure set_AppDefaults_bool(sg_row: Integer; new_val: boolean);
 
 implementation
 
@@ -53,6 +55,7 @@ begin
     DeviceAddress:= 0;
     HomingOrigin:= false;  // HOMING_FORCE_SET_ORIGIN
     SingleAxisHoming:= false;
+    NewGrblVersion:= false;
   end;
 end;
 
@@ -120,6 +123,15 @@ procedure set_AppDefaults_int(sg_row, new_val: Integer);
 begin
   if sg_row < Form1.SgAppDefaults.RowCount then
     Form1.SgAppDefaults.Cells[1,sg_row]:= IntToStr(new_val);
+end;
+
+procedure set_AppDefaults_bool(sg_row: Integer; new_val: boolean);
+begin
+  if sg_row < Form1.SgAppDefaults.RowCount then
+    if new_val then
+      Form1.SgAppDefaults.Cells[1,sg_row]:= 'ON'
+    else
+      Form1.SgAppDefaults.Cells[1,sg_row]:= 'OFF';
 end;
 
 end.

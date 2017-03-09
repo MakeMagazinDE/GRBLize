@@ -53,13 +53,21 @@ begin
   end;
 end;
 }
+<<<<<<< HEAD
 procedure drill_import_line(my_line: String; fileID, penOverride: Integer; fac: Double);
+=======
+procedure drill_import_line(my_line: String; fileID, penOverride: Integer);
+>>>>>>> remotes/origin/master
 // Actions: none, lift, seek, drill, mill
 var
   my_x, my_y: double;
   my_pos: Integer;
   my_char: char;
   my_tool, my_block_Idx: Integer;
+<<<<<<< HEAD
+=======
+  has_dec_point: boolean;  // Dezimalpunkt in Koordinaten (selten!)
+>>>>>>> remotes/origin/master
   num_dec_digits: Integer; // Anzahl Dezimalstellen
   my_val, my_fac: Double;
 
@@ -111,8 +119,11 @@ begin
             my_block_Idx:= length(blockArrays[fileID])-1;
             append_point(fileID, my_block_idx, LastPoint);
             blockArrays[fileID, my_block_idx].pen:= CurrentPen;
+<<<<<<< HEAD
             check_filebounds(FileID, LastPoint);
 
+=======
+>>>>>>> remotes/origin/master
 //            blockArrays[fileID, my_block_idx].enable:= true;
           end;
         end;
@@ -172,7 +183,10 @@ begin
   last_y:= 0;
   prefer_x:= 5;
   prefer_y:= 5;
+<<<<<<< HEAD
   found_idx:= 0;
+=======
+>>>>>>> remotes/origin/master
 
   for i:= 0 to my_len-1 do begin
     // alle nicht besuchten Punkte absuchen
@@ -232,7 +246,11 @@ var
   my_ReadFile: TextFile;
   my_line: String;
   my_tool, my_pos: integer;
+<<<<<<< HEAD
   my_val, my_fac: Double;
+=======
+  my_val: Double;
+>>>>>>> remotes/origin/master
   invalid_header, my_valid: boolean;
   my_char: char;
 
@@ -245,7 +263,11 @@ begin
   FileParamArray[fileID].bounds.min.y := high(Integer);
   FileParamArray[fileID].bounds.max.x := low(Integer);
   FileParamArray[fileID].bounds.max.y := low(Integer);
+<<<<<<< HEAD
   use_inches_in_drillfile:= false; // default METRIC
+=======
+  use_inches_in_drillfile:= true; // default Inches
+>>>>>>> remotes/origin/master
   my_line:='';
   FileMode := fmOpenRead;
   AssignFile(my_ReadFile, my_name);
@@ -273,14 +295,22 @@ begin
     my_pos:= 1;
     ParseCommand(my_pos, my_line, my_val, my_char);
     if my_char = 'T' then begin
+<<<<<<< HEAD
       if pos('.',my_line) > 0 then
         my_fac:= 1;
+=======
+>>>>>>> remotes/origin/master
       my_tool:= round(my_val + 10);
       repeat
         my_valid:= ParseCommand(my_pos, my_line, my_val, my_char);
       until (my_char = 'C') or (not my_valid);
+<<<<<<< HEAD
       if (my_char = 'C') and (my_tool < 32) then begin
         my_val:= my_val * my_fac;
+=======
+      if my_char = 'C' then
+      if (my_tool < 32) then begin
+>>>>>>> remotes/origin/master
         if use_inches_in_drillfile then
           my_val:= my_val * 25.4;
         if useDrillDia then begin

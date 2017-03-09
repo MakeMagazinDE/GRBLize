@@ -2,15 +2,6 @@ unit grbl_player_main;
 // CNC-Steuerung für GRBL-JOG-Platine mit GRBL 0.8c/jog.2 Firmware
 // oder GRBL 0.9j mit DEFINE GRBL115
 
-{$DEFINE GRBL_11}
-{$DEFINE FOUR_AXIS}
-
-{$IFDEF GRBL_11}
-//  {.$EXTENSION 11.exe}
-{$ELSE}
-//  {.$EXTENSION 09.exe}
-{$ENDIF}
-
 interface
 
 uses
@@ -23,9 +14,17 @@ uses
   FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes,
   app_defaults;
 
+{$DEFINE GRBL_11}
+
+{$IFDEF GRBL_11}
+//  {.$EXTENSION 11.exe}
+{$ELSE}
+//  {.$EXTENSION 09.exe}
+{$ENDIF}
+
 const
   c_ProgNameStr: String = 'GRBLize ';
-  c_VerStr: String = '1.5c';
+  c_VerStr: String = '1.5d';
   c_unloadATCstr: String = 'M8';
   c_loadATCstr: String = 'M9';
 {$IFDEF GRBL_11}

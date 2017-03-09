@@ -14,6 +14,8 @@ type
   TFileBuffer = Array of byte;
    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
+  procedure ExtractMessage(var my_str: AnsiString); // GRBL-Message in [] aufbereiten
+
   procedure mdelay(const Milliseconds: DWord);
   procedure ShowAliveState(my_state: t_alivestates);
 
@@ -148,6 +150,14 @@ implementation
 uses grbl_player_main, glscene_view, Graphics;
 
 // #############################################################################
+
+procedure ExtractMessage(var my_str: AnsiString);
+// GRBL-Message in [] aufbereiten
+begin
+  my_str:= StringReplace(my_str,'[','',[rfReplaceAll]);
+  my_str:= StringReplace(my_str,']','',[rfReplaceAll]);
+  my_str:= StringReplace(my_str,':',',',[rfReplaceAll]);
+end;
 
 constructor TStopWatch.Create(const startOnCreate : boolean = false) ;
 begin
@@ -584,6 +594,7 @@ begin
     until (grbl_receiveStr(timeout) = '[Timeout]') or isEmergency or isWaitExit;
 end;
 
+{$DEFINE GRBL_11}
 
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
@@ -605,60 +616,79 @@ begin
   if ftdi_isopen or com_isopen then begin
     DisableStatus;
     grbl_rx_clear;
-{$IFDEF GRBL_11}
-    grbl_SendRealTimeCmd(#$D0);  // Enable device #0
-{$ENDIF}
     grbl_SendRealTimeCmd(#24);   // Soft Reset CTRL-X, Stepper sofort stoppen
     sleep(100);
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Grbl Startup Message and Version Info:');
-    grbl_sendStr('$I' + #13, false);
-    sl_options:= TStringList.Create;
     repeat
-      my_str:= grbl_receiveStr(20);
+      my_str:= grbl_receiveStr(100);
       if (length(my_Str) > 1) and (my_str <> '[Timeout]') then begin
         Form1.Memo1.lines.add(my_str);
-        // get Option list from GRBL 1.1
-        if AnsiContainsStr(my_str, 'OPT:') then begin
-          sl_options.CommaText:= StringReplace(my_str,':',',',[rfReplaceAll]);
-          if AnsiContainsStr(sl_options[1], 'H') then
-            MachineOptions.SingleAxisHoming:= true;
-          if AnsiContainsStr(sl_options[1], 'M') then
-            MachineOptions.MistCoolant:= true;
-          if AnsiContainsStr(sl_options[1], 'H') then
-            MachineOptions.SingleAxisHoming:= true;
-          if AnsiContainsStr(sl_options[1], 'Z') then //  HOMING_FORCE_SET_ORIGIN
-            MachineOptions.HomingOrigin:= true;
-          // parse GRBL compile options
-          for i:= 1 to sl_options.Count-1 do begin
-             if sl_options[i] =  'SPI_SR' then
-              MachineOptions.SPI:= true;
-             if sl_options[i] =  'SPI_DISP' then
-              MachineOptions.Display:= true;
-             if sl_options[i] =  'PANEL' then
-              MachineOptions.Panel:= true;
-          end;
-        end;
       end;
-
     until my_Str = '[Timeout]';
     for i := 0 to 3 do begin
       my_str:= grbl_statusStr;
       MachineState:= none;
       DecodeStatus(my_str);
+      mdelay(20);
       if MachineState <> none then
         break;
     end;
-    sl_options.Free;
+    if MachineState <> none then begin
+      grbl_SendRealTimeCmd(#$D0);  // Enable device #0
+
+      grbl_SendStr('$I' + #13, false);
+      my_str:= grbl_receiveStr(500);
+      if (length(my_Str) > 5) and (my_str <> '[Timeout]') then begin
+        Form1.Memo1.lines.add(my_str);
+        // get version info
+        if AnsiContainsStr(my_str, 'VER:1') then
+          MachineOptions.NewGrblVersion:= true;
+      end;
+      sl_options:= TStringList.Create;
+      my_str:= grbl_receiveStr(50);
+      if (length(my_Str) > 5) and (my_str <> '[Timeout]') then begin
+        Form1.Memo1.lines.add(my_str);
+        ExtractMessage(my_str);
+        // get Option list from GRBL 1.1
+        if AnsiContainsStr(my_str, 'OPT') then begin
+          sl_options.CommaText:= my_str;
+          if sl_options.Count > 0 then begin
+            if AnsiContainsStr(sl_options[1], 'V') then
+              MachineOptions.VariableSpindle:= true;
+            if AnsiContainsStr(sl_options[1], 'H') then
+              MachineOptions.SingleAxisHoming:= true;
+            if AnsiContainsStr(sl_options[1], 'M') then
+              MachineOptions.MistCoolant:= true;
+            if AnsiContainsStr(sl_options[1], 'H') then
+              MachineOptions.SingleAxisHoming:= true;
+            if AnsiContainsStr(sl_options[1], 'Z') then //  HOMING_FORCE_SET_ORIGIN
+              MachineOptions.HomingOrigin:= true;
+            // parse other GRBL compile options of 644 version
+            for i:= 1 to sl_options.Count-1 do begin
+               if sl_options[i] =  'SPI_SR' then
+                MachineOptions.SPI:= true;
+               if sl_options[i] =  'SPI_DISP' then
+                MachineOptions.Display:= true;
+               if sl_options[i] =  'PANEL' then
+                MachineOptions.Panel:= true;
+               if sl_options[i] =  'C_AXIS' then
+                MachineOptions.Caxis:= true;
+            end;
+          end;
+        end;
+      end;
+      sl_options.Free;
+    end;
 
     if MachineOptions.HomingOrigin <> get_AppDefaults_bool(45) then begin
+    // Positive Maschinenrichtung?
       my_btn := MessageDlg('GRBL compile option HOMING_FORCE_SET_ORIGIN'
       + #13 + 'detected. Should I set positive machine space in App Defaults? ',
       mtConfirmation, mbYesNo, 0);
-
+      if my_btn = mrYes then
+        ;
     end;
-    // Positive Maschinenrichtung?
-
     HomingPerformed:= false;
     case MachineState of
       alarm:

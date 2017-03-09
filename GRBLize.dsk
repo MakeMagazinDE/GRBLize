@@ -1,36 +1,40 @@
 ﻿[Closed Files]
-File_0=TSourceModule,'E:\Dropbox\GRBLize_XE8\glscene_view.pas',0,1,971,1,974,0,0,,{1,146,30}
-File_1=TSourceModule,'E:\Dropbox\GRBLize_XE8\drawing_window.pas',0,1,986,1,1010,0,0,,
-File_2=TSourceModule,'E:\Dropbox\GRBLize_XE8\grbl_com.pas',0,1,17,45,45,0,0,,
-File_3=TSourceModule,'E:\Dropbox\GRBLize_XE8\gcode_interpreter.pas',0,1,110,15,144,0,0,,
-File_4=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_blocks.pas',0,1,91,1,121,0,0,,
-File_5=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_pens.pas',0,1,85,6,92,0,0,,
-File_6=TSourceModule,'E:\Dropbox\GRBLize_XE8\cam_view.pas',0,1,209,1,232,0,0,,
-File_7=TSourceModule,'E:\Dropbox\GRBLize_XE8\gerber_import.pas',0,1,117,19,245,0,0,,
-File_8=TSourceModule,'E:\Dropbox\GRBLize_XE8\drill_import.pas',0,1,253,1,287,0,0,,
-File_9=TSourceModule,'E:\Dropbox\GRBLize_XE8\ftdiclass\FTDIchip.pas',0,1,373,1,396,0,0,,
-File_10=TSourceModule,'E:\Dropbox\GRBLize_XE8\hpgl_import.pas',0,1,1,63,85,0,0,,
+File_0=TSourceModule,'E:\Dropbox\GRBLize_XE8\gerber_import.dfm',0,1,208,37,219,0,0,,
+File_1=TSourceModule,'E:\Dropbox\GRBLize_XE8\gerber_import.pas',0,1,1,1,1,0,0,,
+File_2=TSourceModule,'E:\Dropbox\GRBLize_XE8\cam_view.pas',0,1,1,62,7,0,0,,
+File_3=TSourceModule,'E:\Dropbox\GRBLize_XE8\joypad_handling.inc',0,1,132,40,169,0,0,,
+File_4=TSourceModule,'E:\Dropbox\GRBLize_XE8\grbl_com.pas',0,1,616,38,637,0,0,,
+File_5=TSourceModule,'E:\Dropbox\GRBLize_XE8\hpgl_import.inc',0,1,378,53,390,0,0,,
+File_6=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_atc.inc',0,1,238,67,205,0,0,,
+File_7=TSourceModule,'E:\Dropbox\GRBLize_XE8\decodestatus_11.inc',0,1,82,32,107,0,0,,
+File_8=TSourceModule,'E:\Dropbox\GRBLize_XE8\decodestatus_09.inc',0,1,47,1,80,0,0,,
+File_9=TSourceModule,'E:\Dropbox\GRBLize_XE8\drawing_window.pas',0,1,1329,7,1352,0,0,,
+File_10=TSourceModule,'E:\Dropbox\GRBLize_XE8\page_grblsetup.inc',0,1,22,11,11,0,0,,
+File_11=TSourceModule,'E:\Dropbox\GRBLize_XE8\glscene_view.pas',0,1,876,2,902,0,0,,
 
 [Modules]
-Module0=E:\Dropbox\GRBLize_XE8\import_files.pas
-Module1=E:\Dropbox\GRBLize_XE8\hpgl_import.inc
-Module2=E:\Dropbox\GRBLize_XE8\page_job.inc
-Module3=E:\Dropbox\GRBLize_XE8\page_run.inc
-Module4=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
-Module5=E:\Dropbox\GRBLize_XE8\page_atc.inc
+Module0=E:\Dropbox\GRBLize_XE8\page_job.inc
+Module1=default.htm
+Module2=E:\Dropbox\GRBLize_XE8\drill_import.inc
+Module3=E:\Dropbox\GRBLize_XE8\import_files.pas
+Module4=E:\Dropbox\GRBLize_XE8\page_run.inc
+Module5=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
 Count=6
 EditWindowCount=1
+
+[E:\Dropbox\GRBLize_XE8\page_job.inc]
+ModuleType=TSourceModule
+
+[default.htm]
+ModuleType=TURLModule
+
+[E:\Dropbox\GRBLize_XE8\drill_import.inc]
+ModuleType=TSourceModule
 
 [E:\Dropbox\GRBLize_XE8\import_files.pas]
 ModuleType=TSourceModule
 FormState=0
 FormOnTop=0
-
-[E:\Dropbox\GRBLize_XE8\hpgl_import.inc]
-ModuleType=TSourceModule
-
-[E:\Dropbox\GRBLize_XE8\page_job.inc]
-ModuleType=TSourceModule
 
 [E:\Dropbox\GRBLize_XE8\page_run.inc]
 ModuleType=TSourceModule
@@ -40,12 +44,9 @@ ModuleType=TSourceModule
 FormState=1
 FormOnTop=0
 
-[E:\Dropbox\GRBLize_XE8\page_atc.inc]
-ModuleType=TSourceModule
-
 [EditWindow0]
 ViewCount=6
-CurrentEditView=E:\Dropbox\GRBLize_XE8\import_files.pas
+CurrentEditView=E:\Dropbox\GRBLize_XE8\page_job.inc
 View0=0
 View1=1
 View2=2
@@ -80,33 +81,26 @@ BottomMiddlePanelSize=0
 TabDockRightClients=DockSite0=-1
 
 [View0]
-CustomEditViewType=TEditView
-Module=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
-CursorX=3
-CursorY=2292
-TopLine=2269
-LeftCol=1
-Elisions=
-Bookmarks={5,2381,5}
-EditViewName=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
+CustomEditViewType=TWelcomePageView
+WelcomePageURL=bds:/default.htm
 
 [View1]
 CustomEditViewType=TEditView
-Module=E:\Dropbox\GRBLize_XE8\page_run.inc
-CursorX=1
-CursorY=527
-TopLine=509
+Module=E:\Dropbox\GRBLize_XE8\drill_import.inc
+CursorX=45
+CursorY=273
+TopLine=252
 LeftCol=1
 Elisions=
 Bookmarks=
-EditViewName=E:\Dropbox\GRBLize_XE8\page_run.inc
+EditViewName=E:\Dropbox\GRBLize_XE8\drill_import.inc
 
 [View2]
 CustomEditViewType=TEditView
 Module=E:\Dropbox\GRBLize_XE8\page_job.inc
-CursorX=1
-CursorY=1
-TopLine=868
+CursorX=49
+CursorY=985
+TopLine=962
 LeftCol=1
 Elisions=
 Bookmarks=
@@ -114,61 +108,55 @@ EditViewName=E:\Dropbox\GRBLize_XE8\page_job.inc
 
 [View3]
 CustomEditViewType=TEditView
-Module=E:\Dropbox\GRBLize_XE8\hpgl_import.inc
-CursorX=85
-CursorY=431
-TopLine=395
-LeftCol=1
-Elisions=
-Bookmarks=
-EditViewName=E:\Dropbox\GRBLize_XE8\hpgl_import.inc
-
-[View4]
-CustomEditViewType=TEditView
 Module=E:\Dropbox\GRBLize_XE8\import_files.pas
-CursorX=36
-CursorY=528
-TopLine=525
+CursorX=74
+CursorY=5
+TopLine=1
 LeftCol=1
 Elisions=
 Bookmarks=
 EditViewName=E:\Dropbox\GRBLize_XE8\import_files.pas
 
-[View5]
+[View4]
 CustomEditViewType=TEditView
-Module=E:\Dropbox\GRBLize_XE8\page_atc.inc
-CursorX=21
-CursorY=56
-TopLine=85
+Module=E:\Dropbox\GRBLize_XE8\page_run.inc
+CursorX=1
+CursorY=512
+TopLine=477
 LeftCol=1
 Elisions=
 Bookmarks=
-EditViewName=E:\Dropbox\GRBLize_XE8\page_atc.inc
+EditViewName=E:\Dropbox\GRBLize_XE8\page_run.inc
+
+[View5]
+CustomEditViewType=TEditView
+Module=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
+CursorX=1
+CursorY=1017
+TopLine=1
+LeftCol=1
+Elisions=
+Bookmarks={3,1854,47}{4,1854,5}{6,2848,1}
+EditViewName=E:\Dropbox\GRBLize_XE8\grbl_player_main.pas
 
 [Breakpoints]
-Count=1
-Breakpoint0='E:\Dropbox\GRBLize_XE8\page_run.inc',507,'',0,1,'',1,0,0,'',1,'','','',0,''
+Count=0
 
 [EmbarcaderoWin32Debugger_AddressBreakpoints]
 Count=0
 
 [Watches]
-Count=12
-Watch0='AliveState',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch1='current_time',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch2='display_time',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch3='target_time',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch4='lInt',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch5='my_char',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch6='i',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch7='gcsim_dia',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch8='roll',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch9='k',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch10='atcArray',256,0,18,1,0,'Überwachte Ausdrücke',1
-Watch11='my_used_tools_count',256,0,18,1,0,'Überwachte Ausdrücke',1
+Count=7
+Watch0='my_used_tools_count',256,0,18,1,0,'Überwachte Ausdrücke',1
+Watch1='my_pen',256,0,18,1,0,'Überwachte Ausdrücke',1
+Watch2='my_len',256,0,18,1,0,'Überwachte Ausdrücke',1
+Watch3='atc_idx',256,0,18,1,0,'Überwachte Ausdrücke',1
+Watch4='Form1.TimerStatus.Tag',256,0,18,1,0,'Überwachte Ausdrücke',1
+Watch5='dx',256,0,18,1,0,'Überwachte Ausdrücke',1
+Watch6='my_line',256,0,18,1,0,'Überwachte Ausdrücke',1
 
 [WatchWindow]
-WatchColumnWidth=120
+WatchColumnWidth=159
 WatchShowColumnHeaders=1
 PercentageSizes=1
 Create=1
