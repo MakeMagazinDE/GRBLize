@@ -195,7 +195,7 @@ end;
 procedure InitAppdefaults;
 begin
   with Form1.SgAppDefaults do begin
-    RowCount:= 45;
+    RowCount:= 46;
     Rows[0].DelimitedText:= 'Parameter,Value';
     Rows[1].DelimitedText:= '"Tool Change in Job",OFF';
     Rows[2].DelimitedText:= '"Tool Change Position X absolute",10';
@@ -241,6 +241,7 @@ begin
     Rows[42].DelimitedText:='"Joypad FloodToggle Button",2';
     Rows[43].DelimitedText:='"Joypad SpindleToggle Button",3';
     Rows[44].DelimitedText:='"Joypad FeedHold Button",1';
+    Rows[45].DelimitedText:='"Positive Machine Space",OFF';
   end;
   ClearFiles;
   Form1.Memo1.lines.add('Job/application default settings applied');
@@ -270,48 +271,48 @@ begin
     if RowCount < 3 then begin
       InitAppdefaults;
     end;
-    job.toolchange_pause:= Cells[1,1] = 'ON';
+    job.toolchange_pause:= get_AppDefaults_bool(1);
 
-    job.toolchange_x:= StrToFloatDef(Cells[1,2], 0);
-    job.toolchange_y:= StrToFloatDef(Cells[1,3], 0);
-    job.toolchange_z:= StrToFloatDef(Cells[1,4], 0);
+    job.toolchange_x:= get_AppDefaults_float(2);
+    job.toolchange_y:= get_AppDefaults_float(3);
+    job.toolchange_z:= get_AppDefaults_float(4);
 
-    job.parkposition_on_end:= Cells[1,5] = 'ON';
+    job.parkposition_on_end:= get_AppDefaults_bool(5);
 
-    job.park_x:= StrToFloatDef(Cells[1,6], 0);
-    job.park_y:= StrToFloatDef(Cells[1,7], 0);
-    job.park_z:= StrToFloatDef(Cells[1,8], 0);
+    job.park_x:= get_AppDefaults_float(6);
+    job.park_y:= get_AppDefaults_float(7);
+    job.park_z:= get_AppDefaults_float(8);
 
-    job.cam_x:= StrToFloatDef(Cells[1,9], 0);
-    job.cam_y:= StrToFloatDef(Cells[1,10], 0);
-    job.cam_z_abs:= StrToFloatDef(Cells[1,11], 0);
+    job.cam_x:= get_AppDefaults_float(9);
+    job.cam_y:= get_AppDefaults_float(10);
+    job.cam_z_abs:= get_AppDefaults_float(11);
 
-    job.use_fixed_probe:= Cells[1,12] = 'ON';
-    job.probe_x:= StrToFloatDef(Cells[1,13], 0);
-    job.probe_y:= StrToFloatDef(Cells[1,14], 0);
-    job.probe_z:= StrToFloatDef(Cells[1,15], 0);
+    job.use_fixed_probe:= get_AppDefaults_bool(12);
+    job.probe_x:= get_AppDefaults_float(13);
+    job.probe_y:= get_AppDefaults_float(14);
+    job.probe_z:= get_AppDefaults_float(15);
 
     job.use_part_probe:= Cells[1,16] = 'ON';
-    job.probe_z_gauge:= StrToFloatDef(Cells[1,17], 0);
+    job.probe_z_gauge:= get_AppDefaults_float(17);
 
-    job.invert_z:= Cells[1,18] = 'ON';
-    job.spindle_wait:= StrToIntDef(Cells[1,19], 3);
-    job.atc_enabled:= Cells[1,20] = 'ON';
-    job.atc_zero_x:= StrToFloatDef(Cells[1,21], 50);
-    job.atc_zero_y:= StrToFloatDef(Cells[1,22], 20);
-    job.atc_pickup_z:= StrToFloatDef(Cells[1,23], -20);
-    job.atc_delta_x:= StrToFloatDef(Cells[1,24], 20);
-    job.atc_delta_y:= StrToFloatDef(Cells[1,25], 0);
-    job.table_x:= StrToFloatDef(Cells[1,26],200);
-    job.table_y:= StrToFloatDef(Cells[1,27],200);
-    job.table_z:= StrToFloatDef(Cells[1,28],60);
+    job.invert_z:= get_AppDefaults_bool(18);
+    job.spindle_wait:= get_AppDefaults_int(19);
+    job.atc_enabled:= get_AppDefaults_bool(20);
+    job.atc_zero_x:= get_AppDefaults_float(21);
+    job.atc_zero_y:= get_AppDefaults_float(22);
+    job.atc_pickup_z:= get_AppDefaults_float(23);
+    job.atc_delta_x:= get_AppDefaults_float(24);
+    job.atc_delta_y:= get_AppDefaults_float(25);
+    job.table_x:= get_AppDefaults_float(26);
+    job.table_y:= get_AppDefaults_float(27);
+    job.table_z:= get_AppDefaults_float(28);
 
-    job.fix1_x:= StrToFloatDef(Cells[1,29],200);
-    job.fix1_y:= StrToFloatDef(Cells[1,30],200);
-    job.fix1_z:= StrToFloatDef(Cells[1,31],60);
-    job.fix2_x:= StrToFloatDef(Cells[1,32],200);
-    job.fix2_y:= StrToFloatDef(Cells[1,33],200);
-    job.fix2_z:= StrToFloatDef(Cells[1,34],60);
+    job.fix1_x:= get_AppDefaults_float(29);
+    job.fix1_y:= get_AppDefaults_float(30);
+    job.fix1_z:= get_AppDefaults_float(31);
+    job.fix2_x:= get_AppDefaults_float(32);
+    job.fix2_y:= get_AppDefaults_float(33);
+    job.fix2_z:= get_AppDefaults_float(34);
   end;
 end;
 

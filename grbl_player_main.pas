@@ -1,12 +1,14 @@
 unit grbl_player_main;
 // CNC-Steuerung für GRBL-JOG-Platine mit GRBL 0.8c/jog.2 Firmware
 // oder GRBL 0.9j mit DEFINE GRBL115
-{ $DEFINE GRBL_11}
+
+{$DEFINE GRBL_11}
+{$DEFINE FOUR_AXIS}
 
 {$IFDEF GRBL_11}
-  {.$EXTENSION 11.exe}
+//  {.$EXTENSION 11.exe}
 {$ELSE}
-  {.$EXTENSION 09.exe}
+//  {.$EXTENSION 09.exe}
 {$ENDIF}
 
 interface
@@ -520,9 +522,23 @@ type
     t_mstates = (none, idle, run, hold, alarm, zero);
     t_rstates = (s_reset, s_request, s_receive, s_sim);
     t_pstates = (s_notprobed, s_probed_manual, s_probed_contact);
+    T_machine_options = record   // Ausstattungsdetails
+      SPI: Boolean;
+      Display: Boolean;
+      Panel: Boolean;
+      Caxis: Boolean;
+      VariableSpindle: Boolean;
+      MistCoolant: Boolean;
+      HomingLock: Boolean;
+      DeviceAddressed: Boolean;
+      DeviceAddress: Integer;
+      HomingOrigin: Boolean;  // HOMING_FORCE_SET_ORIGIN set
+      SingleAxisHoming: Boolean;
+    end;
 
 
 var
+  MachineOptions:  T_machine_options;    // Ausstattungsdetails
   SendActive: Boolean = false;    // true bis GRBL-Sendeschleife beendet
 
   Form1: TForm1;
@@ -591,7 +607,7 @@ const
   c_zero_z = -25;
   c_numATCslots = 9;
 
-  SettingCodes_11: Array[0..35] of String[31] = (
+  SettingCodes_11_3: Array[0..35] of String[31] = (
     'Step pulse time',
     'Step idle delay',
     'Step pulse invert mask',
@@ -630,6 +646,49 @@ const
     '(none)'
     );
 
+  SettingCodes_11_4: Array[0..39] of String[31] = (
+    'Step pulse time',
+    'Step idle delay',
+    'Step pulse invert mask',
+    'Step direction invert mask',
+    'Invert step enable pin',
+    'Invert limit pins',
+    'Invert probe pin',
+    'Status report options',
+    'Junction deviation',
+    'Arc tolerance',
+    'Report in inches',
+    'Soft limits enable',
+    'Hard limits enable',
+    'Homing cycle enable',
+    'Homing direction invert mask',
+    'Homing locate feed rate',
+    'Homing search seek rate',
+    'Homing switch debounce delay',
+    'Homing switch pull-off distance',
+    'Maximum spindle speed',
+    'Minimum spindle speed',
+    'Laser-mode enable',
+    'X-axis travel resolution',
+    'Y-axis travel resolution',
+    'Z-axis travel resolution',
+    'C-axis travel resolution',
+    'X-axis maximum rate',
+    'Y-axis maximum rate',
+    'Z-axis maximum rate',
+    'C-axis maximum rate',
+    'X-axis acceleration',
+    'Y-axis acceleration',
+    'Z-axis acceleration',
+    'C-axis acceleration',
+    'X-axis maximum travel',
+    'Y-axis maximum travel',
+    'Z-axis maximum travel',
+    'C-axis maximum travel',
+    '(none)',
+    '(none)'
+    );
+
 implementation
 
 uses import_files, Clipper, About, bsearchtree, cam_view, gerber_import;
@@ -639,6 +698,7 @@ uses import_files, Clipper, About, bsearchtree, cam_view, gerber_import;
 // #############################################################################
 // #############################################################################
 {$I joypad.inc}
+{$I app_Defaults.inc}
 
 function isCancelled: Boolean;
 begin
@@ -1781,27 +1841,6 @@ begin
 end;
 
 // #############################################################################
-
-function get_AppDefaults_int(sg_row: Integer): Integer;
-begin
-  result:= 0;
-  with Form1.SgAppDefaults do begin
-    if RowCount < 44 then
-      exit;
-    result:= StrToIntDef(Cells[1,sg_row],0);
-  end;
-end;
-
-function get_AppDefaults_str(sg_row: Integer): String;
-begin
-  result:= '';
-  with Form1.SgAppDefaults do begin
-    if RowCount < 44 then
-      exit;
-    result:= Cells[1,sg_row];
-  end;
-end;
-
 function joy_get_swapped_z: Integer;
 begin
   result:= 0;

@@ -248,7 +248,7 @@ begin
   SendListToGrbl;
   grbl_moveZ(job.atc_pickup_z + 10, true);  // move Z down
   grbl_addStr('G4 P0'); // dwell
-  grbl_addStr(Form1.SgAppDefaults.cells[1,35]);  // Ausblasen
+  grbl_addStr(get_AppDefaults_str(35));  // Ausblasen
   SendListToGrbl;
   atcArray[atc_idx].isInSpindle:= false;
 //    atcArray[tool_idx].tool_pen:= tool_idx;
@@ -283,7 +283,7 @@ begin
   grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
   grbl_addStr('G4 P0'); // dwell
   SendListToGrbl;
-  grbl_addStr(Form1.SgAppDefaults.cells[1,36]);   // Tool aufnehmen
+  grbl_addStr(get_AppDefaults_str(36));   // Tool aufnehmen
   grbl_addStr('G4 P1'); // dwell
   grbl_moveZ(0, true);  // move Z up
   SendListToGrbl;

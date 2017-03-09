@@ -595,6 +595,8 @@ end;
 function grbl_checkResponse: Boolean;
 var my_str: AnsiString;
   i: Integer;
+  sl_options: TSTringList;
+
 begin
   ShowAliveState(s_alive_wait_timeout);
   my_str:= '';
@@ -610,10 +612,47 @@ begin
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Grbl Startup Message and Version Info:');
     grbl_sendStr('$I' + #13, false);
+    sl_options:= TStringList.Create;
+    with MachineOptions do begin
+      SPI:= false;
+      Display:= false;
+      Panel:= false;
+      Caxis:= false;
+      VariableSpindle:= false;
+      MistCoolant:= false;
+      HomingLock:= false;
+      DeviceAddressed:= false;
+      DeviceAddress:= 0;
+      HomingOrigin:= false;  // HOMING_FORCE_SET_ORIGIN
+      SingleAxisHoming:= false;
+    end;
     repeat
       my_str:= grbl_receiveStr(20);
-      if (length(my_Str) > 1) and (my_str <> '[Timeout]') then
+      if (length(my_Str) > 1) and (my_str <> '[Timeout]') then begin
         Form1.Memo1.lines.add(my_str);
+        // get Option list from GRBL 1.1
+        if AnsiContainsStr(my_str, 'OPT:') then begin
+          sl_options.CommaText:= StringReplace(my_str,':',',',[rfReplaceAll]);
+          if AnsiContainsStr(sl_options[1], 'H') then
+            MachineOptions.SingleAxisHoming:= true;
+          if AnsiContainsStr(sl_options[1], 'M') then
+            MachineOptions.MistCoolant:= true;
+          if AnsiContainsStr(sl_options[1], 'H') then
+            MachineOptions.SingleAxisHoming:= true;
+          if AnsiContainsStr(sl_options[1], 'Z') then //  HOMING_FORCE_SET_ORIGIN
+            MachineOptions.HomingOrigin:= true;
+          // parse GRBL compile options
+          for i:= 1 to sl_options.Count-1 do begin
+             if sl_options[i] =  'SPI_SR' then
+              MachineOptions.SPI:= true;
+             if sl_options[i] =  'SPI_DISP' then
+              MachineOptions.Display:= true;
+             if sl_options[i] =  'PANEL' then
+              MachineOptions.Panel:= true;
+          end;
+        end;
+      end;
+
     until my_Str = '[Timeout]';
     for i := 0 to 3 do begin
       my_str:= grbl_statusStr;
@@ -622,6 +661,7 @@ begin
       if MachineState <> none then
         break;
     end;
+    sl_options.Free;
 
     HomingPerformed:= false;
     case MachineState of

@@ -87,6 +87,7 @@ begin
   DeviceNr := 0;
   Range := 1000;
   DeadZone := 200;
+  Device.dwPOV:= $FFFF;
   Calibrate;
 end;
 

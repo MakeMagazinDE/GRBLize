@@ -134,6 +134,7 @@ end;
 // ########################## GRBL DEFAULT BUTTONS #############################
 // #############################################################################
 
+
 procedure TForm1.SgGrblSettingsDrawCell(Sender: TObject; ACol,
   ARow: Integer; Rect: TRect; State: TGridDrawState);
 begin
@@ -179,12 +180,16 @@ begin
           break;
         if pos('[',my_str) > 0 then
           continue;
-{$IFDEF GRBL_11}
-        my_str0:= copy(my_str, 0, pos('=', my_str));
-        Cells[0,RowCount-1]:= my_str0 + SettingCodes_11[RowCount-2];
-{$ELSE}
-        Cells[0,RowCount-1]:= my_str;
-{$ENDIF}
+        {$IFDEF GRBL_11}
+          my_str0:= copy(my_str, 0, pos('=', my_str));
+          {$IFDEF FOUR_AXIS}
+            Cells[0,RowCount-1]:= my_str0 + SettingCodes_11_4[RowCount-2];
+          {$ELSE}
+            Cells[0,RowCount-1]:= my_str0 + SettingCodes_11_3[RowCount-2];
+          {$ENDIF}
+         {$ELSE}
+          Cells[0,RowCount-1]:= my_str;
+        {$ENDIF}
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
         if pos('$130', my_str) > 0 then begin
           job.table_x:= StrDotToFloat(setting_val_extr(my_str));
@@ -255,34 +260,6 @@ begin
   ResetToolflags;
 end;
 
-procedure LoadStringGrid(aGrid: TStringGrid; const my_fileName: string);
-var
-  my_StringList, my_Line: TStringList;
-  aCol, aRow: Integer;
-begin
-  aGrid.RowCount := 2; //clear any previous data
-  my_StringList := TStringList.Create;
-  try
-    my_Line := TStringList.Create;
-    try
-      my_StringList.LoadFromFile(my_fileName);
-      aGrid.RowCount := my_StringList.Count;
-      for aRow := 0 to my_StringList.Count-1 do
-      begin
-        my_Line.CommaText := my_StringList[aRow];
-        for aCol := 0 to aGrid.ColCount-1 do
-          if aCol < my_Line.Count then
-            aGrid.Cells[aCol, aRow] := my_Line[aCol]
-          else
-            aGrid.Cells[aCol, aRow] := '0';
-      end;
-    finally
-      my_Line.Free;
-    end;
-  finally
-    my_StringList.Free;
-  end;
-end;
 
 procedure TForm1.BtnLoadGrblSetupClick(Sender: TObject);
 begin
