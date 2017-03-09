@@ -27,7 +27,8 @@ uses
   grbl_player_main in 'grbl_player_main.pas' {Form1},
   VFrames in 'VFrames.pas',
   gerber_import in 'gerber_import.pas' {FormGerber},
-  import_files in 'import_files.pas';
+  import_files in 'import_files.pas',
+  app_Defaults in 'app_Defaults.pas';
 
 {$R *.res}
 

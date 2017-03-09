@@ -20,7 +20,8 @@ uses
   Dialogs, Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
   VFrames, ExtDlgs, XPMan, CheckLst, drawing_window,
   glscene_view, GLColor, ValEdit, System.ImageList, System.Actions,
-  FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes;
+  FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes,
+  app_defaults;
 
 const
   c_ProgNameStr: String = 'GRBLize ';
@@ -697,8 +698,8 @@ uses import_files, Clipper, About, bsearchtree, cam_view, gerber_import;
 
 // #############################################################################
 // #############################################################################
+
 {$I joypad.inc}
-{$I app_Defaults.inc}
 
 function isCancelled: Boolean;
 begin
@@ -2833,6 +2834,7 @@ begin
   if isSimActive then
     exit;
   WaitForIdle;
+  get_AppDefaults_bool:=
   dx := 0;
   dy := 0;
   dz := 0;

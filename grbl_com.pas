@@ -8,7 +8,7 @@ interface
 
 //uses SysUtils, FTDIdll, FTDIchip, FTDItypes;
 uses SysUtils, StrUtils, DateUtils, Windows, Classes, Forms, Controls, Menus, MMsystem,
-  Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect;
+  Dialogs, StdCtrls, FTDIdll, FTDIchip, FTDItypes, import_files, Clipper, deviceselect, app_defaults;
 
 type
   TFileBuffer = Array of byte;
@@ -594,7 +594,7 @@ end;
 
 function grbl_checkResponse: Boolean;
 var my_str: AnsiString;
-  i: Integer;
+  i, my_btn: Integer;
   sl_options: TSTringList;
 
 begin
@@ -662,6 +662,14 @@ begin
         break;
     end;
     sl_options.Free;
+
+    if MachineOptions.HomingOrigin <> get_AppDefaults_bool(45) then begin
+      my_btn := MessageDlg('GRBL compile option HOMING_FORCE_SET_ORIGIN'
+      + #13 + 'detected. Should I set positive machine space in App Defaults? ',
+      mtConfirmation, mbYesNo, 0);
+
+    end;
+    // Positive Maschinenrichtung?
 
     HomingPerformed:= false;
     case MachineState of
