@@ -1,3 +1,23 @@
+// AppDefaults StringGrid Handler
+unit app_defaults;
+
+interface
+
+//uses SysUtils, FTDIdll, FTDIchip, FTDItypes;
+uses Classes, Grids;
+
+procedure LoadStringGrid(aGrid: TStringGrid; const my_fileName: string);
+function get_AppDefaults_float(sg_row: Integer): double;
+function get_AppDefaults_bool(sg_row: Integer): boolean;
+function get_AppDefaults_int(sg_row: Integer): Integer;
+function get_AppDefaults_str(sg_row: Integer): String;
+procedure set_AppDefaults_int(sg_row, new_val: Integer);
+
+implementation
+
+uses
+  grbl_com, grbl_player_main, SysUtils, StrUtils;
+
 // AppDefaults StringGrid
 
 procedure LoadStringGrid(aGrid: TStringGrid; const my_fileName: string);
@@ -64,3 +84,4 @@ begin
     Form1.SgAppDefaults.Cells[1,sg_row]:= IntToStr(new_val);
 end;
 
+end.
