@@ -102,7 +102,7 @@ function get_AppDefaults_bool(sg_row: Integer): boolean;
 begin
   result:= false;
   if sg_row < Form1.SgAppDefaults.RowCount then
-    result:= Form1.SgAppDefaults.Cells[1,18] = 'ON';
+    result:= Form1.SgAppDefaults.Cells[1,sg_row] = 'ON';
 end;
 
 function get_AppDefaults_int(sg_row: Integer): Integer;

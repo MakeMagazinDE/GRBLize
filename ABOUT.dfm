@@ -532,14 +532,14 @@ object AboutBox: TAboutBox
       Lines.Strings = (
         'HPGL/Excellon Converter/Viewer and G-Code Player'
         ''
-        'IMPORTANT: GRBL must be compiled with'
+        'IMPORTANT: If your machine uses positive machine space i.e.'
         ''
         '#define HOMING_FORCE_SET_ORIGIN'
         ''
         
-          'option enabled in config.h so machine workspace is always positi' +
-          've'
-        '(home position 0,0,0 on bottom left).'
+          'option is enabled in config.h, set "Positive Machine Space" to O' +
+          'N '
+        'in Application defaults. Otherwise, jog functions will not work.'
         ''
         'Written by Carsten Meyer, cm@ct.de '
         '(c) Heise Zeitschriften, c'#39't Hacks/Make 11/2014'

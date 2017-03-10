@@ -73,8 +73,8 @@ begin
     if isCancelled then
       SendSingleCommandStr('M5')  // Liste senden abgeschaltet!
     else begin
-      grbl_addstr('G4 P0');
-      grbl_addstr('M5');
+      grbl_sendlist.add('G4 P0');
+      grbl_sendlist.add('M5');
       SendListToGrbl;
     end;
     Form1.Memo1.lines.add('Spindle OFF, brake wait '+ IntToStr(job.spindle_wait div 2) + ' sec');
@@ -247,7 +247,7 @@ begin
   grbl_moveZ(0, true);
   grbl_moveXY(job.probe_x, job.probe_y, true);
   grbl_moveZ(job.probe_z, true);
-  grbl_addstr('G4 P0');
+  grbl_sendlist.add('G4 P0');
   SendListToGrbl;
   my_zval:= probe_z;
   if my_zval = 0 then
@@ -400,7 +400,7 @@ begin
         Memo1.lines.add('');
         Memo1.lines.add('Run path '+ IntToStr(p));
         Memo1.lines.add('=========================================');
-        grbl_addStr(BitChangeStr(my_entry));
+        grbl_sendlist.add(BitChangeStr(my_entry));
         if my_entry.shape = drillhole then
           grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
         else
@@ -650,7 +650,7 @@ begin
       end;
       LEDbusy.Checked:= true;
       Readln(my_ReadFile, my_line);
-      grbl_addStr(my_line);
+      grbl_sendlist.add(my_line);
       if grbl_sendlist.Count > 100 then
         SendListToGrbl;
     end;

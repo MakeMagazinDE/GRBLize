@@ -472,7 +472,6 @@ type
       property Buttons[index:integer]:boolean read GetButton;
   end;
 
-  function DecodeStatus(my_response: String): Boolean;
   procedure DisplayMachinePosition;
   procedure DisplayWorkPosition;
 
@@ -1591,7 +1590,7 @@ begin
         // ganzer Kreis
         my_str:= 'G2 X' + FloatToSTrDot(my_radius) + 'Y0' + 'I'
           + FloatToSTrDot(-my_radius) + 'J0';
-        grbl_addStr(my_str);
+        grbl_sendlist.add(my_str);
         if isCancelled then
           exit;  // "finally" wird trotzdem ausgeführt!
         SendListToGrbl;
@@ -1774,11 +1773,6 @@ end;
 
 // #############################################################################
 
-{$IFDEF GRBL_11}
-{$I decodestatus_11.inc}
-{$ELSE}
-{$I decodestatus_09.inc}
-{$ENDIF}
 
 
 procedure HandleZeroRequest;
@@ -1861,12 +1855,10 @@ const
 var
   i: integer;
   old_machine_state: t_mstates;
-{$IFDEF GRBL_11}
   btn_idx, feed, feed_old, z_temp: integer;
   feed_v: TIntPoint; // Feed-Vektor
   my_str, feed_str: String;
   fast_jog, jog_sent: boolean;
-{$ENDIF}
 
 begin
   try
@@ -1876,9 +1868,11 @@ begin
       exit;
     TimerStatus.Tag:= 1;
     grbl_rx_clear; // letzte Antwort verwerfen
-    grbl_sendRealTimeCmd('?');   // neuen Status anfordern
     old_machine_state:= MachineState;
-    DecodeStatus(grbl_receiveStr(25)); // muss eingetroffen sein
+    grbl_sendRealTimeCmd('?');   // neuen Status anfordern
+    TimerStatus.Enabled:= false;
+    DecodeStatus(grbl_receiveStr(100)); // muss eingetroffen sein
+    TimerStatus.Enabled:= true;
     if (MachineState = zero) then
       HandleZeroRequest;
     if (MachineState = alarm) and (old_machine_state <> alarm) then
@@ -1886,7 +1880,9 @@ begin
     if (MachineState = hold) and (old_machine_state <> hold) then
       Form1.Memo1.lines.add('HOLD state, press CONTINUE or click READY panel');
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
-{$I joypad_handling.inc}
+    if MachineOptions.NewGrblVersion then begin
+      {$I joypad_handling.inc}
+    end;
   finally
     TimerStatus.Tag:= 0;
   end;

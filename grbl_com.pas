@@ -15,6 +15,7 @@ type
    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
   procedure ExtractMessage(var my_str: AnsiString); // GRBL-Message in [] aufbereiten
+  function DecodeStatus(my_response: String): Boolean;
 
   procedure mdelay(const Milliseconds: DWord);
   procedure ShowAliveState(my_state: t_alivestates);
@@ -40,9 +41,6 @@ type
   function grbl_sendStr(sendStr: String; my_getok: boolean): String;
   function grbl_sendWithShortTimeout(my_cmd: String): String;
   procedure grbl_sendRealTimeCmd(my_cmd: char);
-
-  // GCode-String oder Char an GRBL senden, auf OK warten und Antwort in Memo-Feld eintragen
-  procedure grbl_addStr(my_str: String);
 
   // GCode-String von GRBL holen, ggf. Timeout-Zeit warten:
   // ggf. Application.ProcessMessages während Warten ausführen
@@ -147,7 +145,7 @@ var
 
 implementation
 
-uses grbl_player_main, glscene_view, Graphics;
+uses grbl_player_main, glscene_view, drawing_window, Graphics;
 
 // #############################################################################
 
@@ -607,6 +605,7 @@ function grbl_checkResponse: Boolean;
 var my_str: AnsiString;
   i, my_btn: Integer;
   sl_options: TSTringList;
+  realtime_request_ok: Boolean;
 
 begin
   ShowAliveState(s_alive_wait_timeout);
@@ -626,15 +625,9 @@ begin
         Form1.Memo1.lines.add(my_str);
       end;
     until my_Str = '[Timeout]';
-    for i := 0 to 3 do begin
-      my_str:= grbl_statusStr;
-      MachineState:= none;
-      DecodeStatus(my_str);
-      mdelay(20);
-      if MachineState <> none then
-        break;
-    end;
-    if MachineState <> none then begin
+    my_str:= grbl_statusStr;
+    realtime_request_ok:= AnsiContainsStr(my_str, '>');
+    if realtime_request_ok then begin
       grbl_SendRealTimeCmd(#$D0);  // Enable device #0
 
       grbl_SendStr('$I' + #13, false);
@@ -683,13 +676,20 @@ begin
 
     if MachineOptions.HomingOrigin <> get_AppDefaults_bool(45) then begin
     // Positive Maschinenrichtung?
-      my_btn := MessageDlg('GRBL compile option HOMING_FORCE_SET_ORIGIN'
-      + #13 + 'detected. Should I set positive machine space in App Defaults? ',
-      mtConfirmation, mbYesNo, 0);
-      if my_btn = mrYes then
-        ;
+      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+      Form1.Memo1.lines.add('');
+      Form1.Memo1.lines.add('WARNING: GRBL option HOMING_FORCE_SET_ORIGIN detected.');
+      Form1.Memo1.lines.add('Please set positive machine space in App Defaults,');
+      Form1.Memo1.lines.add('otherwise jog functions will not work properly.');
     end;
     HomingPerformed:= false;
+    MachineState:= none;
+    grbl_rx_clear;
+    grbl_wait_for_timeout(100);
+
+    my_str:= grbl_statusStr;
+    DecodeStatus(my_str);
+
     case MachineState of
       alarm:
         begin
@@ -741,15 +741,19 @@ begin
   ShowAliveState(s_alive_responded);
 end;
 
-procedure grbl_addStr(my_str: String);
-// Zeile an Sendeliste anhängen, wird in Timer2 behandelt
-begin
-  grbl_sendlist.add(my_str);
-end;
-
 // #############################################################################
 // Highlevel-Funktionen
 // #############################################################################
+
+{$I decodestatus_11.inc}
+{$I decodestatus_09.inc}
+function DecodeStatus(my_response: String): Boolean;
+begin
+  if MachineOptions.NewGrblVersion then
+    result:= DecodeStatus11(my_response)
+  else
+    result:= DecodeStatus09(my_response);
+end;
 
 procedure grbl_checkZ(var z: Double);
 // limits z to upper limit
@@ -776,14 +780,14 @@ end;
 procedure grbl_offsXY(x, y: Double);
 // GCode-String G92 x,y mit abschließendem CR an GRBL senden, auf OK warten
 begin
-  grbl_addStr('G92 X'+ FloatToSTrDot(x)+' Y'+ FloatToSTrDot(y));
+  grbl_sendlist.add('G92 X'+ FloatToSTrDot(x)+' Y'+ FloatToSTrDot(y));
 end;
 
 procedure grbl_offsZ(z: Double);
 // GCode-String G92 z mit abschließendem CR an GRBL senden, auf OK warten
 // Z mit Tool-Offset versehen
 begin
-  grbl_addStr('G92 Z'+ FloatToSTrDot(z));
+  grbl_sendlist.add('G92 Z'+ FloatToSTrDot(z));
 end;
 
 procedure grbl_moveXY(x, y: Double; is_abs: Boolean);
@@ -799,7 +803,7 @@ begin
     grbl_oldy:= y;
   end;
   my_str:= my_str + FloatToSTrDot(x) + ' Y' + FloatToSTrDot(y);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
 end;
 
 procedure grbl_moveZ(z: Double; is_abs: Boolean);
@@ -814,7 +818,7 @@ begin
     grbl_oldz:= z;
   end;
   my_str:= my_str + FloatToSTrDot(z);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
 end;
 
 procedure grbl_moveslowZ(z: Double; is_abs: Boolean);
@@ -830,7 +834,7 @@ begin
   end;
   my_str:= my_str + FloatToSTrDot(z) + ' F250';
   grbl_oldf:= 250;
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
 end;
 
 procedure grbl_millXYF(x, y: Double; f: Integer);
@@ -842,7 +846,7 @@ begin
   my_str:= 'G1 X'+ FloatToSTrDot(x)+' Y'+ FloatToSTrDot(y);
   if f <> grbl_oldf then
     my_str:= my_str + ' F' + IntToStr(f);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
   grbl_oldf:= f;
   grbl_oldx:= x;
   grbl_oldy:= y;
@@ -859,7 +863,7 @@ begin
     my_str:= my_str + ' X'+ FloatToSTrDot(x);
   if y <> grbl_oldy then
     my_str:= my_str + ' Y'+ FloatToSTrDot(y);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
   grbl_oldx:= x;
   grbl_oldy:= y;
 end;
@@ -871,7 +875,7 @@ var my_str: String;
 begin
   grbl_checkZ(z);
   my_str:= 'G1 Z'+ FloatToSTrDot(z) + ' F' + IntToStr(f);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
   grbl_oldf:= f;
   grbl_oldz:= z;
 end;
@@ -882,7 +886,7 @@ var my_str: String;
 begin
   grbl_checkZ(z);
   my_str:= 'G1 Z'+ FloatToSTrDot(z);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
   grbl_oldz:= z;
 end;
 
@@ -896,7 +900,7 @@ begin
   my_str:= 'G1 X' + FloatToSTrDot(x) +' Y'+ FloatToSTrDot(y) +' Z' + FloatToSTrDot(z);
   if f <> grbl_oldf then
     my_str:= my_str + ' F' + IntToStr(f);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
   grbl_oldf:= f;
   grbl_oldx:= x;
   grbl_oldy:= y;
@@ -917,7 +921,7 @@ begin
     my_str:= my_str + ' Y'+ FloatToSTrDot(y);
   if z <> grbl_oldz then
     my_str:= my_str + ' Z'+ FloatToSTrDot(z);
-  grbl_addStr(my_str);
+  grbl_sendlist.add(my_str);
   grbl_oldx:= x;
   grbl_oldy:= y;
   grbl_oldz:= z;

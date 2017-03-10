@@ -1,6 +1,6 @@
 // Version für GRBL 1.1
 
-function DecodeStatus(my_response: String): Boolean;
+function DecodeStatus11(my_response: String): Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
 // setzt pos_changed wenn sich Position änderte
 
@@ -41,7 +41,7 @@ begin
     sl_fields:= TStringList.Create;
     sl_values:= TStringList.Create;
     if (my_response[1] = '<') then begin
-       my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
+      my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
     end else begin

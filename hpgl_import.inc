@@ -207,7 +207,7 @@ begin
 end;
 
 // #############################################################################
-// SVG Import, contributed by Jochen Kaiser
+// SVG Import, contributed by Frank Kaiser
 // #############################################################################
 
 type                                      // 2D-Punkt mit zusätzlichem Parameter
@@ -357,7 +357,7 @@ begin
     ScaleX   := 1;
     ScaleY   := 1;
     filled   := false;                                             // nur Kontur
-    pen      := MAXINT;                             // Stift muss gesetzt werden
+    pen      := 1;                             // Stift muss gesetzt werden
     F        := MAXINT;                       // ID für Pfad muss gesetzt werden
     Hmm      := MAXDOUBLE;             // Seitenhöhe in [mm] muss gesetzt werden
     Hpx      := MAXDOUBLE;             // Seitenhöhe in [px] muss gesetzt werden

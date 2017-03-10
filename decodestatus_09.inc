@@ -1,6 +1,6 @@
 // Version für GRBL 0.9j und 0.9ks
 
-function DecodeStatus(my_response: String): Boolean;
+function DecodeStatus09(my_response: String): Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
 // setzt pos_changed wenn sich Position änderte
 
