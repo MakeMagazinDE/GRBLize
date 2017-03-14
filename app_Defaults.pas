@@ -17,8 +17,9 @@ type
     HomingLock: Boolean;
     DeviceAddressed: Boolean;
     DeviceAddress: Integer;
-    HomingOrigin: Boolean;  // HOMING_FORCE_SET_ORIGIN set
     SingleAxisHoming: Boolean;
+    HomingOrigin: Boolean;  // HOMING_FORCE_SET_ORIGIN set
+    PositiveSpace: Boolean; // derived from AppDefaults Table
   end;
 
 
@@ -56,6 +57,7 @@ begin
     HomingOrigin:= false;  // HOMING_FORCE_SET_ORIGIN
     SingleAxisHoming:= false;
     NewGrblVersion:= false;
+    MachineOptions.PositiveSpace:= get_AppDefaults_bool(45);
   end;
 end;
 
@@ -88,6 +90,7 @@ begin
   finally
     my_StringList.Free;
   end;
+  MachineOptions.PositiveSpace:= get_AppDefaults_bool(45);
 end;
 
 

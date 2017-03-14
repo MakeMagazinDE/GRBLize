@@ -470,7 +470,7 @@ begin
     Memo1.lines.add('Blocks done.');
     WaitForIdle;
 // grbl_millpath und grbl_drillpath enden mit job.z_penup, deshalb:
-    SendSingleCommandStr('G0 G53 Z0'); // move Z up
+    SendSingleCommandStr('G0 G53 Z-1'); // move Z up
     spindle_on_off(false);
 
     if CheckEndPark.Checked then
@@ -566,7 +566,7 @@ begin
       if (not isCancelled) and CheckToolChange.checked then begin
 // Werkzeugwechel
         spindle_on_off(false);
-        SendSingleCommandStr('G0 G53 Z0'); // move Z up
+        SendSingleCommandStr('G0 G53 Z-1'); // move Z up
         GLSclearPathNodes;
         if CheckUseATC2.checked then begin
 // automatischer Werkzeugwechsel, zum Ende erstes Werkzeug wiederaufnehmen
@@ -592,7 +592,7 @@ begin
     Memo1.lines.add('Blocks done.');
     WaitForIdle;
 // grbl_millpath und grbl_drillpath enden mit job.z_penup, deshalb:
-    SendSingleCommandStr('G0 G53 Z0'); // move Z up
+    SendSingleCommandStr('G0 G53 Z-1'); // move Z up
     spindle_on_off(false);
 
     if CheckEndPark.Checked then
@@ -657,7 +657,7 @@ begin
     CloseFile(my_ReadFile);
     SendListToGrbl;
     WaitForIdle;
-    SendSingleCommandStr('G0 G53 Z0'); // move Z up
+    SendSingleCommandStr('G0 G53 Z-1'); // move Z up
     spindle_on_off(false);
 
     if not isCancelled then begin

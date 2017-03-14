@@ -181,15 +181,15 @@ begin
           break;
         if pos('[',my_str) > 0 then
           continue;
-        {$IFDEF GRBL_11}
+        if MachineOptions.NewGrblVersion then begin
+
           my_str0:= copy(my_str, 0, pos('=', my_str));
           if MachineOptions.Caxis then
             Cells[0,RowCount-1]:= my_str0 + SettingCodes_11_4[RowCount-2]
           else
             Cells[0,RowCount-1]:= my_str0 + SettingCodes_11_3[RowCount-2];
-        {$ELSE}
+        end else
           Cells[0,RowCount-1]:= my_str;
-        {$ENDIF}
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
         if pos('$130', my_str) > 0 then begin
           job.table_x:= StrDotToFloat(setting_val_extr(my_str));

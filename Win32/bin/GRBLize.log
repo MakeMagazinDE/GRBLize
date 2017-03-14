@@ -2,15 +2,13 @@
 0	 (i)  Logging [debug info (D), info (i), notices (M), warnings (W), errors (Er), fatal errors (!!)]
 0	 (i)  Buffered mode: False
 0	 (i)  Temporary rendering context created
-16	 (M)  Getting OpenGL entry points and extension
-16	 (M)  
-16	 (i)  OpenGL rendering context information:
-16	 (i)  Renderer     : ATI Radeon HD 3870
-16	 (i)  Vendor       : ATI Technologies Inc.
-16	 (i)  Version      : 3.3.11672 Compatibility Profile Context
-31	 (i)  GLSL version : 3.30
-31	 (M)  
-109	 (i)  Temporary rendering context destroyed
-641	 (M)  Getting OpenGL entry points and extension
-49172	 (i)  Logged fatal_errors: 0, errors: 0, warnings: 0, notices: 4, info: 10, debug: 0
-49172	 (i)  Log session shutdown
+15	 (M)  Getting OpenGL entry points and extension
+15	 (M)  
+31	 (i)  OpenGL rendering context information:
+31	 (i)  Renderer     : ATI Radeon HD 3870
+31	 (i)  Vendor       : ATI Technologies Inc.
+31	 (i)  Version      : 3.3.11672 Compatibility Profile Context
+47	 (i)  GLSL version : 3.30
+47	 (M)  
+125	 (i)  Temporary rendering context destroyed
+734	 (M)  Getting OpenGL entry points and extension

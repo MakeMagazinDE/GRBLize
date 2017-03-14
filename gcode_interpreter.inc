@@ -195,7 +195,7 @@ begin
     if is_offset then begin
       grbl_wpos.x:= x;
     end else if is_absolute then
-      grbl_wpos.x:= x - WorkZeroX
+      grbl_wpos.x:= x - WorkZero.X
     else
       grbl_wpos.x:= x;
   end;
@@ -206,7 +206,7 @@ begin
     if is_offset then begin
       grbl_wpos.y:= y;
     end else if is_absolute then
-      grbl_wpos.y:= y - WorkZeroY
+      grbl_wpos.y:= y - WorkZero.Y
     else
       grbl_wpos.y:= y;
   end;
@@ -217,7 +217,7 @@ begin
     if is_offset then begin
       grbl_wpos.z:= z;
     end else if is_absolute then
-      grbl_wpos.z:= z - WorkZeroZ
+      grbl_wpos.z:= z - WorkZero.Z
     else
       grbl_wpos.z:= z;
   end;
@@ -232,9 +232,9 @@ begin
   gcsim_x_old:= grbl_wpos.x;
   gcsim_y_old:= grbl_wpos.y;
   gcsim_z_old:= grbl_wpos.z;
-  grbl_mpos.x:= grbl_wpos.x + WorkZeroX;
-  grbl_mpos.y:= grbl_wpos.y + WorkZeroy;
-  grbl_mpos.z:= grbl_wpos.z + WorkZeroZ;
+  grbl_mpos.x:= grbl_wpos.x + WorkZero.X;
+  grbl_mpos.y:= grbl_wpos.y + WorkZero.y;
+  grbl_mpos.z:= grbl_wpos.z + WorkZero.Z;
 end;
 
 

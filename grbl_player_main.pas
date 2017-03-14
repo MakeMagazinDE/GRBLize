@@ -14,24 +14,13 @@ uses
   FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes,
   app_defaults;
 
-{$DEFINE GRBL_11}
-
-{$IFDEF GRBL_11}
-//  {.$EXTENSION 11.exe}
-{$ELSE}
-//  {.$EXTENSION 09.exe}
-{$ENDIF}
 
 const
   c_ProgNameStr: String = 'GRBLize ';
   c_VerStr: String = '1.5d';
   c_unloadATCstr: String = 'M8';
   c_loadATCstr: String = 'M9';
-{$IFDEF GRBL_11}
-  c_Grbl_VerStr: String = 'for GRBL 1.1 ';
-{$ELSE}
-  c_Grbl_VerStr: String = 'for GRBL 0.9 ';
-{$ENDIF}
+  c_Grbl_VerStr: String = 'for GRBL 0.9 and 1.1 ';
 
 type
   TPOVControl = record   // Joystick control
@@ -286,6 +275,13 @@ type
     PanelPinState: TPanel;
     LabelStatusFaults: TLabel;
     LabelResponse: TLabel;
+    MposC: TLabel;
+    PosC: TLabel;
+    BtnZeroC: TSpeedButton;
+    Label39: TLabel;
+    Label40: TLabel;
+    Label41: TLabel;
+    Label42: TLabel;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -417,6 +413,7 @@ type
     procedure SgFilesExit(Sender: TObject);
     procedure SgFilesClick(Sender: TObject);
     procedure BtnReloadAllClick(Sender: TObject);
+    procedure BtnZeroCClick(Sender: TObject);
 
 
   private
@@ -517,6 +514,7 @@ type
       X: Double;
       Y: Double;
       Z: Double;
+      C: Double;
     end;
     t_mstates = (none, idle, run, hold, alarm, zero);
     t_rstates = (s_reset, s_request, s_receive, s_sim);
@@ -536,17 +534,16 @@ var
   JobSettingsPath: String;
 
   grbl_mpos, grbl_wpos, old_grbl_wpos, grbl_wco: T3dFloat;
+  Jog, WorkZero:T3dFloat;  // Absolutwerte Werkstück-Null
   grbl_feed_ov, grbl_seek_ov, grbl_speed_ov: Integer;
   grbl_feed, grbl_speed: Integer;
   MouseJogAction: Boolean;
   open_request, ftdi_was_open, com_was_open: boolean;
-  WorkZeroX, WorkZeroY, WorkZeroZ: Double;  // Absolutwerte Werkstück-Null
-  JogX, JogY, JogZ: Double;  // Absolutwerte Jogpad
   HomingPerformed: Boolean;
 
   MposOnFixedProbe, MposOnPartGauge: Double;
   MposOnFixedProbeReference: Double;
-  WorkZeroXdone, WorkZeroYdone, WorkZeroZdone, WorkZeroAllDone: Boolean;
+  WorkZeroXdone, WorkZeroYdone, WorkZeroZdone, WorkZeroCdone, WorkZeroAllDone: Boolean;
 //  ProbedState: t_pstates;
 
   LastToolUsed: Integer = 1;  // Zuletzt Benutztes Tool im Job, 0 = unused
@@ -736,6 +733,7 @@ begin
     MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
     MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
     MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
+    MPosC.Caption:= FormatFloat('000.0', grbl_mpos.c);
   end;
 end;
 
@@ -745,6 +743,7 @@ begin
     PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
     PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
     PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+    PosC.Caption:= FormatFloat('000.0', grbl_wpos.c);
   end;
 end;
 
@@ -925,22 +924,26 @@ begin
   grbl_mpos.x:= c_zero_x;
   grbl_mpos.y:= c_zero_y;
   grbl_mpos.z:= c_zero_z;
+  grbl_mpos.c:= 0;
   grbl_wpos.x:= 0;
   grbl_wpos.y:= 0;
   grbl_wpos.z:= job.z_gauge;
-  WorkZeroX:= grbl_mpos.x - grbl_wpos.x;
-  WorkZeroY:= grbl_mpos.y - grbl_wpos.y;
-  WorkZeroZ:= grbl_mpos.z - grbl_wpos.z;
+  grbl_wpos.c:= 0;
+  WorkZero.X:= grbl_mpos.x - grbl_wpos.x;
+  WorkZero.Y:= grbl_mpos.y - grbl_wpos.y;
+  WorkZero.Z:= grbl_mpos.z - grbl_wpos.z;
   with Form1 do begin
     MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
     MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
     MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
+    MPosC.Caption:= FormatFloat('000.0', grbl_mpos.z);
     PosX.Caption:=  FormatFloat('000.00', grbl_wpos.x);
     PosY.Caption:=  FormatFloat('000.00', grbl_wpos.y);
     PosZ.Caption:=  FormatFloat('000.00', grbl_wpos.z);
-    LabelWorkX.Caption:= FormatFloat('000.00', WorkZeroX);
-    LabelWorkY.Caption:= FormatFloat('000.00', WorkZeroY);
-    LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
+    PosC.Caption:=  FormatFloat('000.0', grbl_wpos.z);
+    LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X);
+    LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y);
+    LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z);
   end;
   InvalidateTLCs;
   UpdateATC;
@@ -964,12 +967,12 @@ begin
   gcsim_x_old:= grbl_wpos.x;
   gcsim_y_old:= grbl_wpos.y;
   gcsim_z_old:= grbl_wpos.z;
-  WorkZeroX:= grbl_mpos.x - grbl_wpos.x;
-  WorkZeroY:= grbl_mpos.y - grbl_wpos.y;
-  WorkZeroZ:= grbl_mpos.z - grbl_wpos.z;
-  JogX:= grbl_wpos.x;
-  JogY:= grbl_wpos.y;
-  JogZ:= grbl_wpos.z;
+  WorkZero.X:= grbl_mpos.x - grbl_wpos.x;
+  WorkZero.Y:= grbl_mpos.y - grbl_wpos.y;
+  WorkZero.Z:= grbl_mpos.z - grbl_wpos.z;
+  Jog.X:= grbl_wpos.x;
+  Jog.Y:= grbl_wpos.y;
+  Jog.Z:= grbl_wpos.z;
   ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
   GLSspindle_on_off(false);
   GLSneedsRedrawTimeout:= 0;
@@ -1017,12 +1020,9 @@ begin
   StartupDone:= false;
   Show;
   Memo1.lines.Clear;
-{$IFDEF GRBL_11}
-  Memo1.lines.add('GRBLize for GRBL 1.1');
+  Memo1.lines.add(c_ProgNameStr + c_VerStr);
   Memo1.lines.add('with joystick/gamepad support');
-{$ELSE}
-  Memo1.lines.add('GRBLize for GRBL 0.9');
-{$ENDIF}
+  Memo1.lines.add('for GRBL 1.1');
   StopWatch:= TStopWatch.Create() ;
   Width:= Constraints.MaxWidth;
   grbl_sendlist:= TStringList.create;
@@ -1743,9 +1743,9 @@ begin
 
   // weniger aktuelle Sachen updaten
   if TimerBlinkToggle then begin
-    LabelWorkX.Caption:= FormatFloat('000.00', WorkZeroX);
-    LabelWorkY.Caption:= FormatFloat('000.00', WorkZeroY);
-    LabelWorkZ.Caption:= FormatFloat('000.00', WorkZeroZ);
+    LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X);
+    LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y);
+    LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z);
   end else begin
     LabelTableX.Caption:= FormatFloat('000.00', job.table_x);
     LabelTableY.Caption:= FormatFloat('000.00', job.table_y);
@@ -1785,16 +1785,17 @@ begin
     TimerStatus.Enabled:= false;
     grbl_wait_for_timeout(50);
     grbl_rx_clear;
-    WorkZeroX:= grbl_mpos.x;
-    WorkZeroY:= grbl_mpos.y;
-    WorkZeroZ:= grbl_mpos.Z - job.z_gauge;
+    WorkZero.X:= grbl_mpos.x;
+    WorkZero.Y:= grbl_mpos.y;
+    WorkZero.Z:= grbl_mpos.Z - job.z_gauge;
 
-    JogX:= WorkZeroX;
-    JogY:= WorkZeroY;
-    JogZ:= WorkZeroZ;
+    Jog.X:= WorkZero.X;
+    Jog.Y:= WorkZero.Y;
+    Jog.Z:= WorkZero.Z;
+    Jog.C:= WorkZero.C;
 
     MposOnPartGauge:= grbl_mpos.Z;
-    WorkZeroZ:= MposOnPartGauge - job.z_gauge;
+    WorkZero.Z:= MposOnPartGauge - job.z_gauge;
 
     Memo1.lines.add('Zero request from machine panel, will set X, Y to zero');
     Memo1.lines.add('and Z to Z gauge height from Job Defaults');
@@ -1872,7 +1873,6 @@ begin
     grbl_sendRealTimeCmd('?');   // neuen Status anfordern
     TimerStatus.Enabled:= false;
     DecodeStatus(grbl_receiveStr(100)); // muss eingetroffen sein
-    TimerStatus.Enabled:= true;
     if (MachineState = zero) then
       HandleZeroRequest;
     if (MachineState = alarm) and (old_machine_state <> alarm) then
@@ -1883,6 +1883,7 @@ begin
     if MachineOptions.NewGrblVersion then begin
       {$I joypad_handling.inc}
     end;
+    TimerStatus.Enabled:= true;
   finally
     TimerStatus.Tag:= 0;
   end;
@@ -2057,12 +2058,12 @@ begin
     grbl_sendStr('$X' + #13, false);   // Unlock
     grbl_wait_for_timeout(100);
     Memo1.lines.add('Move Z up, restore Offsets');
-    grbl_sendStr('G0 G53 Z0' + #13, true);   // Move up
+    grbl_sendStr('G0 G53 Z-1' + #13, true);  // Move Z up
     grbl_sendStr('G4 P1' + #13, true);       // Dwell/Pause
     Memo1.lines.add('');
-    grbl_sendStr('G92 Z'+FloatToStrDot(-WorkZeroZ) + #13, true); // wir sind auf 0
-    grbl_sendStr('G92 X'+ FloatToSTrDot(grbl_mpos.X - WorkZeroX)
-      +' Y'+ FloatToSTrDot(grbl_mpos.Y - WorkZeroY) + #13, true);
+    grbl_sendStr('G92 Z'+FloatToStrDot(-WorkZero.Z) + #13, true); // wir sind auf 0
+    grbl_sendStr('G92 X'+ FloatToSTrDot(grbl_mpos.X - WorkZero.X)
+      +' Y'+ FloatToSTrDot(grbl_mpos.Y - WorkZero.Y) + #13, true);
     Memo1.lines.add('Done.');
     repeat
       Application.processmessages;
@@ -2415,9 +2416,10 @@ begin
     spindle_on_off(false);
     ResetToolflags;
     DisableStatus;
-    my_response:= ansiuppercase(grbl_sendStr('$h'+#13, true));
+    grbl_wait_for_timeout(200);
+    my_response:= grbl_sendStr('$h'+#13, true);
     Memo1.lines.add(my_response);
-    if my_response <> 'OK' then begin
+    if my_response <> 'ok' then begin
       Memo1.lines.add('WARNING: Home Cycle failed - do not rely on machine position!');
       MessageDlg('Home Cycle failed. ALARM LOCK cleared,'
         + #13 + 'but do not rely on machine position.', mtWarning, [mbOK], 0);
@@ -2555,8 +2557,8 @@ begin
   drawing_tool_down:= false;
   WorkZeroXdone:= true;
   SendSingleCommandStr('G92 X0');
-  WorkZeroX:= grbl_mpos.X;
-  JogX:= WorkZeroX;
+  WorkZero.X:= grbl_mpos.X;
+  Jog.X:= WorkZero.X;
   NeedsRedraw:= true;
 end;
 
@@ -2568,8 +2570,8 @@ begin
   drawing_tool_down:= false;
   WorkZeroYdone:= true;
   SendSingleCommandStr('G92 Y0');
-  WorkZeroY:= grbl_mpos.Y;
-  JogY:= WorkZeroY;
+  WorkZero.Y:= grbl_mpos.Y;
+  Jog.Y:= WorkZero.Y;
   NeedsRedraw:= true;
 end;
 
@@ -2581,9 +2583,9 @@ begin
   Memo1.lines.add('Manual Work/part Z zero, will set Z to ');
   Memo1.lines.add('Z Gauge value ' + FormatFloat('00.00', job.z_gauge) + ' mm above part');
   MposOnPartGauge:= grbl_mpos.Z;
-  WorkZeroZ:= MposOnPartGauge - job.z_gauge;
+  WorkZero.Z:= MposOnPartGauge - job.z_gauge;
   WorkZeroZdone:= true;
-  JogZ:= WorkZeroZ;
+  Jog.Z:= WorkZero.Z;
   if isSimActive then
     ResetSimulation;
   InvalidateTLCs;
@@ -2603,6 +2605,19 @@ begin
   BtnZeroXClick(Sender);
   BtnZeroYClick(Sender);
   BtnZeroZClick(Sender);
+end;
+
+procedure TForm1.BtnZeroCClick(Sender: TObject);
+begin
+  WaitForIdle;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('Manual Work/part C zero');
+  drawing_tool_down:= false;
+  WorkZeroYdone:= true;
+  SendSingleCommandStr('G92 C0');
+  WorkZero.C:= grbl_mpos.C;
+  Jog.C:= WorkZero.C;
+  NeedsRedraw:= true;
 end;
 
 // #############################################################################
@@ -2636,12 +2651,12 @@ begin
       PlaySound('SYSTEMHAND', 0, SND_ASYNC);
     end else begin
       WorkZeroZdone:= true;
-      WorkZeroZ:= MposOnPartGauge - job.probe_z_gauge;
-      JogZ:= WorkZeroZ;
+      WorkZero.Z:= MposOnPartGauge - job.probe_z_gauge;
+      Jog.Z:= WorkZero.Z;
       DisableStatus;
       SendReceiveAndDwell('G0 G53 Z0' + #13);  // Ganz oben
       // WorkZero ist negativ. Wird sind um -Workzero über dem Werkstück
-      grbl_SendStr('G92 Z'+FloatToStrDot(-WorkZeroZ) + #13, true);
+      grbl_SendStr('G92 Z'+FloatToStrDot(-WorkZero.Z) + #13, true);
       EnableStatus;
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
 {
@@ -2837,74 +2852,79 @@ begin
     24: dz:= -1;
     25: dz:= -10;
   end;
-{$IFDEF GRBL_11}
-  if (abs(dx)>5) or (abs(dy)>5) or (abs(dz)>5) then
-    f:= get_AppDefaults_int(37) // JogSpeed Fast
-  else
-    if (abs(dx)>0.5) or (abs(dy)>0.5) or (abs(dz)>0.5) then
-      f:= get_AppDefaults_int(38) // JogSpeed Slow
+
+  if MachineOptions.NewGrblVersion then begin
+    if (abs(dx)>5) or (abs(dy)>5) or (abs(dz)>5) then
+      f:= get_AppDefaults_int(37) // JogSpeed Fast
     else
-      f:= get_AppDefaults_int(38) div 5;
+      if (abs(dx)>0.5) or (abs(dy)>0.5) or (abs(dz)>0.5) then
+        f:= get_AppDefaults_int(38) // JogSpeed Slow
+      else
+        f:= get_AppDefaults_int(38) div 5;
 
-  if get_AppDefaults_bool(45) then begin // Positive Machine Space
-    if dx > 0 then
-      SendSingleCommandStr('$J=G53 X' + FloatToStrDot(job.table_x) + 'F'+ IntToStr(f));
-    if dx < 0 then
-      SendSingleCommandStr('$J=G53 X1 F'+ IntToStr(f));
+    if get_AppDefaults_bool(45) then begin
+    // Positive Machine Space (XY)
+      if dx > 0 then
+        SendSingleCommandStr('$J=G53 X' + FloatToStrDot(job.table_x) + 'F'+ IntToStr(f));
+      if dx < 0 then
+        SendSingleCommandStr('$J=G53 X1 F'+ IntToStr(f));
 
-    if dy > 0 then
-      SendSingleCommandStr('$J=G53 Y' + FloatToStrDot(job.table_y) + 'F'+ IntToStr(f));
-    if dy < 0 then
-      SendSingleCommandStr('$J=G53 Y1 F'+ IntToStr(f));
+      if dy > 0 then
+        SendSingleCommandStr('$J=G53 Y' + FloatToStrDot(job.table_y) + 'F'+ IntToStr(f));
+      if dy < 0 then
+        SendSingleCommandStr('$J=G53 Y1 F'+ IntToStr(f));
 
-    if dz > 0 then
-      SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
-    if dz < 0 then
-      SendSingleCommandStr('$J=G53 Z-' + FloatToStrDot(job.table_z) + 'F'+ IntToStr(f div 3));
+      if dz > 0 then // Move Z up
+        SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
+      if dz < 0 then
+        SendSingleCommandStr('$J=G53 Z' + FloatToStrDot(-job.table_z) + 'F'+ IntToStr(f div 3));
+
+    end else begin
+    // Standard CNC: Negative machine space (XYZ)
+      if dx > 0 then
+        SendSingleCommandStr('$J=G53 X-1 F'+ IntToStr(f));
+      if dx < 0 then
+        SendSingleCommandStr('$J=G53 X' + FloatToStrDot(1-job.table_x) + 'F'+ IntToStr(f));
+
+      if dy > 0 then
+        SendSingleCommandStr('$J=G53 Y-1 F'+ IntToStr(f));
+      if dy < 0 then
+        SendSingleCommandStr('$J=G53 Y' + FloatToStrDot(1-job.table_y) + 'F'+ IntToStr(f));
+
+      if dz > 0 then // Move Z up
+        SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
+      if dz < 0 then
+        SendSingleCommandStr('$J=G53 Z' + FloatToStrDot(1-job.table_z) + 'F'+ IntToStr(f div 3));
+    end;
+
+    while GetAsyncKeyState(VK_LBUTTON) < 0 do begin
+      Application.ProcessMessages;
+      sleep(5);
+    end;
+    grbl_sendRealTimeCmd(#$85);   // Jog Cancel
+    sleep(10);
+    grbl_sendRealTimeCmd(#$85);   // Jog Cancel
   end else begin
-    if dx > 0 then
-      SendSingleCommandStr('$J=G53 X-1 F'+ IntToStr(f));
-    if dx < 0 then
-      SendSingleCommandStr('$J=G53 X-' + FloatToStrDot(job.table_x) + 'F'+ IntToStr(f));
-
-    if dy > 0 then
-      SendSingleCommandStr('$J=G53 Y-' + FloatToStrDot(job.table_y) + 'F'+ IntToStr(f));
-    if dy < 0 then
-      SendSingleCommandStr('$J=G53 Y-1 F'+ IntToStr(f));
-
-    if dz > 0 then
-      SendSingleCommandStr('$J=G53 Z-' + FloatToStrDot(job.table_z) + 'F'+ IntToStr(f div 3));
-    if dz < 0 then
-      SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
+    //my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
+    first_loop_done:= false;
+    repeat
+      Jog.X:= grbl_mpos.X + dx;
+      Jog.Y:= grbl_mpos.Y + dy;
+      Jog.Z:= grbl_mpos.Z + dz;
+      if dx <> 0 then
+        SendSingleCommandStr('G0 G53 X' + FloatToStrDot(Jog.X));
+      if dy <> 0 then
+        SendSingleCommandStr('G0 G53 Y' + FloatToStrDot(Jog.Y));
+      if dz <> 0 then
+        SendSingleCommandStr('G0 G53 Z' + FloatToStrDot(Jog.Z));
+      if not first_loop_done then
+        mdelay(300)
+      else
+        mdelay(100);
+      first_loop_done:= true;
+    until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
   end;
-  while GetAsyncKeyState(VK_LBUTTON) < 0 do begin
-    Application.ProcessMessages;
-    sleep(25);
-  end;
-  grbl_sendRealTimeCmd(#$85);   // Jog Cancel
-
-{$ELSE}
-  //my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
-  first_loop_done:= false;
-  repeat
-    JogX:= grbl_mpos.X + dx;
-    JogY:= grbl_mpos.Y + dy;
-    JogZ:= grbl_mpos.Z + dz;
-    if dx <> 0 then
-      SendSingleCommandStr('G0 G53 X' + FloatToStrDot(JogX));
-    if dy <> 0 then
-      SendSingleCommandStr('G0 G53 Y' + FloatToStrDot(JogY));
-    if dz <> 0 then
-      SendSingleCommandStr('G0 G53 Z' + FloatToStrDot(JogZ));
-    if not first_loop_done then
-      mdelay(300)
-    else
-      mdelay(100);
-    first_loop_done:= true;
-  until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
   NeedsRedraw:= true;
-{$ENDIF}
-
 end;
 
 end.

@@ -1222,10 +1222,10 @@ begin
   grbl_offsXY(0, 0);
   SendListToGrbl;
 
-  WorkZeroX:= grbl_mpos.X;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y;
-  JogY:= WorkZeroY;
+  WorkZero.X:= grbl_mpos.X;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y;
+  Jog.Y:= WorkZero.Y;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;
@@ -1242,10 +1242,10 @@ begin
   grbl_offsXY(x, y);
   SendListToGrbl;
 
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
+  WorkZero.X:= grbl_mpos.X - x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y - y;
+  Jog.Y:= WorkZero.Y;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;
@@ -1262,10 +1262,10 @@ begin
   grbl_offsXY(x, y);
   SendListToGrbl;
 
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
+  WorkZero.X:= grbl_mpos.X - x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y - y;
+  Jog.Y:= WorkZero.Y;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;
@@ -1282,10 +1282,10 @@ begin
   grbl_offsXY(-job.cam_x, -job.cam_y);
   SendListToGrbl;
 
-  WorkZeroX:= grbl_mpos.X + job.cam_x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y + job.cam_x;
-  JogY:= WorkZeroY;
+  WorkZero.X:= grbl_mpos.X + job.cam_x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y + job.cam_x;
+  Jog.Y:= WorkZero.Y;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;
@@ -1303,10 +1303,10 @@ begin
   grbl_offsXY(x, y);
   SendListToGrbl;
 
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
+  WorkZero.X:= grbl_mpos.X - x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y - y;
+  Jog.Y:= WorkZero.Y;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;
@@ -1325,10 +1325,10 @@ begin
   grbl_offsXY(x, y);
   SendListToGrbl;
 
-  WorkZeroX:= grbl_mpos.X - x;
-  JogX:= WorkZeroX;
-  WorkZeroY:= grbl_mpos.Y - y;
-  JogY:= WorkZeroY;
+  WorkZero.X:= grbl_mpos.X - x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y - y;
+  Jog.Y:= WorkZero.Y;
   WorkZeroXdone:= true;
   WorkZeroYdone:= true;
   NeedsRedraw:= true;

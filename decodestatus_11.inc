@@ -131,15 +131,21 @@ begin
           grbl_mpos.x:= StrDotToFloat(sl_values[1]);
           grbl_mpos.y:= StrDotToFloat(sl_values[2]);
           grbl_mpos.z:= StrDotToFloat(sl_values[3]);
+          if MachineOptions.Caxis and (sl_values.count > 4) then
+            grbl_mpos.c:= StrDotToFloat(sl_values[4]);
+
           grbl_wpos.x:= grbl_mpos.x - grbl_wco.x;
           grbl_wpos.y:= grbl_mpos.y - grbl_wco.y;
           grbl_wpos.z:= grbl_mpos.z - grbl_wco.z;
+          grbl_wpos.c:= grbl_mpos.c - grbl_wco.c;
           DisplayWorkPosition;
         end;
         if (sl_values.count > 3) and (sl_values[0] = 'WCO') then begin
           grbl_wco.x:= StrDotToFloat(sl_values[1]);
           grbl_wco.y:= StrDotToFloat(sl_values[2]);
           grbl_wco.z:= StrDotToFloat(sl_values[3]);
+          if MachineOptions.Caxis and (sl_values.count > 4) then
+            grbl_wco.c:= StrDotToFloat(sl_values[4]);
           DisplayMachinePosition;
         end;
         if (sl_values.count > 2) and (sl_values[0] = 'FS') then begin

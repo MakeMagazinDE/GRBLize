@@ -682,6 +682,7 @@ begin
       Form1.Memo1.lines.add('Please set positive machine space in App Defaults,');
       Form1.Memo1.lines.add('otherwise jog functions will not work properly.');
     end;
+    MachineOptions.PositiveSpace:= get_AppDefaults_bool(45);
     HomingPerformed:= false;
     MachineState:= none;
     grbl_rx_clear;
@@ -747,6 +748,7 @@ end;
 
 {$I decodestatus_11.inc}
 {$I decodestatus_09.inc}
+
 function DecodeStatus(my_response: String): Boolean;
 begin
   if MachineOptions.NewGrblVersion then
@@ -758,23 +760,26 @@ end;
 procedure grbl_checkZ(var z: Double);
 // limits z to upper limit
 begin
-  if WorkZeroZ + z > 0 then
-    z:= - WorkZeroZ;
-  if WorkZeroZ + z < -job.table_Z then
-    z:= -WorkZeroZ - job.table_Z;
+// gilt auch für MachineOptions.PositiveSpace=true!
+  if WorkZero.Z + z > -1 then
+    z:= - WorkZero.Z -1;
+  if WorkZero.Z + z < -job.table_Z then
+    z:= -WorkZero.Z - job.table_Z;
 end;
 
 procedure grbl_checkXY(var x,y: Double);
 // limits xy to machine limits
 begin
-  if WorkZeroX + x < 0 then
-    x:= - WorkZeroX;
-  if WorkZeroX + x > job.table_X then
-    x:= job.table_X - WorkZeroX;
-  if WorkZeroY + y < 0 then
-    y:= - WorkZeroY;
-  if WorkZeroY + Y > job.table_Y then
-    y:= job.table_Y - WorkZeroY;
+  if MachineOptions.PositiveSpace then begin
+    if WorkZero.X + x < 0 then
+      x:= - WorkZero.X;
+    if WorkZero.X + x > job.table_X then
+      x:= job.table_X - WorkZero.X;
+    if WorkZero.Y + y < 0 then
+      y:= - WorkZero.Y;
+    if WorkZero.Y + Y > job.table_Y then
+      y:= job.table_Y - WorkZero.Y;
+  end;
 end;
 
 procedure grbl_offsXY(x, y: Double);

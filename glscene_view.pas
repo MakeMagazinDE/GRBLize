@@ -922,16 +922,16 @@ begin
   with Form4 do begin
     GLDummyCubeZprobe.Visible:= Form1.CheckTLCprobe.Checked;
     if GLDummyCubeZprobe.Visible then begin
-      GLDummyCubeZprobe.Position.X:= (job.probe_x - WorkZeroX) / c_GLscale;
-      GLDummyCubeZprobe.Position.Y:= (job.probe_y - WorkZeroy) / c_GLscale;
-      GLDummyCubeZprobe.Position.Z:= (job.probe_z - WorkZeroz) / c_GLscale;
+      GLDummyCubeZprobe.Position.X:= (job.probe_x - WorkZero.X) / c_GLscale;
+      GLDummyCubeZprobe.Position.Y:= (job.probe_y - WorkZero.y) / c_GLscale;
+      GLDummyCubeZprobe.Position.Z:= (job.probe_z - WorkZero.z) / c_GLscale;
     end;
 
     GLDummyCubeATC.Visible:= Form1.CheckUseATC2.Checked;
     if GLDummyCubeATC.Visible then begin
-      GLDummyCubeATC.Position.X:= (job.atc_zero_x - WorkZerox) / c_GLscale;
-      GLDummyCubeATC.Position.Y:= (job.atc_zero_y - WorkZeroy) / c_GLscale;
-      GLDummyCubeATC.Position.Z:= (job.atc_pickup_z - WorkZeroz) / c_GLscale + 0.5;
+      GLDummyCubeATC.Position.X:= (job.atc_zero_x - WorkZero.x) / c_GLscale;
+      GLDummyCubeATC.Position.Y:= (job.atc_zero_y - WorkZero.y) / c_GLscale;
+      GLDummyCubeATC.Position.Z:= (job.atc_pickup_z - WorkZero.z) / c_GLscale + 0.5;
       GLCubeATCbase.Position.X:= 4.5 * job.atc_delta_x / c_GLscale;
       GLCubeATCbase.Position.Y:= 4.5 * job.atc_delta_y / c_GLscale;
       GLCubeATCbase.CubeWidth:= 9 * job.atc_delta_x / c_GLscale + 2;
