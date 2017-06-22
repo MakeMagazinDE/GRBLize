@@ -1,6 +1,6 @@
 // Version für GRBL 1.1
 
-function DecodeStatus11(my_response: String): Boolean;
+function GetStatus11: Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
 // setzt pos_changed wenn sich Position änderte
 
@@ -12,35 +12,24 @@ function DecodeStatus11(my_response: String): Boolean;
 // 1 Zeichen dauert bei 19200  Bd 1/1920 s  = ca. 0,5 ms,   d.h. 35 ms für gesamten Satz
 
 var
-  i: Integer;
+  i, zero_mask: Integer;
   is_valid: Boolean;
   sl_fields, sl_values: TSTringList;
   pins_received: Boolean;
-begin
+  my_response: String;
+
+  begin
   try
+    my_response:= grbl_statusStr; // anfordern
     result:= false;
-    if length(my_response) < 1 then
-      exit;
-    if (pos('[', my_response) > 0) then begin
-      if AnsiContainsStr(my_response, 'Timeout') then begin
-        inc(StatusFaultCounter);  // nicht vollständig
-        Form1.LabelResponse.Caption:= my_response;
-        exit;
-      end;
-      Form1.LabelResponse.Caption:= my_response;
-      Form1.Memo1.lines.add('');
-      Form1.Memo1.lines.add('GRBL message:');
-      Form1.Memo1.lines.add(my_response);
-      grbl_wait_for_timeout(10);
-      exit;
-    end else if (pos('>', my_response) = 0) then begin
+    if (pos('>', my_response) = 0) then begin
+      grbl_wait_for_timeout(50);
       inc(StatusFaultCounter);  // nicht vollständig
       Form1.LabelResponse.Caption:= my_response;
-      exit;
+      my_response:= grbl_statusStr; // nochmals anfordern
     end;
-    sl_fields:= TStringList.Create;
-    sl_values:= TStringList.Create;
-    if (my_response[1] = '<') then begin
+
+    if (length(my_response) > 1) and (my_response[1] = '<') then begin
       my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
@@ -49,6 +38,9 @@ begin
       Form1.LabelResponse.Caption:= my_response;
       exit;
     end;
+
+    sl_fields:= TStringList.Create;
+    sl_values:= TStringList.Create;
     is_valid:= false;
 
     with Form1 do begin
@@ -67,7 +59,7 @@ begin
         dec(AliveCount);
       ShowAliveState(LastAliveState);
       sl_values.CommaText:= sl_fields[0];
-       if (sl_values[0] = 'Idle') then begin
+      if (sl_values[0] = 'Idle') then begin
         PanelReady.Color:= clLime;
         PanelReady.Font.Color:= clwhite;
         is_valid:= true;
@@ -76,7 +68,22 @@ begin
         PanelReady.Color:= $00004000;
         PanelReady.Font.Color:= clgray;
       end;
-
+{
+// wird jetzt von CheckForPushmessage() erledigt
+      zero_mask:= 0;
+      for i:= 0 to sl_values.count-1 do begin
+        if (sl_values[i] = 'ZeroX') then
+          zero_mask:= zero_mask or 1;
+        if (sl_values[i] = 'ZeroY') then
+          zero_mask:= zero_mask or 2;
+        if (sl_values[i] = 'ZeroZ') then
+          zero_mask:= zero_mask or 4;
+        if (sl_values[i] = 'ZeroC') then
+          zero_mask:= zero_mask or 8;
+      end;
+      if zero_mask > 0 then
+        HandleZeroRequest(zero_mask);
+}
       if (sl_values[0] = 'Hold') then begin
       // Kann Hold:0 oder Hold:1 sein
         is_valid:= true;

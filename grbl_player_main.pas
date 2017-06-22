@@ -1773,54 +1773,6 @@ end;
 
 // #############################################################################
 
-
-
-procedure HandleZeroRequest;
-// wenn Zero-Button auf Maschinen-Panel gedrückt
-var my_str, my_response: String;
-
-begin
-  Form1.Memo1.lines.add('');
-  if HomingPerformed then with Form1 do begin
-    TimerStatus.Enabled:= false;
-    grbl_wait_for_timeout(50);
-    grbl_rx_clear;
-    WorkZero.X:= grbl_mpos.x;
-    WorkZero.Y:= grbl_mpos.y;
-    WorkZero.Z:= grbl_mpos.Z - job.z_gauge;
-
-    Jog.X:= WorkZero.X;
-    Jog.Y:= WorkZero.Y;
-    Jog.Z:= WorkZero.Z;
-    Jog.C:= WorkZero.C;
-
-    MposOnPartGauge:= grbl_mpos.Z;
-    WorkZero.Z:= MposOnPartGauge - job.z_gauge;
-
-    Memo1.lines.add('Zero request from machine panel, will set X, Y to zero');
-    Memo1.lines.add('and Z to Z gauge height from Job Defaults');
-    PlaySound('SYSTEMEXCLAMATION', 0, SND_ASYNC);
-
-    my_str:= 'G94';
-    my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
-    Form1.Memo1.lines.add(my_str);
-    my_str:= 'G92 X0 Y0 Z'+FloatToStrDot(job.z_gauge);
-    my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
-    Form1.Memo1.lines.add(my_str);
-    WorkZeroXdone:= true;
-    WorkZeroYdone:= true;
-    WorkZeroZdone:= true;
-
-    InvalidateTLCs;
-    repeat
-      DecodeStatus(grbl_statusStr); // muss eingetroffen sein
-    until MachineState <> zero;
-    TimerStatus.Enabled:= true;
-  end else
-    Form1.Memo1.lines.add('WARNING: Zero request ignored - no Home Cycle performed');
-end;
-
-// #############################################################################
 function joy_get_swapped_z: Integer;
 begin
   result:= 0;
@@ -1868,13 +1820,9 @@ begin
     if isSimActive then
       exit;
     TimerStatus.Tag:= 1;
-    grbl_rx_clear; // letzte Antwort verwerfen
     old_machine_state:= MachineState;
-    grbl_sendRealTimeCmd('?');   // neuen Status anfordern
     TimerStatus.Enabled:= false;
-    DecodeStatus(grbl_receiveStr(100)); // muss eingetroffen sein
-    if (MachineState = zero) then
-      HandleZeroRequest;
+    GetStatus; // muss eingetroffen sein
     if (MachineState = alarm) and (old_machine_state <> alarm) then
       Form1.Memo1.lines.add('ALARM state, reset machine and perform home cycle');
     if (MachineState = hold) and (old_machine_state <> hold) then
@@ -1918,7 +1866,7 @@ begin
     while (MachineState = run) do begin // noch beschäftigt?
       sleep(50);
       if not Form1.TimerStatus.enabled then
-        DecodeStatus(grbl_statusStr);
+        GetStatus;
       Application.processmessages;
       if isCancelled or isEmergency or isWaitExit then
         break;
@@ -2038,7 +1986,7 @@ begin
     mdelay(100);
     grbl_rx_clear; // letzte Antwort verwerfen
     repeat
-      pos_changed:= DecodeStatus(grbl_statusStr);
+      pos_changed:= GetStatus;
     until (not pos_changed) and (MachineState = hold) or isEmergency;
     mdelay(100);
     Memo1.lines.add('Reset GRBL');
@@ -2552,73 +2500,41 @@ end;
 procedure TForm1.BtnZeroXClick(Sender: TObject);
 begin
   WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Manual Work/part X zero');
-  drawing_tool_down:= false;
-  WorkZeroXdone:= true;
-  SendSingleCommandStr('G92 X0');
-  WorkZero.X:= grbl_mpos.X;
-  Jog.X:= WorkZero.X;
-  NeedsRedraw:= true;
+  HandleZeroRequest(1);
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
   WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Manual Work/part Y zero');
-  drawing_tool_down:= false;
-  WorkZeroYdone:= true;
-  SendSingleCommandStr('G92 Y0');
-  WorkZero.Y:= grbl_mpos.Y;
-  Jog.Y:= WorkZero.Y;
-  NeedsRedraw:= true;
+  HandleZeroRequest(2);
 end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
 // manuelle Z-Höhe mit Messklotz
 begin
   WaitForIdle;
-  Memo1.lines.add('');
-  Memo1.lines.add('Manual Work/part Z zero, will set Z to ');
-  Memo1.lines.add('Z Gauge value ' + FormatFloat('00.00', job.z_gauge) + ' mm above part');
-  MposOnPartGauge:= grbl_mpos.Z;
-  WorkZero.Z:= MposOnPartGauge - job.z_gauge;
-  WorkZeroZdone:= true;
-  Jog.Z:= WorkZero.Z;
-  if isSimActive then
-    ResetSimulation;
-  InvalidateTLCs;
-  CancelG43offset;
-  SendSingleCommandStr('G92 Z'+FloatToStrDot(job.z_gauge));
+  HandleZeroRequest(4);
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
 {
   if CheckPartProbeZ.Checked then
     DoTLCandConfirm(true, 1);
 }
-  NeedsRedraw:= true;
-  UpdateATC;
-end;
-
-procedure TForm1.BtnZeroAllClick(Sender: TObject);
-begin
-  BtnZeroXClick(Sender);
-  BtnZeroYClick(Sender);
-  BtnZeroZClick(Sender);
+  if isSimActive then
+    ResetSimulation;
 end;
 
 procedure TForm1.BtnZeroCClick(Sender: TObject);
 begin
   WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Manual Work/part C zero');
-  drawing_tool_down:= false;
-  WorkZeroYdone:= true;
-  SendSingleCommandStr('G92 C0');
-  WorkZero.C:= grbl_mpos.C;
-  Jog.C:= WorkZero.C;
-  NeedsRedraw:= true;
+  HandleZeroRequest(8);
 end;
+
+procedure TForm1.BtnZeroAllClick(Sender: TObject);
+begin
+  WaitForIdle;
+  HandleZeroRequest(15);
+end;
+
 
 // #############################################################################
 

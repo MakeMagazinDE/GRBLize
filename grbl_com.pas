@@ -14,8 +14,15 @@ type
   TFileBuffer = Array of byte;
    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
-  procedure ExtractMessage(var my_str: AnsiString); // GRBL-Message in [] aufbereiten
-  function DecodeStatus(my_response: String): Boolean;
+  procedure ExtractMessage(var my_str: String); // GRBL-Message in [] aufbereiten
+
+  // holt und dekodiert "?"-Status
+  function GetStatus: Boolean;
+
+  procedure HandleZeroRequest(axis_mask: Integer);
+
+  // überprüft Antwort auf Push-Message, ist TRUE wenn ja
+  function CheckForPushmessage(var my_response: String):Boolean;
 
   procedure mdelay(const Milliseconds: DWord);
   procedure ShowAliveState(my_state: t_alivestates);
@@ -147,15 +154,122 @@ implementation
 
 uses grbl_player_main, glscene_view, drawing_window, Graphics;
 
+{$I decodestatus_11.inc}
+{$I decodestatus_09.inc}
+
 // #############################################################################
 
-procedure ExtractMessage(var my_str: AnsiString);
+procedure HandleZeroRequest(axis_mask: Integer);
+// wenn Zero-Button auf Maschinen-Panel gedrückt
+var my_str, my_response: String;
+
+begin
+  if axis_mask = 0 then
+    exit;
+  drawing_tool_down:= false;
+  NeedsRedraw:= true;
+  if HomingPerformed then with Form1 do begin
+    TimerStatus.Enabled:= false;
+    Memo1.lines.add('Zero request from machine panel');
+    PlaySound('SYSTEMEXCLAMATION', 0, SND_ASYNC);
+    if (axis_mask and 1 = 1) then begin
+      WorkZero.X:= grbl_mpos.x;
+      Jog.X:= WorkZero.X;
+      my_str:= 'G92 X0';
+      my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
+      Form1.Memo1.lines.add(my_str);
+      WorkZeroXdone:= true;
+    end;
+
+    if (axis_mask and 2 = 2) then begin
+      WorkZero.Y:= grbl_mpos.y;
+      Jog.Y:= WorkZero.Y;
+      my_str:= 'G92 Y0';
+      my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
+      Form1.Memo1.lines.add(my_str);
+      WorkZeroYdone:= true;
+    end;
+
+    if (axis_mask and 4 = 4) then begin
+      Memo1.lines.add('Set Z pos to Z gauge height from Job Defaults');
+      WorkZero.Z:= grbl_mpos.Z - job.z_gauge;
+      Jog.Z:= WorkZero.Z;
+      MposOnPartGauge:= grbl_mpos.Z;
+      WorkZero.Z:= MposOnPartGauge - job.z_gauge;
+      Form1.Memo1.lines.add('Cancel Tool Length Offset (TLO)');
+      my_str:= 'G49';  // cancel tool offset
+      my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
+      Form1.Memo1.lines.add(my_str);
+      InvalidateTLCs;
+      my_str:= 'G92 Z'+FloatToStrDot(job.z_gauge);
+      my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
+      UpdateATC;
+      Form1.Memo1.lines.add(my_str);
+      WorkZeroZdone:= true;
+    end;
+
+    if (axis_mask and 8 = 8) then begin
+      WorkZero.C:= grbl_mpos.C;
+      Jog.C:= WorkZero.C;
+      my_str:= 'G92 C0';
+      my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
+      Form1.Memo1.lines.add(my_str);
+      Jog.C:= WorkZero.C;
+    end;
+
+    InvalidateTLCs;
+    repeat
+      GetStatus; // muss eingetroffen sein
+    until MachineState <> zero;
+    TimerStatus.Enabled:= true;
+  end else
+    Form1.Memo1.lines.add('WARNING: Zero request ignored - no Home Cycle performed');
+end;
+
+
+procedure ExtractMessage(var my_str: String);
 // GRBL-Message in [] aufbereiten
 begin
   my_str:= StringReplace(my_str,'[','',[rfReplaceAll]);
   my_str:= StringReplace(my_str,']','',[rfReplaceAll]);
   my_str:= StringReplace(my_str,':',',',[rfReplaceAll]);
 end;
+
+function CheckForPushmessage(var my_response: String):Boolean;
+// überprüft Antwort auf Push-Message oder ALARM, ist TRUE wenn ja
+var zero_mask: Integer;
+begin
+  result:= false;
+  if (pos('ALARM', my_response) > 0) then begin
+    MachineState:= alarm;
+    HomingPerformed:= false;
+    result:= true;
+  end;
+  if (pos('[', my_response) > 0) then begin
+    Form1.LabelResponse.Caption:= my_response;
+    if AnsiContainsStr(my_response, 'Timeout') then begin
+      inc(StatusFaultCounter);  // nicht angekommen
+      exit;  // Timeout ist KEINE Push-Message
+    end;
+    Form1.Memo1.lines.add(my_response);
+    zero_mask:= 0;
+    if AnsiContainsStr(my_response, 'ZeroX') then
+      zero_mask:= zero_mask or 1;
+    if AnsiContainsStr(my_response, 'ZeroY') then
+      zero_mask:= zero_mask or 2;
+    if AnsiContainsStr(my_response, 'ZeroZ') then
+      zero_mask:= zero_mask or 4;
+    if AnsiContainsStr(my_response, 'ZeroC') then
+      zero_mask:= zero_mask or 8;
+    if AnsiContainsStr(my_response, 'ZeroAll') then
+      zero_mask:= 15;
+    if zero_mask > 0 then
+      HandleZeroRequest(zero_mask);
+    result:= true;
+  end;
+end;
+
+// #############################################################################
 
 constructor TStopWatch.Create(const startOnCreate : boolean = false) ;
 begin
@@ -519,7 +633,6 @@ end;
 // Abhängig davon, ob FTDI oder COM benutzt wird, entsprechende Routine aufrufen
 // #############################################################################
 
-
 function grbl_receiveCount: Integer;
 // gibt Anzahl der Zeichen im Empfangspuffer zurück
 begin
@@ -541,6 +654,17 @@ end;
 function grbl_receiveStr(timeout: Integer): string;
 begin
   result:= '';
+  repeat
+    if ftdi_isopen then
+      result:= FTDIreceiveStr(timeout);
+    if com_isopen then
+      result:= COMReceiveStr(timeout);
+  until not CheckForPushmessage(result);
+end;
+
+function grbl_receiveStr_noCheck(timeout: Integer): string;
+begin
+  result:= '';
   if ftdi_isopen then
     result:= FTDIreceiveStr(timeout);
   if com_isopen then
@@ -553,10 +677,12 @@ function grbl_sendStr(sendStr: String; my_getok: boolean): String;
 // GRBL-Steuerzeichen sein (?,!,~,CTRL-X)
 begin
   result:= '';
-  if ftdi_isopen then
-    result:= FTDIsendStr(sendStr, my_getok);
-  if com_isopen then
-    result:= COMsendStr(sendStr, my_getok);
+  repeat
+    if ftdi_isopen then
+      result:= FTDIsendStr(sendStr, my_getok);
+    if com_isopen then
+      result:= COMsendStr(sendStr, my_getok);
+  until not CheckForPushmessage(result);
 end;
 
 
@@ -565,7 +691,9 @@ function grbl_SendWithShortTimeout(my_cmd: String): String;
 begin
   if isGRBLactive then begin
     grbl_SendStr(my_cmd + #13, false);
-    result:= grbl_receiveStr(25);
+    repeat
+      result:= grbl_receiveStr(25);
+    until not CheckForPushmessage(result);
   end else
     result:= '';
 end;
@@ -583,69 +711,68 @@ end;
 // #############################################################################
 
 procedure grbl_wait_for_timeout(timeout: Integer);
+var my_str: String;
 begin
   if isGrblActive then
     repeat
       if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
-    until (grbl_receiveStr(timeout) = '[Timeout]') or isEmergency or isWaitExit;
+      my_str:= grbl_receiveStr(timeout);
+      CheckForPushmessage(my_str);
+    until (my_str = '[Timeout]') or isEmergency or isWaitExit;
 end;
-
-{$DEFINE GRBL_11}
 
 function grbl_statusStr: string;
 // fordert Maschinenstatus mit "?" an
 begin
   grbl_SendRealTimeCmd('?'); // Status anfordern
-  grbl_statusStr:= grbl_receiveStr(100);
+  repeat
+    result:= grbl_receiveStr(100);
+  until not CheckForPushmessage(result);
 end;
 
 function grbl_checkResponse: Boolean;
-var my_str: AnsiString;
+var my_str1, my_str2: String;
   i, my_btn: Integer;
   sl_options: TSTringList;
   realtime_request_ok: Boolean;
 
 begin
   ShowAliveState(s_alive_wait_timeout);
-  my_str:= '';
+  my_str1:= '';
   result:= false;
   InitMachineOptions;
   if ftdi_isopen or com_isopen then begin
     DisableStatus;
     grbl_rx_clear;
     grbl_SendRealTimeCmd(#24);   // Soft Reset CTRL-X, Stepper sofort stoppen
-    sleep(100);
+    sleep(200);
     Form1.Memo1.lines.add('');
-    Form1.Memo1.lines.add('Grbl Startup Message and Version Info:');
+    Form1.Memo1.lines.add('Startup Message and Version Info:');
     repeat
-      my_str:= grbl_receiveStr(100);
-      if (length(my_Str) > 1) and (my_str <> '[Timeout]') then begin
-        Form1.Memo1.lines.add(my_str);
-      end;
-    until my_Str = '[Timeout]';
-    my_str:= grbl_statusStr;
-    realtime_request_ok:= AnsiContainsStr(my_str, '>');
+      my_str1:= grbl_receiveStr_noCheck(500);
+      CheckForPushmessage(my_str1);
+    until my_Str1 = '[Timeout]';
+    my_str1:= grbl_statusStr;
+    realtime_request_ok:= AnsiContainsStr(my_str1, '>');
     if realtime_request_ok then begin
-      grbl_SendRealTimeCmd(#$D0);  // Enable device #0
-
+//      grbl_SendRealTimeCmd(#$D0);  // Enable device #0
       grbl_SendStr('$I' + #13, false);
-      my_str:= grbl_receiveStr(500);
-      if (length(my_Str) > 5) and (my_str <> '[Timeout]') then begin
-        Form1.Memo1.lines.add(my_str);
+      my_str1:= grbl_receiveStr_noCheck(100);
+      my_str2:= grbl_receiveStr_noCheck(100);
+      grbl_wait_for_timeout(50);
+      if CheckForPushmessage(my_str1) then begin
         // get version info
-        if AnsiContainsStr(my_str, 'VER:1') then
+        if AnsiContainsStr(my_str1, 'VER:1') then
           MachineOptions.NewGrblVersion:= true;
       end;
       sl_options:= TStringList.Create;
-      my_str:= grbl_receiveStr(50);
-      if (length(my_Str) > 5) and (my_str <> '[Timeout]') then begin
-        Form1.Memo1.lines.add(my_str);
-        ExtractMessage(my_str);
+      if CheckForPushmessage(my_str2) then begin
+        ExtractMessage(my_str2);
         // get Option list from GRBL 1.1
-        if AnsiContainsStr(my_str, 'OPT') then begin
-          sl_options.CommaText:= my_str;
+        if AnsiContainsStr(my_str2, 'OPT') then begin
+          sl_options.CommaText:= my_str2;
           if sl_options.Count > 0 then begin
             if AnsiContainsStr(sl_options[1], 'V') then
               MachineOptions.VariableSpindle:= true;
@@ -685,11 +812,9 @@ begin
     MachineOptions.PositiveSpace:= get_AppDefaults_bool(45);
     HomingPerformed:= false;
     MachineState:= none;
-    grbl_rx_clear;
-    grbl_wait_for_timeout(100);
-
-    my_str:= grbl_statusStr;
-    DecodeStatus(my_str);
+    grbl_wait_for_timeout(50);
+    GetStatus;
+    grbl_wait_for_timeout(50);
 
     case MachineState of
       alarm:
@@ -712,10 +837,9 @@ begin
         end;
       idle:
         begin
-          grbl_wait_for_timeout(50);
           grbl_SendRealTimeCmd(#13);
-          my_str:= ansiuppercase(grbl_receiveStr(20));
-          if (pos('OK',my_str) > 0) then begin
+          my_str1:= ansiuppercase(grbl_receiveStr_noCheck(20));
+          if (pos('OK',my_str1) > 0) then begin
             result:= true;
             HomingPerformed:= true;
             Form1.Memo1.lines.add('');
@@ -746,15 +870,13 @@ end;
 // Highlevel-Funktionen
 // #############################################################################
 
-{$I decodestatus_11.inc}
-{$I decodestatus_09.inc}
 
-function DecodeStatus(my_response: String): Boolean;
+function GetStatus: Boolean;
 begin
   if MachineOptions.NewGrblVersion then
-    result:= DecodeStatus11(my_response)
+    result:= GetStatus11
   else
-    result:= DecodeStatus09(my_response);
+    result:= GetStatus09;
 end;
 
 procedure grbl_checkZ(var z: Double);

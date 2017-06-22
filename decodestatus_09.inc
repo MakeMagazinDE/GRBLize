@@ -1,6 +1,6 @@
 // Version für GRBL 0.9j und 0.9ks
 
-function DecodeStatus09(my_response: String): Boolean;
+function GetStatus09: Boolean;
 // liefert Busy-Status TRUE wenn GRBL-Status nicht IDLE ist
 // setzt pos_changed wenn sich Position änderte
 
@@ -15,16 +15,20 @@ var
   my_start_idx: Integer;
   is_valid, is_jogging: Boolean;
   sl_values: TSTringList;
+  my_response: String;
 
-begin
+  begin
   try
-    sl_values:= TStringList.Create;
+    my_response:= grbl_statusStr; // anfordern
     result:= false;
-    if (pos('>', my_response) = 0) then begin  // nicht vollständig
-      inc(StatusFaultCounter);
-      exit;
+    if (pos('>', my_response) = 0) then begin
+      grbl_wait_for_timeout(50);
+      inc(StatusFaultCounter);  // nicht vollständig
+      Form1.LabelResponse.Caption:= my_response;
+      my_response:= grbl_statusStr; // nochmals anfordern
     end;
-    if (my_response[1] = '<') then begin
+
+    if (length(my_response) > 1) and (my_response[1] = '<') then begin
       my_response:= StringReplace(my_response,'<','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,'>','',[rfReplaceAll]);
       my_response:= StringReplace(my_response,':',',',[rfReplaceAll]);
@@ -33,6 +37,7 @@ begin
       exit;
     end;
     is_valid:= false;
+    sl_values:= TStringList.Create;
     with Form1 do begin
       sl_values.clear;
       sl_values.CommaText:= my_response;
@@ -53,9 +58,10 @@ begin
         PanelReady.Color:= clLime;
         PanelReady.Font.Color:= clwhite;
         is_valid:= true;
-        if (my_Str = 'Zero') then
-          MachineState:= zero
-        else
+        if (my_Str = 'Zero') then begin
+          MachineState:= zero;
+          HandleZeroRequest(7);
+        end else
           MachineState:= idle;
       end else begin
         PanelReady.Color:= $00004000;

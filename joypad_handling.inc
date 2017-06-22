@@ -35,7 +35,7 @@ begin
       if JoyPad.POV.down then
         grbl_SendWithShortTimeout('$J=G91Y-0.05F100');
       mdelay(50);
-      DecodeStatus(grbl_statusStr);
+      GetStatus;
       JoyPad.update;
     until not JoyPad.POV.active;
     grbl_sendRealTimeCmd(#$85); // Jog Cancel
@@ -45,7 +45,7 @@ begin
   if JoyPad.Buttons[btn_idx] then
   begin
     // Taste 1, Nullpunkt soll gesetzt werden
-    HandleZeroRequest;
+    HandleZeroRequest(15);
     joy_wait_btn_release(btn_idx);
   end;
 
@@ -119,7 +119,7 @@ begin
       jog_sent := true;
       JoyPad.update;
       sleep(5);
-      DecodeStatus(grbl_statusStr);
+      GetStatus;
       sleep(5);
     end;
 
@@ -157,7 +157,7 @@ begin
       jog_sent := true;
       JoyPad.update;
       sleep(5);
-      DecodeStatus(grbl_statusStr);
+      GetStatus;
       sleep(5);
     end;
 
@@ -197,7 +197,7 @@ begin
       JoyPad.update;
       z_temp := joy_get_swapped_z;
       sleep(5);
-      DecodeStatus(grbl_statusStr);
+      GetStatus;
       sleep(5);
     end;
     LabelJoySend.Caption := 'Cancel Jog';

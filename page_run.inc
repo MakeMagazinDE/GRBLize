@@ -226,7 +226,7 @@ begin
       SendReceiveAndDwell('G0 G53 Z0');  // Z up
       // Workaround für GRBL-JOG mit Zero-Eingang als Limit-Switch:
       repeat
-        DecodeStatus(grbl_statusStr);
+        GetStatus;
       until MachineState < zero;
       EnableStatus;
     end else if isSimActive then begin
