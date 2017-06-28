@@ -458,7 +458,6 @@ begin
         inc(my_row);
       end;
       Form1.SgFiles.Repaint;
-      OpenFilesInGrid;
     end;
     s:= sl.indexof('#Pens');
     if s >= 0 then begin
@@ -486,6 +485,8 @@ begin
         inc(my_row);
       end;
       Form1.SgJobDefaults.Repaint;
+                // Laden der Fräsedateinen erst nach Einlesen der Werkstückgröße
+      OpenFilesInGrid;
     end;
     s:= sl.indexof('#Blocks');
     if s >= 0 then begin
