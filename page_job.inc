@@ -100,6 +100,7 @@ begin
     Cells[5,i+1]:= '0';
     Cells[6,i+1]:= '100';
     Cells[6,i+1]:= 'YES';
+    Cells[7,i+1]:= '0.9';
     Cells[8,i+1]:= '';
     job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100';
     with FileParamArray[i] do begin
@@ -327,6 +328,22 @@ begin
   job.pens[tool_idx].force_closed:= true;
 end;
 
+procedure ProveNewGBR(FileName:string;i: integer);
+var GbrName, CmdStr: string;
+begin
+   GbrName := ChangeFileExt(FileName, '.gbr');              // Quelle ist *.gbr?
+   if not FileExists(GbrName) then begin
+     GbrName := ChangeFileExt(FileName, '.gbl');            // Quelle ist *.gbl?
+     if not FileExists(GbrName) then exit;// Quelle nicht gefunden, nur NC laden
+   end;
+                // TestS enthält nun den Namen der ursprünglichen Gerber-Datei!!
+   if FileAge(FileName) < FileAge(GbrName) then
+     CmdStr := CallPcb2Gcode(GbrName,
+                             pos('front',GbrName) > 0,
+                             FileParamArray[i-1].user1,
+                             '500');
+end;
+
 Procedure OpenFilesInGrid;
 var
   i, pen_override: Integer;
@@ -355,6 +372,7 @@ begin
       FileParamArray[i-1].offset.X:= round(StrToFloatDef(Cells[4, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].scale:= StrToFloatDef(Cells[6, i], 100.0);
+      FileParamArray[i-1].user1:= StrToFloatDef(Cells[7, i], 0.2);
       my_path:= Cells[0,i];
       my_ext:= AnsiUpperCase(ExtractFileExt(my_path));
       if my_ext = '' then
@@ -375,11 +393,13 @@ begin
         Cells[8, i]:= 'GCode'; // Remark
         gcode_fileload(my_path, i-1, -1);
       end else if (my_ext = '.NCF') then begin
+        ProveNewGBR(my_path,i);
         Cells[8, i]:= 'PCB top'; // Remark
         Cells[1, i]:= '8'; // Replace Pen
         gcode_fileload(my_path, i-1, 8);
         SetPCBmillTool(8);
       end else if (my_ext = '.NCB') then begin
+        ProveNewGBR(my_path,i);
         Cells[8, i]:= 'PCB botm'; // Remark
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);

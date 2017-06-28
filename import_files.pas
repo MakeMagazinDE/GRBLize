@@ -46,6 +46,7 @@ const
     isdrillfile:Boolean;
     bounds: Tbounds;
     offset: TintPoint;
+    user1: Double;
   end;
 
   Tpen_record = record

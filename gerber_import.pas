@@ -7,6 +7,11 @@ uses ShellApi, Winapi.Windows, MMsystem, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Vcl.Dialogs,
   import_files, grbl_com;
 
+function CallPcb2Gcode(my_source_path: String;
+                       FrontSide:      boolean;
+                       my_offset:      Double;
+                       Dpi:            String):String;
+
 type
   TFormGerber = class(TForm)
     OKBtn: TButton;
@@ -44,6 +49,7 @@ var
   GerberFileNumber: Integer;
   img: TImage;
   image_loaded: Boolean;
+
 
 implementation
 
@@ -217,44 +223,65 @@ begin { Mirror }
   end; { Assigned(Picture.Graphic) }
 end; { Mirror }
 
-procedure TFormGerber.BtnGerberConvertClick(Sender: TObject);
-var my_converter_path, my_source_path, my_png_path,
-  my_side, my_arg: String;
-  my_offset: Double;
+function CallPcb2Gcode(my_source_path: String;
+                       FrontSide:      boolean;
+                       my_offset:      Double;
+                       Dpi:            String):String;
+var my_converter_path, my_side, my_arg: String;
 begin
-  Paintbox1.canvas.Brush.Color:= clsilver;
-  Paintbox1.canvas.FillRect(rect(0,0,PaintBox1.Width,PaintBox1.Height));
-  Label30.Caption:= ExtractFileName(GerberFileName);
-  Memo2.Lines.Add('Converted file will be imported as #' + IntToStr(GerberFileNumber));
-  Memo2.Lines.Add('Please wait...');
-  Application.ProcessMessages;
+  Result := '';                           // Leerstring entspricht Fehlermeldung
   my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\pcb2gcode.exe';
-  my_png_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
-  if FileExists(my_png_path) then
-    DeleteFile(my_png_path);
-  if not FileExists(my_converter_path) then begin
-    Memo2.lines.add('PCB2GCODE converter not found.');
+  if not FileExists(my_converter_path) then
     exit;
-  end;
-  my_source_path:= GerberFileName;
 
-  if RadioButtonFront.Checked then
+  if FrontSide then
     my_side:= '--front'
   else
     my_side:= '--back';
 
-  Screen.Cursor:= crHourglass;
   ConvertedFileName:= ChangeFileExt(my_source_path, '.nc' + my_side[3]);
-  my_offset:= StrToFloatDef(EditInflate.Text, 0.1);
+
   my_arg:= my_side + #32 + my_source_path
-    + ' --nog81 --dpi ' + EditDPI.Text
+    + ' --nog81 --dpi ' + Dpi
     + ' --zsafe 1 --zchange 30 --zwork -0.2'
     + ' --offset ' + FloatToStrDot(my_offset)
     + ' --mill-feed 200'
     + ' --optimise=1 --mill-speed 6000 --metric=1 --metricoutput=1 '
     + my_side + '-output ' + ConvertedFileName;
-//  Memo2.lines.add(my_arg);
   ExecuteFile(my_converter_path, my_arg, ExtractFilePath(my_converter_path), true, true);
+  Result := my_arg;
+end;
+
+procedure TFormGerber.BtnGerberConvertClick(Sender: TObject);
+var CmdStr, my_png_path: String;
+begin
+  Paintbox1.canvas.Brush.Color:= clsilver;
+  Paintbox1.canvas.FillRect(rect(0,0,PaintBox1.Width,PaintBox1.Height));
+  Label30.Caption:= ExtractFileName(GerberFileName);
+
+  my_png_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
+  if FileExists(my_png_path) then
+    DeleteFile(my_png_path);
+
+  Memo2.Lines.Add('Converted file will be imported as #' + IntToStr(GerberFileNumber));
+  Memo2.Lines.Add('Please wait...');
+  Application.ProcessMessages;
+  Screen.Cursor:= crHourglass;
+
+  FileParamArray[GerberFileNumber-1].user1:= StrToFloatDef(EditInflate.Text, 0.1);
+  Form1.SgFiles.Cells[7, GerberFileNumber]:= EditInflate.Text;
+
+  CmdStr := CallPcb2Gcode(GerberFileName,
+                          RadioButtonFront.Checked,
+                          FileParamArray[GerberFileNumber-1].user1,
+                          '500');
+
+  if CmdStr = '' then begin
+    Memo2.lines.add('PCB2GCODE converter not found.');
+    exit;
+  end;
+
+  Memo2.lines.add(CmdStr);
 
   FormGerber.BringToFront;
   Screen.Cursor:= crDefault;
@@ -265,6 +292,7 @@ begin
     Label30.Caption:= ExtractFileName(ConvertedFileName);
   end;
 //  mdelay(500);
+  my_png_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
   if FileExists(my_png_path) then begin
     BtnGerberConvert.Enabled:= true;
     OKbtn.Enabled:= true;
@@ -284,7 +312,6 @@ begin
     image_loaded:= false;
   end;
   Memo2.lines.add('Done.');
-
 end;
 
 procedure blank_warning;
