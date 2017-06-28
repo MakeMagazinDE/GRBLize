@@ -481,6 +481,8 @@ begin
   finally
     ExitJobMsg(true);
   end;
+  if sgATC.Row < c_numATCslots then          // auf nächstes Tool weiterschalten
+    sgATC.Row:= sgATC.Row + 1;
 end;
 
 procedure TForm1.BtnRunJobClick(Sender: TObject);
