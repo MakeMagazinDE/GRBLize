@@ -2,7 +2,6 @@
 // ################################## A T C ####################################
 // #############################################################################
 
-
 procedure SetATCslot(const pen_idx: Integer; atc_idx: integer);
 begin
   if atc_idx > c_numATCslots then
@@ -54,13 +53,13 @@ begin
     if final_array[block_idx].enable then begin
       pen_idx:= final_array[block_idx].pen;
       atc_idx:= search_same_tool_in_atc(pen_idx);
-      if atc_idx < 0 then
-        inc(atc_slot)
-      else
-        atc_slot:= atc_idx;
-      if atc_slot <= c_numATCslots then begin
-        SetATCslot(pen_idx, atc_slot);
-        job.pens[pen_idx].atc:= atc_slot;
+      if atc_idx < 0 then begin        // nicht gefunden, neuen Slot reservieren
+        inc(atc_slot);
+        atc_idx:= atc_slot;
+      end;
+      if atc_idx <= c_numATCslots then begin
+        SetATCslot(pen_idx, atc_idx);
+        job.pens[pen_idx].atc:= atc_idx;
   //        Form1.Memo1.lines.add('Pen/Tool ' + IntToStr(pen_idx) + ' assigned to ATC #' + IntToStr(atc_slot));
       end else begin
         PlaySound('SYSTEMHAND', 0, SND_ASYNC);
