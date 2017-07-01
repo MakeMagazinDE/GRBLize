@@ -38,10 +38,13 @@ type
     procedure BtnMoveCamPointClick(Sender: TObject);
     procedure BtnMoveToolPointClick(Sender: TObject);
     procedure BtnMoveToolZeroClick(Sender: TObject);
-
+    procedure SwitchCam(SwitchOn: boolean);
+    procedure hide;
+    procedure show;
   private
     { Private-Deklarationen }
   public
+    FrameCounter: integer;
     { Public-Deklarationen }
     fVideoImage: TVideoImage;
     fVideoBitmap: TBitmap;
@@ -50,7 +53,9 @@ type
 
 var
   Form3: TForm3;
-  fActivated, fCamPresent, CamIsOn : boolean;
+  fCamActivated,                        // Cam is switched on in current session
+  fCamPresent,                              // Cam is present in current session
+  CamIsOn : boolean;                                      // global state of Cam
   overlay_color: Tcolor;
 
 implementation
@@ -59,28 +64,41 @@ uses grbl_player_main, import_files, drawing_window, grbl_com, glscene_view;
 
 {$R *.dfm}
 
+procedure TForm3.SwitchCam(SwitchOn: boolean);
+begin
+  if fCamPresent and (SwitchOn <> fCamActivated) then begin
+    if SwitchOn then begin
+      Label1.Caption:='    Initializing Webcam...';
+      Application.ProcessMessages;
+      if fVideoImage.VideoStart(DeviceList[0]) <> 0 then
+        FrameCounter:= 0;
+    end else begin
+      Label1.Caption:='  Webcam/Video Device off';
+      fVideoImage.VideoStop;
+    end;
+    fCamActivated := SwitchOn;
+  end;
+end;
+
+procedure TForm3.show;
+begin
+  inherited show;
+  SwitchCam(CamIsOn);
+end;
+
+procedure TForm3.hide;
+begin
+  SwitchCam(false);
+  inherited hide;
+end;
+
 procedure TForm3.RadioGroupCamClick(Sender: TObject);
 begin
-  case RadioGroupCam.ItemIndex of
-    0:
-      begin
-      Label1.Caption:='  Webcam/Video Device off';
-        if fActivated then begin
-          CamIsOn:= false;
-          fActivated := false;
-          fVideoImage.VideoStop;
-        end;
-      end;
-    1:
-      if fCamPresent then begin
-        Label1.Caption:='    Initializing Webcam...';
-        Application.ProcessMessages;
-        if not fActivated then
-          fVideoImage.VideoStart(DeviceList[0]);
-        fActivated:= true;
-        CamIsOn:= true;
-      end else
-        RadioGroupCam.ItemIndex:= 0;
+  if fCamPresent then begin
+    CamIsOn:= RadioGroupCam.ItemIndex = 1;
+    SwitchCam(CamIsOn)
+  end else begin
+    RadioGroupCam.ItemIndex:= 0;
   end;
   Repaint;
 end;
@@ -90,8 +108,9 @@ var
   r : integer;
   bm_center_x, bm_center_y: Integer;
 begin
+  inc(FrameCounter);
   // Retreive latest video image
-  if not fActivated then
+  if not fCamActivated then
     exit;
   fVideoImage.GetBitmap(fVideoBitmap);
   with fVideoBitmap do begin
@@ -122,8 +141,8 @@ end;
 
 procedure TForm3.FormCreate(Sender: TObject);
 var
-  grbl_ini:TRegistry;
-
+  grbl_ini: TRegistry;
+  OldEvent: TNotifyEvent;
 begin
   grbl_ini:= TRegistry.Create;
   try
@@ -142,41 +161,41 @@ begin
     grbl_ini.Free;
   end;
 
-  fActivated:= false;
-  // Create instance of our video image class.
-  fVideoImage:= TVideoImage.Create;
-  // Tell fVideoImage where to paint the images it receives from the camera
-  // (Only in case we do not want to modify the images by ourselves)
-  fVideoImage.SetDisplayCanvas(VideoBox.Canvas);
-  fVideoBitmap:= TBitmap.create;
-  fVideoBitmap.Height:= VideoBox.Height;
-  fVideoBitmap.Width:= VideoBox.Width;
-
-
-  // Create instance of our video image class.
-  fVideoImage:= TVideoImage.Create;
-  // Tell fVideoImage where to paint the images it receives from the camera
-  // (Only in case we do not want to modify the images by ourselves)
-  fVideoImage.SetDisplayCanvas(VideoBox.Canvas);
+  fCamActivated:= false;
+  RadioGroupCam.ItemIndex:= 0;
 
   overlay_color:= OverlayColor.Color;
 
   DeviceList := TStringList.Create;
   fVideoImage.GetListOfDevices(DeviceList);
+
   if DeviceList.Count < 1 then begin
     // If no camera has been found, terminate program
     fCamPresent:= false;
     DeviceList.Free;
-    RadioGroupCam.ItemIndex:= 0;
     Label1.Caption:='No Webcam/Video Device found';
     CamIsOn:= false;
   end else begin
     fCamPresent:= true;
+
+    // Create instance of our video image class.
     fVideoImage:= TVideoImage.Create;
+    // Tell fVideoImage where to paint the images it receives from the camera
+    // (Only in case we do not want to modify the images by ourselves)
+    fVideoImage.SetDisplayCanvas(VideoBox.Canvas);
+    fVideoBitmap:= TBitmap.create;
+    fVideoBitmap.Height:= VideoBox.Height;
+    fVideoBitmap.Width:= VideoBox.Width;
+
     fVideoImage.OnNewVideoFrame := OnNewVideoFrame;
     Label1.Caption:='  Webcam/Video Device off';
+
+    OldEvent:= RadioGroupCam.OnClick;                      // save OnClick event
+    RadioGroupCam.OnClick:= nil;                // no execution of OnClick event
+    RadioGroupCam.ItemIndex:= 0;
     if CamIsOn then
-//      RadioGroupCam.ItemIndex:= 1;
+      RadioGroupCam.ItemIndex:= 1;
+    RadioGroupCam.OnClick := OldEvent;                  // restore OnClick event
   end;
 end;
 
@@ -196,10 +215,10 @@ begin
   end;
 
   if fCamPresent then begin
-    if fActivated then
+    if fCamActivated then
       fVideoImage.VideoStop;
   end;
-  fActivated := false;
+  fCamActivated := false;
   Form1.ShowSpindleCam1.Checked:= false;
 end;
 
@@ -351,8 +370,6 @@ end;
 
 procedure TForm3.Timer1Timer(Sender: TObject);
 begin
-  if CamIsOn and (RadioGroupCam.ItemIndex = 0) then
-    RadioGroupCam.ItemIndex:= 1;
   if (HilitePoint < 0) and (HiliteBlock < 0) then begin
     BtnCamAtPoint.Enabled:= false;
     BtnMoveToolPoint.Enabled:= false;
