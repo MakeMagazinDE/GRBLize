@@ -533,7 +533,8 @@ begin
     // letzten Eintrag entfernen, falls gleich erstem Punkt, dafür "closed" setzen
     my_first_pt:= blockArrays[fileID,b].outline_raw[0];
     my_last_pt:= blockArrays[fileID,b].outline_raw[my_pathlen-1];
-    if (my_first_pt.X = my_last_pt.X) and (my_first_pt.Y = my_last_pt.Y) and auto_close_polygons then begin
+    if (my_first_pt.X = my_last_pt.X) and (my_first_pt.Y = my_last_pt.Y) and
+       (my_pathlen > 1) and auto_close_polygons then begin
       dec(my_pathlen);
       blockArrays[fileID,b].closed:= true;
       setlength(blockArrays[fileID,b].outline_raw, my_pathlen);
