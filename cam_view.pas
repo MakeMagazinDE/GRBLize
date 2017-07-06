@@ -40,11 +40,9 @@ type
     procedure BtnMoveToolZeroClick(Sender: TObject);
     procedure SwitchCam(SwitchOn: boolean);
     procedure hide;
-    procedure show;
   private
     { Private-Deklarationen }
   public
-    FrameCounter: integer;
     { Public-Deklarationen }
     fVideoImage: TVideoImage;
     fVideoBitmap: TBitmap;
@@ -70,20 +68,13 @@ begin
     if SwitchOn then begin
       Label1.Caption:='    Initializing Webcam...';
       Application.ProcessMessages;
-      if fVideoImage.VideoStart(DeviceList[0]) <> 0 then
-        FrameCounter:= 0;
+      fVideoImage.VideoStart(DeviceList[0]);
     end else begin
       Label1.Caption:='  Webcam/Video Device off';
       fVideoImage.VideoStop;
     end;
     fCamActivated := SwitchOn;
   end;
-end;
-
-procedure TForm3.show;
-begin
-  inherited show;
-  SwitchCam(CamIsOn);
 end;
 
 procedure TForm3.hide;
@@ -108,7 +99,6 @@ var
   r : integer;
   bm_center_x, bm_center_y: Integer;
 begin
-  inc(FrameCounter);
   // Retreive latest video image
   if not fCamActivated then
     exit;

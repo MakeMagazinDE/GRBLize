@@ -424,8 +424,8 @@ begin
     job.pens[i].enable:= job.pens[i].used;
   end;
 
-  JobToPenGridList;
-  apply_pen_change;
+//  JobToPenGridList;
+//  apply_pen_change;
   NeedsRedraw:= true;
 
   Form1.SgPens.Repaint;
@@ -447,6 +447,22 @@ begin
   if FileExists(JobSettingsPath) then begin
     sl:= Tstringlist.Create;
     sl.LoadfromFile(JobSettingsPath);
+
+  // load defaults first, because size of table influence the settings of blocks
+    s:= sl.indexof('#Defaults');
+    if s >= 0 then begin
+      inc(s);
+      my_row:= 1;
+      for i := s to sl.Count-1 do begin
+        if AnsiContainsStr(sl.strings[i],'#') then
+          break;
+        Form1.SgJobDefaults.Rowcount:= my_row+1;
+        Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
+        inc(my_row);
+      end;
+      Form1.SgJobDefaults.Repaint;
+    end;
+
     s:= sl.indexof('#Files');
     if s >= 0 then begin
       inc(s);
@@ -458,7 +474,9 @@ begin
         inc(my_row);
       end;
       Form1.SgFiles.Repaint;
+      OpenFilesInGrid;
     end;
+
     s:= sl.indexof('#Pens');
     if s >= 0 then begin
       inc(s);
@@ -473,21 +491,7 @@ begin
       PenGridListToJob;
       apply_pen_change;
     end;
-    s:= sl.indexof('#Defaults');
-    if s >= 0 then begin
-      inc(s);
-      my_row:= 1;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        Form1.SgJobDefaults.Rowcount:= my_row+1;
-        Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
-        inc(my_row);
-      end;
-      Form1.SgJobDefaults.Repaint;
-                // Laden der Fräsedateinen erst nach Einlesen der Werkstückgröße
-      OpenFilesInGrid;
-    end;
+
     s:= sl.indexof('#Blocks');
     if s >= 0 then begin
       inc(s);
@@ -509,6 +513,7 @@ begin
       end;
       Form1.SgBlocks.Repaint;
     end;
+
     s:= sl.indexof('#PathEnables');
     if s >= 0 then begin
       sl_p:= Tstringlist.Create;
@@ -529,6 +534,7 @@ begin
       end;
       sl_p.Free;
     end;
+
     s:= sl.indexof('#Comment');
     if s >= 0 then begin
       inc(s);
@@ -564,9 +570,10 @@ begin
       break;
     end;
   end;
-  ListBlocks;
   for i := 0 to high(final_array) do
     final_array[i].enable:= is_any_milling_enabled(final_array[i]);
+  ListBlocks;
+  NeedsRedraw:= true;
 end;
 
 Procedure LoadIniFile;
@@ -794,8 +801,9 @@ begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
   NeedsRedraw:= true;
   ListBlocks;
-  if SgJobDefaults.Row > 7 then
-    OpenFilesInGrid;
+//  if SgJobDefaults.Row > 7 then
+              // adapt parameters also after leaving cell by click to other cell
+  OpenFilesInGrid;
 end;
 
 // #############################################################################
