@@ -93,6 +93,7 @@ const
 
   Tfinal = record
     enable: Boolean;
+    out_of_work: Boolean;
     pen: Integer;
     shape: Tshape;
     closed: Boolean;
@@ -783,6 +784,8 @@ begin
     final_array[i].shape:= job.pens[my_block.pen].shape;
     // diese Werte liegen seit Import fest:
     final_array[i].enable:= my_block.enable;
+                          // handle out_of_work independently from manual enable
+    final_array[i].out_of_work:= my_block.enable;
     final_array[i].pen:= my_block.pen;
     if job.pens[my_block.pen].force_closed then
       final_array[i].closed:= true  // ist ein Gerber-Import
@@ -807,7 +810,7 @@ procedure make_final_array(fileID: Integer);
 var i, c, p, m: Integer;
   my_len: Integer;
 begin
-  
+
   for p:= 0 to length(blockArrays[fileID])-1 do begin    // Parent-Loop (p)
     if blockArrays[fileID, p].parentID >= 0 then
       continue;                                 // ist bereits Parent

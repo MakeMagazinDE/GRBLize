@@ -762,6 +762,8 @@ begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   OpenFilesInGrid;
+  NeedsRedraw:= true;
+  ListBlocks;
 end;
 
 procedure TForm1.SgJobDefaultsKeyPress(Sender: TObject; var Key: Char);
@@ -799,11 +801,11 @@ procedure TForm1.SgJobDefaultsClick(Sender: TObject);
 begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
-  NeedsRedraw:= true;
-  ListBlocks;
 //  if SgJobDefaults.Row > 7 then
               // adapt parameters also after leaving cell by click to other cell
   OpenFilesInGrid;
+  NeedsRedraw:= true;
+  ListBlocks;
 end;
 
 // #############################################################################

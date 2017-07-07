@@ -34,7 +34,8 @@ var i: Integer;
 begin
   result:= -1;
   for i := 1 to c_numATCslots do
-    if not isToolDifferent(pen_idx, atcArray[i].pen) then begin
+    if atcArray[i].used and
+       not isToolDifferent(pen_idx, atcArray[i].pen) then begin
       result:= i;
       break;
     end;
@@ -50,7 +51,8 @@ begin
 
   atc_slot:= 0;
   for block_idx:= 0 to my_len do begin
-    if final_array[block_idx].enable then begin
+    if final_array[block_idx].enable and
+       not final_array[block_idx].out_of_work then begin
       pen_idx:= final_array[block_idx].pen;
       atc_idx:= search_same_tool_in_atc(pen_idx);
       if atc_idx < 0 then begin        // nicht gefunden, neuen Slot reservieren

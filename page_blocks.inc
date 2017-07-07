@@ -8,7 +8,7 @@ function ListBlocks: boolean;
 var i, j, my_len, my_millingcount, my_row, my_pathcount: Integer;
 //  my_entry: Tfinal;
   x1, y1, x2, y2: Double;
-  out_of_work: Boolean;
+//  out_of_work: Boolean;
   my_offset: TIntPoint;
   my_bounds: Tbounds;
   my_str: String;
@@ -36,7 +36,7 @@ begin
       for i:= 0 to my_len-1 do begin
         //my_entry:= final_array[i];
         my_pathcount:= length(final_array[i].millings);
-        out_of_work:= false;
+        final_array[i].out_of_work:= false;
         if my_pathcount < 1 then
           continue;
         // '#,Pen,Ena,Dia,Shape,Bounds,Points';
@@ -66,17 +66,17 @@ begin
         y2:= my_bounds.max.y / c_hpgl_scale;
         if final_array[i].enable then begin
           if (x1 < 0) then
-            out_of_work:= true;
+            final_array[i].out_of_work:= true;
           if (y1 < 0) then
-            out_of_work:= true;
+            final_array[i].out_of_work:= true;
           if (x2 > job.partsize_x) then
-            out_of_work:= true;
+            final_array[i].out_of_work:= true;
           if (y2 > job.partsize_y) then
-            out_of_work:= true;
+            final_array[i].out_of_work:= true;
         end;
-        if out_of_work then begin
-          // Form1.Memo1.lines.add('WARNING: Tool path ' + IntToStr(i+1) + ' outside work - disabled');
-          final_array[i].enable:= false;
+        if final_array[i].out_of_work then begin
+          Form1.Memo1.lines.add('WARNING: Tool path ' + IntToStr(i+1) + ' outside work - disabled');
+//          final_array[i].enable:= false;
           result:= true;
         end;
         Cells[3,my_row]:= FormatFloat('0.0', job.pens[final_array[i].pen].diameter);

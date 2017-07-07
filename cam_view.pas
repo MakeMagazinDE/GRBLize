@@ -360,6 +360,8 @@ end;
 
 procedure TForm3.Timer1Timer(Sender: TObject);
 begin
+  if visible then
+    SwitchCam(CamIsOn);
   if (HilitePoint < 0) and (HiliteBlock < 0) then begin
     BtnCamAtPoint.Enabled:= false;
     BtnMoveToolPoint.Enabled:= false;
