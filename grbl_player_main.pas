@@ -1179,7 +1179,8 @@ begin
     grbl_ini.WriteString('SettingsPath',JobSettingsPath);
     grbl_ini.WriteBool('DrawingFormVisible',Form1.ShowDrawing1.Checked);
     grbl_ini.WriteBool('CamFormVisible',Form1.ShowSpindleCam1.Checked);
-    grbl_ini.WriteBool('CamOn', CamIsOn);
+                                      // wird in Form3.Close noch einmal gemacht
+    //    grbl_ini.WriteBool('CamOn', CamIsOn);
     grbl_ini.WriteBool('SceneFormVisible',Form1.Show3DPreview1.Checked);
     if ftdi_isopen then
       grbl_ini.WriteString('FTDIdeviceSerial', ftdi_serial)

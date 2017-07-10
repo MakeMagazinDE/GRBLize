@@ -100,6 +100,7 @@ begin
     Cells[5,i+1]:= '0';
     Cells[6,i+1]:= '100';
     Cells[6,i+1]:= 'YES';
+    Cells[7,i+1]:= '0.9';
     Cells[8,i+1]:= '';
     job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100';
     with FileParamArray[i] do begin
@@ -327,6 +328,22 @@ begin
   job.pens[tool_idx].force_closed:= true;
 end;
 
+procedure ProveNewGBR(FileName:string;i: integer);
+var GbrName, CmdStr: string;
+begin
+   GbrName := ChangeFileExt(FileName, '.gbr');              // Quelle ist *.gbr?
+   if not FileExists(GbrName) then begin
+     GbrName := ChangeFileExt(FileName, '.gbl');            // Quelle ist *.gbl?
+     if not FileExists(GbrName) then exit;// Quelle nicht gefunden, nur NC laden
+   end;
+                // TestS enthält nun den Namen der ursprünglichen Gerber-Datei!!
+   if FileAge(FileName) < FileAge(GbrName) then
+     CmdStr := CallPcb2Gcode(GbrName,
+                             pos('front',GbrName) > 0,
+                             FileParamArray[i-1].user1,
+                             '500');
+end;
+
 Procedure OpenFilesInGrid;
 var
   i, pen_override: Integer;
@@ -355,6 +372,7 @@ begin
       FileParamArray[i-1].offset.X:= round(StrToFloatDef(Cells[4, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].scale:= StrToFloatDef(Cells[6, i], 100.0);
+      FileParamArray[i-1].user1:= StrToFloatDef(Cells[7, i], 0.2);
       my_path:= Cells[0,i];
       my_ext:= AnsiUpperCase(ExtractFileExt(my_path));
       if my_ext = '' then
@@ -375,11 +393,13 @@ begin
         Cells[8, i]:= 'GCode'; // Remark
         gcode_fileload(my_path, i-1, -1);
       end else if (my_ext = '.NCF') then begin
+        ProveNewGBR(my_path,i);
         Cells[8, i]:= 'PCB top'; // Remark
         Cells[1, i]:= '8'; // Replace Pen
         gcode_fileload(my_path, i-1, 8);
         SetPCBmillTool(8);
       end else if (my_ext = '.NCB') then begin
+        ProveNewGBR(my_path,i);
         Cells[8, i]:= 'PCB botm'; // Remark
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);
@@ -404,8 +424,8 @@ begin
     job.pens[i].enable:= job.pens[i].used;
   end;
 
-  JobToPenGridList;
-  apply_pen_change;
+//  JobToPenGridList;
+//  apply_pen_change;
   NeedsRedraw:= true;
 
   Form1.SgPens.Repaint;
@@ -427,6 +447,22 @@ begin
   if FileExists(JobSettingsPath) then begin
     sl:= Tstringlist.Create;
     sl.LoadfromFile(JobSettingsPath);
+
+  // load defaults first, because size of table influence the settings of blocks
+    s:= sl.indexof('#Defaults');
+    if s >= 0 then begin
+      inc(s);
+      my_row:= 1;
+      for i := s to sl.Count-1 do begin
+        if AnsiContainsStr(sl.strings[i],'#') then
+          break;
+        Form1.SgJobDefaults.Rowcount:= my_row+1;
+        Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
+        inc(my_row);
+      end;
+      Form1.SgJobDefaults.Repaint;
+    end;
+
     s:= sl.indexof('#Files');
     if s >= 0 then begin
       inc(s);
@@ -440,6 +476,7 @@ begin
       Form1.SgFiles.Repaint;
       OpenFilesInGrid;
     end;
+
     s:= sl.indexof('#Pens');
     if s >= 0 then begin
       inc(s);
@@ -454,19 +491,7 @@ begin
       PenGridListToJob;
       apply_pen_change;
     end;
-    s:= sl.indexof('#Defaults');
-    if s >= 0 then begin
-      inc(s);
-      my_row:= 1;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        Form1.SgJobDefaults.Rowcount:= my_row+1;
-        Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
-        inc(my_row);
-      end;
-      Form1.SgJobDefaults.Repaint;
-    end;
+
     s:= sl.indexof('#Blocks');
     if s >= 0 then begin
       inc(s);
@@ -488,6 +513,7 @@ begin
       end;
       Form1.SgBlocks.Repaint;
     end;
+
     s:= sl.indexof('#PathEnables');
     if s >= 0 then begin
       sl_p:= Tstringlist.Create;
@@ -508,6 +534,7 @@ begin
       end;
       sl_p.Free;
     end;
+
     s:= sl.indexof('#Comment');
     if s >= 0 then begin
       inc(s);
@@ -543,9 +570,10 @@ begin
       break;
     end;
   end;
-  ListBlocks;
   for i := 0 to high(final_array) do
     final_array[i].enable:= is_any_milling_enabled(final_array[i]);
+  ListBlocks;
+  NeedsRedraw:= true;
 end;
 
 Procedure LoadIniFile;
@@ -734,6 +762,8 @@ begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   OpenFilesInGrid;
+  NeedsRedraw:= true;
+  ListBlocks;
 end;
 
 procedure TForm1.SgJobDefaultsKeyPress(Sender: TObject; var Key: Char);
@@ -771,10 +801,11 @@ procedure TForm1.SgJobDefaultsClick(Sender: TObject);
 begin
   with SgJobDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
+//  if SgJobDefaults.Row > 7 then
+              // adapt parameters also after leaving cell by click to other cell
+  OpenFilesInGrid;
   NeedsRedraw:= true;
   ListBlocks;
-  if SgJobDefaults.Row > 7 then
-    OpenFilesInGrid;
 end;
 
 // #############################################################################

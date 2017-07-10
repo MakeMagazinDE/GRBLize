@@ -512,11 +512,14 @@ begin
   if my_radius < 1 then
     my_radius:= 1;
   my_offset:= job.pens[my_final_entry.pen].offset;
-  if (my_final_entry.shape = drillhole) or (not has_multiple_millings) or (not my_final_entry.enable) then begin
-    // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
+  if (my_final_entry.shape = drillhole) or
+     (not has_multiple_millings) or
+     (not my_final_entry.enable) or
+     (my_final_entry.out_of_work) then begin
+   // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
     my_pen_color:= job.pens[my_final_entry.pen].Color;
-    set_colors(my_final_entry.enable, is_highlited, my_pen_color,
-       my_line_color, my_fill_color1, my_fill_color2);
+    set_colors( (my_final_entry.enable and not my_final_entry.out_of_work),
+      is_highlited, my_pen_color, my_line_color, my_fill_color1, my_fill_color2);
     my_fill_color3:= colorDim(my_pen_color, 80);
   end;
 
