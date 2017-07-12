@@ -2838,7 +2838,10 @@ begin
         mdelay(300)
       else
         mdelay(100);
-      first_loop_done:= true;
+      if not first_loop_done then begin
+        first_loop_done:= true;
+        GetAsyncKeyState(VK_LBUTTON);
+      end;
     until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
   end;
   NeedsRedraw:= true;
