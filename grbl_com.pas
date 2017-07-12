@@ -247,10 +247,16 @@ begin
   end;
   if (pos('[', my_response) > 0) then begin
     Form1.LabelResponse.Caption:= my_response;
+
     if AnsiContainsStr(my_response, 'Timeout') then begin
       inc(StatusFaultCounter);  // nicht angekommen
       exit;  // Timeout ist KEINE Push-Message
     end;
+
+    // PRB is the answer to the probe command and will handled by GBRLize as the
+    // direct answer, not as Push Meaasge
+    if AnsiContainsStr(my_response, 'PRB') then exit;
+
     Form1.Memo1.lines.add(my_response);
     zero_mask:= 0;
     if AnsiContainsStr(my_response, 'ZeroX') then
