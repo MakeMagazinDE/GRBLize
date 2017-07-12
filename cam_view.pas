@@ -40,10 +40,6 @@ type
     procedure BtnMoveToolZeroClick(Sender: TObject);
     procedure SwitchCam(SwitchOn: boolean);
     procedure hide;
-<<<<<<< HEAD
-=======
-    procedure show;
->>>>>>> 03395e93fd76862b63343793f5467fc02d9c39b8
   private
     { Private-Deklarationen }
   public
@@ -73,12 +69,7 @@ begin
     if SwitchOn then begin
       Label1.Caption:='    Initializing Webcam...';
       Application.ProcessMessages;
-<<<<<<< HEAD
       fVideoImage.VideoStart(DeviceList[0]);
-=======
-      if fVideoImage.VideoStart(DeviceList[0]) <> 0 then
-        FrameCounter:= 0;
->>>>>>> 03395e93fd76862b63343793f5467fc02d9c39b8
     end else begin
       Label1.Caption:='  Webcam/Video Device off';
       fVideoImage.VideoStop;
@@ -87,15 +78,6 @@ begin
   end;
 end;
 
-<<<<<<< HEAD
-=======
-procedure TForm3.show;
-begin
-  inherited show;
-  SwitchCam(CamIsOn);
-end;
-
->>>>>>> 03395e93fd76862b63343793f5467fc02d9c39b8
 procedure TForm3.hide;
 begin
   SwitchCam(false);
@@ -380,11 +362,8 @@ end;
 
 procedure TForm3.Timer1Timer(Sender: TObject);
 begin
-<<<<<<< HEAD
   if visible then
     SwitchCam(CamIsOn);
-=======
->>>>>>> 03395e93fd76862b63343793f5467fc02d9c39b8
   if (HilitePoint < 0) and (HiliteBlock < 0) then begin
     BtnCamAtPoint.Enabled:= false;
     BtnMoveToolPoint.Enabled:= false;
