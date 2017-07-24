@@ -518,7 +518,6 @@ begin
   finally
     grbl_ini.Free;
   end;
-  Form1.WindowMenu1.Items[2].Checked:= false;
   //GLCadencer1.Enabled:= false;
 end;
 

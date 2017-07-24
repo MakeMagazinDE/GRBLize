@@ -1002,7 +1002,7 @@ begin
 end;
 
 procedure grbl_millZF(z: Double; f: Integer);
-// GCode-String G0 x,y mit abschließendem CR an GRBL senden, auf OK warten
+// GCode-String G0 z mit abschließendem CR an GRBL senden, auf OK warten
 // F (speed) wird hier immer neu gesetzt wg. möglichem GRBL-Z-Scaling
 var my_str: String;
 begin

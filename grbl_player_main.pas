@@ -12,7 +12,7 @@ uses
   VFrames, ExtDlgs, XPMan, CheckLst, drawing_window,
   glscene_view, GLColor, ValEdit, System.ImageList, System.Actions,
   FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes,
-  app_defaults;
+  app_defaults, DateUtils;
 
 
 const
@@ -72,12 +72,6 @@ type
     TabSheetRun: TTabSheet;
     SgGrblSettings: TStringGrid;
     Bevel3: TBevel;
-    PosX: TLabel;
-    BtnZeroX: TSpeedButton;
-    PosY: TLabel;
-    BtnZeroY: TSpeedButton;
-    PosZ: TLabel;
-    BtnZeroZ: TSpeedButton;
     Label11: TLabel;
     BtnSendGrblSettings: TBitBtn;
     ColorDialog1: TColorDialog;
@@ -99,7 +93,6 @@ type
     WindowMenu1: TMenuItem;
     ShowDrawing1: TMenuItem;
     Show3DPreview1: TMenuItem;
-    ShowSpindleCam1: TMenuItem;
     SgJobDefaults: TStringGrid;
     MemoComment: TMemo;
     Label3: TLabel;
@@ -110,7 +103,6 @@ type
     PanelReady: TPanel;
     PanelAlarm: TPanel;
     PanelHold: TPanel;
-    Label6: TLabel;
     Bevel5: TBevel;
     BtnLoadGrblSetup: TSpeedButton;
     BtnSaveGrblSetup: TSpeedButton;
@@ -120,7 +112,6 @@ type
     SgAppDefaults: TStringGrid;
     Label25: TLabel;
     Label26: TLabel;
-    Label27: TLabel;
     Label28: TLabel;
     Bevel8: TBevel;
     LabelWorkX: TLabel;
@@ -139,7 +130,6 @@ type
     Label31: TLabel;
     Bevel6: TBevel;
     Bevel9: TBevel;
-    CheckPartProbeZ: TCheckBox;
     PanelZdone: TPanel;
     LabelHintZ: TLabel;
     ToolBar1: TToolBar;
@@ -154,52 +144,16 @@ type
     BtnZeroAll: TSpeedButton;
     Label48: TLabel;
     GerberImport1: TMenuItem;
-    BitBtn9: TBitBtn;
-    BitBtn8: TBitBtn;
-    BitBtn7: TBitBtn;
-    BitBtn10: TBitBtn;
-    BitBtn11: TBitBtn;
-    BitBtn12: TBitBtn;
-    BitBtn1: TBitBtn;
-    BitBtn2: TBitBtn;
-    BitBtn3: TBitBtn;
-    BitBtn4: TBitBtn;
-    BitBtn5: TBitBtn;
-    BitBtn6: TBitBtn;
-    Label17: TLabel;
-    Label18: TLabel;
-    BitBtn15: TBitBtn;
-    BitBtn14: TBitBtn;
-    BitBtn13: TBitBtn;
-    BitBtn16: TBitBtn;
-    BitBtn17: TBitBtn;
-    BitBtn18: TBitBtn;
-    BtnHomeCycle: TSpeedButton;
-    BtnMovePark: TSpeedButton;
-    BtnMoveFix1: TSpeedButton;
-    BtnMoveFix2: TSpeedButton;
-    Label20: TLabel;
-    BtnMoveXYzero: TSpeedButton;
-    BtnMoveToolChange: TSpeedButton;
     LabelHintZ2: TLabel;
-    Label15: TLabel;
-    Label16: TLabel;
     Memo1: TMemo;
     Label13: TLabel;
     Bevel4: TBevel;
-    Bevel10: TBevel;
     PanelAlive: TPanel;
     EditFirstToolDia: TEdit;
     CheckToolChange: TCheckBox;
     CheckUseATC2: TCheckBox;
     sgATC: TStringGrid;
     LabelATCmsg: TLabel;
-    BtnSetPark: TButton;
-    BtnSetFix1: TButton;
-    BtnSetFix2: TButton;
-    BtnHomeOverride: TSpeedButton;
-    Bevel11: TBevel;
-    Label10: TLabel;
     Label24: TLabel;
     PopupMenuATC: TPopupMenu;
     pu_MovetoATCslot: TMenuItem;
@@ -208,14 +162,9 @@ type
     pu_ProbeToolLengthRef: TMenuItem;
     pu_ProbetoolLengthComp: TMenuItem;
     BtnRunTool: TSpeedButton;
-    BtnMoveMillCenter: TSpeedButton;
-    BtnZcontact: TSpeedButton;
-    Label9: TLabel;
-    Bevel2: TBevel;
     Label14: TLabel;
     Label21: TLabel;
     Label22: TLabel;
-    BtnMoveZzero: TSpeedButton;
     Action1: TAction;
     PopupMenuShape: TPopupMenu;
     ms_contour: TMenuItem;
@@ -276,12 +225,60 @@ type
     LabelStatusFaults: TLabel;
     LabelResponse: TLabel;
     MposC: TLabel;
-    PosC: TLabel;
     BtnZeroC: TSpeedButton;
-    Label39: TLabel;
-    Label40: TLabel;
-    Label41: TLabel;
-    Label42: TLabel;
+    TabSheet2: TTabSheet;
+    VideoBox: TPaintBox;
+    RadioGroupCam: TRadioGroup;
+    TrackBar1: TTrackBar;
+    StaticText1: TStaticText;
+    StaticText6: TStaticText;
+    OverlayColor: TPanel;
+    Label43: TLabel;
+    BitBtn14: TBitBtn;
+    BitBtn13: TBitBtn;
+    BitBtn12: TBitBtn;
+    BitBtn11: TBitBtn;
+    BitBtn10: TBitBtn;
+    BitBtn3: TBitBtn;
+    BitBtn2: TBitBtn;
+    BitBtn1: TBitBtn;
+    BitBtn6: TBitBtn;
+    BitBtn5: TBitBtn;
+    BitBtn4: TBitBtn;
+    BitBtn7: TBitBtn;
+    BitBtn8: TBitBtn;
+    BitBtn9: TBitBtn;
+    Bevel10: TBevel;
+    BtnHomeOverride: TSpeedButton;
+    BtnHomeCycle: TSpeedButton;
+    LabelJogDistance: TLabel;
+    BtnMovePark: TSpeedButton;
+    Bevel2: TBevel;
+    LabelMoveTo: TLabel;
+    BtnZcontact: TSpeedButton;
+    BtnMoveXYzero: TSpeedButton;
+    BtnMoveHilite: TSpeedButton;
+    BtnMoveZzero: TSpeedButton;
+    BtnMoveToolChange: TSpeedButton;
+    BtnMoveFix2: TSpeedButton;
+    BtnMoveFix1: TSpeedButton;
+    Label9: TLabel;
+    Label6: TLabel;
+    CheckPartProbeZ: TCheckBox;
+    Bevel11: TBevel;
+    PosC: TLabel;
+    PosZ: TLabel;
+    PosY: TLabel;
+    PosX: TLabel;
+    Bevel12: TBevel;
+    Label10: TLabel;
+    Bevel13: TBevel;
+    Bevel14: TBevel;
+    Label15: TLabel;
+    BtnEmergStopRun: TBitBtn;
+    BtnCancelRun: TSpeedButton;
+    BtnCancelMill: TSpeedButton;
+    BtnEmergStopMill: TBitBtn;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -294,7 +291,7 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure SgJobDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure ShowSpindleCam1Click(Sender: TObject);
+//    procedure ShowSpindleCam1Click(Sender: TObject);
     procedure Show3DPreview1Click(Sender: TObject);
     procedure ShowDrawing1Click(Sender: TObject);
     procedure SgJobDefaultsExit(Sender: TObject);
@@ -306,7 +303,7 @@ type
     procedure SgBlocksDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
     procedure BtnMoveToolChangeClick(Sender: TObject);
-    procedure BtnMoveParkClick(Sender: TObject);
+//    procedure BtnMoveParkClick(Sender: TObject);
     procedure BtnMoveXYzeroClick(Sender: TObject);
     procedure SgGrblSettingsDrawCell(Sender: TObject; ACol,
       ARow: Integer; Rect: TRect; State: TGridDrawState);
@@ -356,12 +353,12 @@ type
     procedure BtnZcontactClick(Sender: TObject);
     procedure CheckTLCprobeClick(Sender: TObject);
     procedure BtnRescanClick(Sender: TObject);
-    procedure BtnMoveFix2Click(Sender: TObject);
-    procedure BtnMoveFix1Click(Sender: TObject);
-    procedure BtnSetFix1Click(Sender: TObject);
-    procedure BtnSetFix2Click(Sender: TObject);
+//    procedure BtnMoveFix2Click(Sender: TObject);
+//    procedure BtnMoveFix1Click(Sender: TObject);
+//    procedure BtnSetFix1Click(Sender: TObject);
+//    procedure BtnSetFix2Click(Sender: TObject);
     procedure BtnZeroAllClick(Sender: TObject);
-    procedure BtnSetParkClick(Sender: TObject);
+//    procedure BtnSetParkClick(Sender: TObject);
     procedure GerberImport1Click(Sender: TObject);
     procedure sgATCDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
       State: TGridDrawState);
@@ -383,7 +380,7 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure pu_ProbetoolLengthCompClick(Sender: TObject);
     procedure BtnRunToolClick(Sender: TObject);
-    procedure BtnMoveMillCenterClick(Sender: TObject);
+//    procedure BtnMoveMillCenterClick(Sender: TObject);
     procedure BtnMoveZzeroClick(Sender: TObject);
     procedure mt_Click(Sender: TObject);
     procedure ms_Click(Sender: TObject);
@@ -415,11 +412,37 @@ type
     procedure BtnReloadAllClick(Sender: TObject);
     procedure BtnZeroCClick(Sender: TObject);
 
+    procedure RadioGroupCamClick(Sender: TObject);
+    procedure SwitchCam(SwitchOn: boolean);
+    procedure OverlayColorClick(Sender: TObject);
+
+    procedure MouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure BtnMoveCamZeroClick(Sender: TObject);
+    procedure BtnCamAtZeroClick(Sender: TObject);
+    procedure BtnCamAtPointClick(Sender: TObject);
+    procedure BtnMoveCamPointClick(Sender: TObject);
+    procedure BtnMoveToolPointClick(Sender: TObject);
+    procedure SetDefaultToPos(s: String; var x,y,z: Double; idx: integer; CAM: boolean);
+    procedure MoveToPos(S: String; x, y, z: Double; Set0, CAM: boolean);
+    procedure SetZero(axes: integer);
+
+    procedure hide;
 
   private
     { Private declarations }
+    JogDistance: integer;
+    MouseDownStart: int64;
   public
     { Public declarations }
+    FrameCounter: integer;
+    BtnDownTime:  int64;
+    BtnDownTag:   integer;
+    fVideoImage:  TVideoImage;
+    fVideoBitmap: TBitmap;
+    procedure OnNewVideoFrame(Sender : TObject; Width, Height: integer; DataPtr: pointer);
   end;
 
   TLed = class
@@ -581,6 +604,11 @@ var
   JoyPadWasActive: Boolean = false;
   SavedPortnameForSim: String;
 
+  fCamActivated,                        // Cam is switched on in current session
+  fCamPresent,                              // Cam is present in current session
+  CamIsOn : boolean;                                      // global state of Cam
+  overlay_color: Tcolor;
+
 const
    // für Simulation
   c_zero_x = 50;
@@ -672,7 +700,7 @@ const
 
 implementation
 
-uses import_files, Clipper, About, bsearchtree, cam_view, gerber_import;
+uses import_files, Clipper, About, bsearchtree, gerber_import;
 
 {$R *.dfm}
 
@@ -730,20 +758,35 @@ end;
 procedure DisplayMachinePosition;
 begin
   with Form1 do begin
-    MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
-    MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
-    MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
-    MPosC.Caption:= FormatFloat('000.0', grbl_mpos.c);
+    if HomingPerformed then begin
+      MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
+      MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
+      MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
+      MPosC.Caption:= FormatFloat('000.0', grbl_mpos.c);
+    end else begin
+      MPosX.Caption:= '---.--';
+      MPosY.Caption:= '---.--';
+      MPosZ.Caption:= '---.--';
+      MPosC.Caption:= '---.-';
+    end;
   end;
 end;
 
 procedure DisplayWorkPosition;
 begin
   with Form1 do begin
-    PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
-    PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
-    PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
-    PosC.Caption:= FormatFloat('000.0', grbl_wpos.c);
+    if WorkZeroXdone
+      then PosX.Caption:= FormatFloat('000.00', grbl_wpos.x)
+      else PosX.Caption:= '---.--';
+    if WorkZeroYdone
+      then PosY.Caption:= FormatFloat('000.00', grbl_wpos.y)
+      else PosY.Caption:= '---.--';
+    if WorkZeroZdone
+      then PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z)
+      else PosZ.Caption:= '---.--';
+    if WorkZeroCdone
+      then PosC.Caption:= FormatFloat('000.0', grbl_wpos.c)
+      else PosC.Caption:= '---.--';
   end;
 end;
 
@@ -756,10 +799,19 @@ begin
     BtnMovePark.Enabled:= my_state;
     BtnMoveFix1.Enabled:= my_state;
     BtnMoveFix2.Enabled:= my_state;
+    BtnMoveHilite.Enabled:= my_state;
     BtnMoveToolChange.Enabled:= my_state;
-    BtnZeroX.Enabled:= my_state;
-    BtnZeroY.Enabled:= my_state;
-    BtnZeroZ.Enabled:= my_state;
+
+    BtnMoveXYzero.Enabled:= my_state;
+//    BtnMoveXYzero.Flat:= not (WorkZeroXdone and WorkZeroYdone);
+    BtnMoveZzero.Enabled:= my_state;
+//    BtnMoveZzero.Flat:= not WorkZeroZdone;
+    BtnZeroC.Enabled:= my_state;
+
+//    BtnMoveZzero.Enabled:= my_state;
+//    BtnZeroX.Enabled:= my_state;
+//    BtnZeroY.Enabled:= my_state;
+//    BtnZeroZ.Enabled:= my_state;
     BtnZeroAll.Enabled:= my_state;
 //    Form1.BtnProbeTLC.Enabled:= my_state and Form1.CheckFixedProbeZ.checked;
     BtnZcontact.Enabled:= my_state and CheckPartProbeZ.Checked;
@@ -797,8 +849,8 @@ begin
     BtnRunGcode.Enabled:= my_state;
     BtnRunJob.Enabled:= my_state and (length(final_array) > 0);
     BtnRunTool.Enabled:= my_state and (length(final_array) > 0);
-    Form3.BtnMoveToolZero.Enabled:= my_state;
-    Form3.BtnMoveCamZero.Enabled:= my_state;
+//    Form3.BtnMoveToolZero.Enabled:= my_state;
+//    Form3.BtnMoveCamZero.Enabled:= my_state;
   end;
 end;
 
@@ -859,7 +911,7 @@ begin
   end;
   is_idle:= MachineState = idle;
   Form1.BtnCancel.Enabled:= is_running;
-  Form1.BtnMoveMillCenter.Enabled:= WorkZeroXdone and WorkZeroYdone;
+  Form1.BtnMoveHilite.Enabled:= WorkZeroXdone and WorkZeroYdone;
   Form1.BtnMoveXYZero.Enabled:= WorkZeroXdone and WorkZeroYdone;
   Form1.BtnMoveZzero.Enabled:= WorkZeroAllDone;
 
@@ -933,6 +985,7 @@ begin
   WorkZero.Y:= grbl_mpos.y - grbl_wpos.y;
   WorkZero.Z:= grbl_mpos.z - grbl_wpos.z;
   with Form1 do begin
+    MPosX.Caption:= '---.--';
     MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
     MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
     MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
@@ -1015,7 +1068,7 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 var
   grbl_ini: TRegistry;
-
+  OldEvent: TNotifyEvent;
 begin
   StartupDone:= false;
   Show;
@@ -1068,8 +1121,8 @@ begin
       ftdi_was_open:= false;
     if grbl_ini.ValueExists('DrawingFormVisible') then
       ShowDrawing1.Checked:= grbl_ini.ReadBool('DrawingFormVisible');
-    if grbl_ini.ValueExists('CamFormVisible') then
-      ShowSpindleCam1.Checked:= grbl_ini.ReadBool('CamFormVisible');
+//    if grbl_ini.ValueExists('CamFormVisible') then
+//      ShowSpindleCam1.Checked:= grbl_ini.ReadBool('CamFormVisible');
 
     if grbl_ini.ValueExists('SceneFormVisible') then
       Show3DPreview1.Checked:= grbl_ini.ReadBool('SceneFormVisible');
@@ -1084,6 +1137,11 @@ begin
       com_was_open:= grbl_ini.ReadBool('ComOpen')
     else
       com_was_open:= false;
+
+    CamIsOn:= false;
+    if grbl_ini.ValueExists('CamOn') then
+      CamIsOn:= grbl_ini.ReadBool('CamOn');
+
   finally
     grbl_ini.Free;
   end;
@@ -1095,12 +1153,68 @@ begin
   else
     Form4.hide;
 
-  if not IsFormOpen('Form3') then
-    Form3 := TForm3.Create(Self);
-  if ShowSpindleCam1.Checked then
-    Form3.show
-  else
-    Form3.hide;
+//  if not IsFormOpen('Form3') then
+//    Form3 := TForm3.Create(Self);
+//  if ShowSpindleCam1.Checked then
+//    Form3.show
+//  else
+//    Form3.hide;
+
+  fCamActivated:= false;
+  RadioGroupCam.ItemIndex:= 0;
+
+  overlay_color:= OverlayColor.Color;
+
+  DeviceList := TStringList.Create;
+  fVideoImage.GetListOfDevices(DeviceList);
+
+  if DeviceList.Count < 1 then begin
+    // If no camera has been found, terminate program
+    fCamPresent:= false;
+    DeviceList.Free;
+    Label43.Caption:='No Webcam/Video Device found';
+    CamIsOn:= false;
+  end else begin
+    fCamPresent:= true;
+
+    // Create instance of our video image class.
+    fVideoImage:= TVideoImage.Create;
+    // Tell fVideoImage where to paint the images it receives from the camera
+    // (Only in case we do not want to modify the images by ourselves)
+    fVideoImage.SetDisplayCanvas(VideoBox.Canvas);
+    fVideoBitmap:= TBitmap.create;
+    fVideoBitmap.Height:= VideoBox.Height;
+    fVideoBitmap.Width:= VideoBox.Width;
+
+    fVideoImage.OnNewVideoFrame := OnNewVideoFrame;
+    Label43.Caption:='  Webcam/Video Device off';
+
+    OldEvent:= RadioGroupCam.OnClick;                      // save OnClick event
+    RadioGroupCam.OnClick:= nil;                // no execution of OnClick event
+    RadioGroupCam.ItemIndex:= 0;
+    if CamIsOn then
+      RadioGroupCam.ItemIndex:= 1;
+    RadioGroupCam.OnClick := OldEvent;                  // restore OnClick event
+  end;
+
+//  grbl_ini:= TRegistry.Create;
+//  try
+//    grbl_ini.RootKey := HKEY_CURRENT_USER;
+//    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr,true);
+//    if grbl_ini.ValueExists('CamFormTop') then
+//      Top:= grbl_ini.ReadInteger('CamFormTop');
+//    if grbl_ini.ValueExists('CamFormLeft') then
+//      Left:= grbl_ini.ReadInteger('CamFormLeft');
+{
+    if grbl_ini.ValueExists('CamFormVisible') then
+      form_visible:= grbl_ini.ReadBool('CamFormVisible');
+}
+//  finally
+//    grbl_ini.Free;
+//  end;
+
+  JogDistance:= 1; // 0.1mm
+  LabelJogDistance.Caption:=  '0.1';
 
   if not IsFormOpen('Form2') then
     Form2 := TForm2.Create(Self);
@@ -1178,9 +1292,8 @@ begin
     grbl_ini.WriteInteger('MainFormPage',PageControl1.ActivePageIndex);
     grbl_ini.WriteString('SettingsPath',JobSettingsPath);
     grbl_ini.WriteBool('DrawingFormVisible',Form1.ShowDrawing1.Checked);
-    grbl_ini.WriteBool('CamFormVisible',Form1.ShowSpindleCam1.Checked);
-                                      // wird in Form3.Close noch einmal gemacht
-    //    grbl_ini.WriteBool('CamOn', CamIsOn);
+//    grbl_ini.WriteBool('CamFormVisible',Form1.ShowSpindleCam1.Checked);
+    grbl_ini.WriteBool('CamOn', CamIsOn);
     grbl_ini.WriteBool('SceneFormVisible',Form1.Show3DPreview1.Checked);
     if ftdi_isopen then
       grbl_ini.WriteString('FTDIdeviceSerial', ftdi_serial)
@@ -1190,6 +1303,7 @@ begin
     grbl_ini.WriteString('ComBaudrate', deviceselectbox.EditBaudrate.Text);
     grbl_ini.WriteString('ComPort', com_name);
     grbl_ini.WriteBool('ComOpen', com_isopen);
+    grbl_ini.WriteBool('CamOn', CamIsOn);
   finally
     grbl_ini.Free;
   end;
@@ -1207,6 +1321,13 @@ begin
   grbl_is_connected:= false;
   SaveIniFile;
 
+  if fCamPresent then begin
+    if fCamActivated then
+      fVideoImage.VideoStop;
+  end;
+  fCamActivated := false;
+//  ShowSpindleCam1.Checked:= false;
+
   mdelay(200);
   if IsFormOpen('AboutBox') then
     AboutBox.Close;
@@ -1214,10 +1335,9 @@ begin
     DeviceSelectbox.Close;
   if IsFormOpen('Form4') then
     Form4.Close;
-  if IsFormOpen('Form3') then
-    Form3.Close;
   if IsFormOpen('Form2') then
     Form2.Close;
+
 end;
 
 // #############################################################################
@@ -1744,9 +1864,15 @@ begin
 
   // weniger aktuelle Sachen updaten
   if TimerBlinkToggle then begin
-    LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X);
-    LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y);
-    LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z);
+    if WorkZeroXdone
+      then LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X)
+      else LabelWorkX.Caption:= '---.--';
+    if WorkZeroYdone
+      then LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y)
+      else LabelWorkY.Caption:= '---.--';
+    if WorkZeroZdone
+      then LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z)
+      else LabelWorkZ.Caption:= '---.--';
   end else begin
     LabelTableX.Caption:= FormatFloat('000.00', job.table_x);
     LabelTableY.Caption:= FormatFloat('000.00', job.table_y);
@@ -1760,6 +1886,9 @@ begin
     LEDbusy.Checked:= false;
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
   end;
+
+  if visible then                   // switch CAM on after initalisation of form
+    SwitchCam(CamIsOn);
 end;
 
 // #############################################################################
@@ -2141,14 +2270,14 @@ begin
     Form2.Hide;
 end;
 
-procedure TForm1.ShowSpindleCam1Click(Sender: TObject);
-begin
-  ShowSpindleCam1.Checked:= not ShowSpindleCam1.Checked;
-  if ShowSpindleCam1.Checked then
-    Form3.Show
-  else
-    Form3.Hide;
-end;
+//procedure TForm1.ShowSpindleCam1Click(Sender: TObject);
+//begin
+//  ShowSpindleCam1.Checked:= not ShowSpindleCam1.Checked;
+//  if ShowSpindleCam1.Checked then
+//    Form3.Show
+//  else
+//    Form3.Hide;
+//end;
 
 procedure TForm1.CheckUseATC2Click(Sender: TObject);
 begin
@@ -2258,7 +2387,7 @@ begin
   NeedsRedraw:= true;
 end;
 
-
+{
 procedure TForm1.BtnMoveMillCenterClick(Sender: TObject);
 begin
   Memo1.lines.add('');
@@ -2267,7 +2396,7 @@ begin
   grbl_moveXY(final_bounds_mm.mid.x, final_bounds_mm.mid.y, false);
   SendListToGrbl;
 end;
-
+}
 // #############################################################################
 
 procedure TForm1.BtnEmergencyStopClick(Sender: TObject);
@@ -2498,23 +2627,26 @@ end;
 // #################### R E F E R E N C E  B U T T O N S #######################
 // #############################################################################
 
-procedure TForm1.BtnZeroXClick(Sender: TObject);
+procedure TForm1.SetZero(axes: integer);
 begin
   WaitForIdle;
-  HandleZeroRequest(1);
+  HandleZeroRequest(axes);
+end;
+
+procedure TForm1.BtnZeroXClick(Sender: TObject);
+begin
+  SetZero(1);
 end;
 
 procedure TForm1.BtnZeroYClick(Sender: TObject);
 begin
-  WaitForIdle;
-  HandleZeroRequest(2);
+  SetZero(2);
 end;
 
 procedure TForm1.BtnZeroZClick(Sender: TObject);
 // manuelle Z-Höhe mit Messklotz
 begin
-  WaitForIdle;
-  HandleZeroRequest(4);
+  SetZero(4);
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
 {
   if CheckPartProbeZ.Checked then
@@ -2526,14 +2658,12 @@ end;
 
 procedure TForm1.BtnZeroCClick(Sender: TObject);
 begin
-  WaitForIdle;
-  HandleZeroRequest(8);
+  SetZero(8);
 end;
 
 procedure TForm1.BtnZeroAllClick(Sender: TObject);
 begin
-  WaitForIdle;
-  HandleZeroRequest(15);
+  SetZero(15);
 end;
 
 
@@ -2636,7 +2766,30 @@ end;
 // ################### M O V E  AND  J O G  B U T T O N S ######################
 // #############################################################################
 
+procedure TForm1.MoveToPos(S: String; x, y, z: Double; Set0, CAM: boolean);
+begin
+  if machine_busy_msg then
+    exit;
+  LEDbusy.Checked:= true;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('Move to ' + S + ' zero');
+  spindle_on_off(false);
+  drawing_tool_down:= false;
+  if CAM then begin
+    x:= x - job.cam_x;
+    y:= y - job.cam_y;
+  end;
+  grbl_moveZ(0, true);  // Z ganz oben, absolut!
+  grbl_moveXY(x, y, true);
+  grbl_moveZ(z, true);
+  SendListToGrbl;
+  mdelay(250);
+  NeedsRedraw:= true;
+  if Set0 then
+    SetZero(3);
+end;
 
+{
 procedure TForm1.BtnMoveParkClick(Sender: TObject);
 begin
   if machine_busy_msg then
@@ -2694,7 +2847,7 @@ begin
   BtnZeroYClick(Sender);
 //  BtnZeroZClick(Sender);
 end;
-
+}
 procedure TForm1.BtnMoveXYzeroClick(Sender: TObject);
 begin
   if machine_busy_msg then
@@ -2737,38 +2890,161 @@ begin
   NeedsRedraw:= true;
 end;
 
+procedure TForm1.BtnMoveCamZeroClick(Sender: TObject);
+begin
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('Move cam to part zero');
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(-job.cam_x,-job.cam_y, false);
+    grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
+end;
+
+procedure TForm1.BtnCamAtZeroClick(Sender: TObject);
+begin
+  WaitForIdle;
+  Form1.Memo1.lines.add('');
+  Form1.Memo1.lines.add('Offset cam to part zero');
+
+  grbl_offsXY(-job.cam_x, -job.cam_y);
+  SendListToGrbl;
+
+  WorkZero.X:= grbl_mpos.X + job.cam_x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y + job.cam_y;
+  Jog.Y:= WorkZero.Y;
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+  NeedsRedraw:= true;
+end;
+
+procedure TForm1.BtnMoveToolPointClick(Sender: TObject);
+var x,y: Double;
+begin
+  Form1.Memo1.lines.add('');
+  if HilitePoint >= 0 then begin
+    Form1.Memo1.lines.add('Move tool to point');
+    hilite_to(x,y);
+  end else begin
+    Form1.Memo1.lines.add('Move tool to center');
+    hilite_center_to(x,y);
+  end;
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up absolute
+    grbl_moveXY(x, y, false);
+    if WorkZeroAllDone then begin
+      grbl_moveZ(job.z_penlift, false);
+    end else begin
+      Form1.Memo1.lines.add('WARNING: Z Zero not set!');
+      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+    end;
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
+
+  SendListToGrbl;
+end;
+
+procedure TForm1.BtnMoveCamPointClick(Sender: TObject);
+var x,y: Double;
+begin
+  if (HilitePoint < 0) and (HiliteBlock < 0) then
+    exit;
+  Form1.Memo1.lines.add('');
+  if HilitePoint >= 0 then begin
+    Form1.Memo1.lines.add('Move cam to point');
+    hilite_to(x,y);
+  end else begin
+    Form1.Memo1.lines.add('Move cam to center');
+    hilite_center_to(x, y);
+  end;
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
+
+  if WorkZeroXdone and WorkZeroYdone then begin
+    grbl_moveZ(0, true);  // move Z up
+    grbl_moveXY(x, y, false);
+    grbl_moveZ(job.cam_z_abs, true);
+    SendListToGrbl;
+  end else begin
+    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+  end;
+end;
+
+procedure TForm1.BtnCamAtPointClick(Sender: TObject);
+var x,y: Double;
+begin
+  if (HilitePoint < 0) and (HiliteBlock < 0) then
+    exit;
+  Form1.Memo1.lines.add('');
+  if HilitePoint >= 0 then begin
+    Form1.Memo1.lines.add('Offset cam to point');
+    hilite_to(x,y);
+  end else begin
+    Form1.Memo1.lines.add('Offset cam to center');
+    hilite_center_to(x,y);
+  end;
+  x:= x - job.cam_x;
+  y:= y - job.cam_y;
+
+  grbl_offsXY(x, y);
+  SendListToGrbl;
+
+  WorkZero.X:= grbl_mpos.X - x;
+  Jog.X:= WorkZero.X;
+  WorkZero.Y:= grbl_mpos.Y - y;
+  Jog.Y:= WorkZero.Y;
+  WorkZeroXdone:= true;
+  WorkZeroYdone:= true;
+  NeedsRedraw:= true;
+end;
+
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var dx, dy, dz: Double;
   f: Integer;
   first_loop_done: boolean;
-begin
-  if isSimActive then
-    exit;
+  S: String;
+  begin
+//  if isSimActive then
+//    exit;
   WaitForIdle;
   dx := 0;
   dy := 0;
   dz := 0;
   case (Sender as TBitBtn).tag of   // Welcher Jog-Button?
-    0: dx:= 0.1;
-    1: dx:= 1;
-    2: dx:= 10;
-    3: dx:= -0.1;
-    4: dx:= -1;
-    5: dx:= -10;
-    10: dy:= 0.1;
-    11: dy:= 1;
-    12: dy:= 10;
-    13: dy:= -0.1;
-    14: dy:= -1;
-    15: dy:= -10;
-    20: dz:= 0.1;
-    21: dz:= 1;
-    22: dz:= 10;
-    23: dz:= -0.1;
-    24: dz:= -1;
-    25: dz:= -10;
+    0:  begin          dy:=  1; end;     // Nord
+    1:  begin dx:=  1; dy:=  1; end;     // NordOst
+    2:  begin dx:=  1;          end;     // Ost
+    3:  begin dx:=  1; dy:= -1; end;     // Südost
+    4:  begin          dy:= -1; end;     // Süd
+    5:  begin dx:= -1; dy:= -1; end;     // SüdWest
+    6:  begin dx:= -1;          end;     // West
+    7:  begin dx:= -1; dy:=  1; end;     // NordWest
+    10: begin dz:=  1;          end;     // Auf
+    11: begin dz:= -1;          end;     // Ab
+    20: begin JogDistance:=1;    LabelJogDistance.Caption:= '0.1'; exit end;
+    21: begin JogDistance:=10;   LabelJogDistance.Caption:= '1';   exit end;
+    22: begin JogDistance:=100;  LabelJogDistance.Caption:= '10';  exit end;
+    23: begin JogDistance:=1000; LabelJogDistance.Caption:= '100'; exit end;
   end;
+
+  if (dx = 0) and (dy = 0) and (dz = 0) then                 // nothing to move
+    exit;
+
+  dx:= dx * JogDistance /10;
+  dy:= dy * JogDistance /10;
+  dz:= dz * JogDistance /10;
 
   if MachineOptions.NewGrblVersion then begin
     if (abs(dx)>5) or (abs(dy)>5) or (abs(dz)>5) then
@@ -2826,25 +3102,168 @@ begin
     first_loop_done:= false;
     repeat
       Jog.X:= grbl_mpos.X + dx;
+      if Jog.X < 0            then Jog.X:= 0;        // begrenzen auf Tischgröße
+      if Jog.X > job.table_x  then Jog.X:= job.table_x;
       Jog.Y:= grbl_mpos.Y + dy;
+      if Jog.Y < 0            then Jog.Y:= 0;        // begrenzen auf Tischgröße
+      if Jog.Y > job.table_y  then Jog.Y:= job.table_y;
       Jog.Z:= grbl_mpos.Z + dz;
-      if dx <> 0 then
-        SendSingleCommandStr('G0 G53 X' + FloatToStrDot(Jog.X));
-      if dy <> 0 then
-        SendSingleCommandStr('G0 G53 Y' + FloatToStrDot(Jog.Y));
-      if dz <> 0 then
-        SendSingleCommandStr('G0 G53 Z' + FloatToStrDot(Jog.Z));
+      if Jog.Z > 0            then Jog.Z:= 0;        // begrenzen auf Tischgröße
+      if Jog.Z < -job.table_z then Jog.Z:= -job.table_z;
+
+      s:= 'G0 G53';
+      if Jog.X <> grbl_mpos.X then        // nur wenn sich die X-Position ändert
+        s:= s + ' X' + FloatToStrDot(Jog.X);
+      if Jog.Y <> grbl_mpos.Y then        // nur wenn sich die Y-Position ändert
+        s:= s + ' Y' + FloatToStrDot(Jog.Y);
+      if Jog.Z <> grbl_mpos.Z then        // nur wenn sich die Z-Position ändert
+        s:= s + ' Z' + FloatToStrDot(Jog.Z);
+
+      if length(s) > 6 then                 // nur wenn sich die Position ändert
+        SendSingleCommandStr(s);
+
       if not first_loop_done then
         mdelay(300)
       else
         mdelay(100);
-      if not first_loop_done then begin
-        first_loop_done:= true;
-        GetAsyncKeyState(VK_LBUTTON);
-      end;
+
+//      if not first_loop_done then begin
+//        first_loop_done:= true;
+//        GetAsyncKeyState(VK_LBUTTON);
+//      end;
     until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
+    Application.ProcessMessages;                // handle event on windows level
   end;
   NeedsRedraw:= true;
+end;
+
+procedure TForm1.MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  MouseDownStart:= MillisecondOfTheYear(Now);
+end;
+
+procedure TForm1.MouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var D: int64;
+begin
+      // D: time [ms] of pressed mouse button, will be 0 in case of touch screen
+  D:= MillisecondOfTheYear(Now) - MouseDownStart;
+
+  if not fCamActivated then begin
+    if (Button = mbLeft) and (D < 300) then             // move tool to position
+      case (Sender as TSpeedButton).tag of
+        0: MoveToPos('park position', job.park_x, job.park_y, job.park_z, false, false);
+        1: MoveToPos('fix1 position', job.fix1_x, job.fix1_y, job.fix1_z, true,  false);
+        2: MoveToPos('fix2 position', job.fix2_x, job.fix2_y, job.fix2_z, true,  false);
+        3: BtnMoveToolPointClick(Sender);
+        4: BtnMoveToolChangeClick(Sender);
+        5: BtnMoveXYzeroClick(Sender);
+        6: BtnMoveZzeroClick(Sender);
+        8: BtnZcontactClick(Sender);
+      end;
+
+    if (Button = mbRight) or (D > 300) then        // set value to tool position
+      case (Sender as TSpeedButton).tag of
+        0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, 6,  false);
+        1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, 29, false);
+        2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, 32, false);
+        4: SetDefaultToPos('ToolChange', job.toolchange_x,job.toolchange_y,job.toolchange_z, 2, false);
+        5: begin BtnZeroXClick(Sender); BtnZeroYClick(Sender) end;
+        6: BtnZeroZClick(Sender);
+      end;
+
+  end else begin
+    if (Button = mbLeft) and (D < 300) then              // move CAM to position
+      case (Sender as TSpeedButton).tag of
+        0: MoveToPos('park', job.park_x, job.park_y, job.park_z, false, true);
+        1: MoveToPos('fix1', job.fix1_x, job.fix1_y, job.fix1_z, true,  true);
+        2: MoveToPos('fix2', job.fix2_x, job.fix2_y, job.fix2_z, true,  true);
+        5: BtnMoveCamZeroClick(Sender);
+        7: BtnMoveCamPointClick(Sender);
+        8: BtnZcontactClick(Sender);
+      end;
+
+    if (Button = mbRight) or (D > 300) then         // set value to CAM position
+      case (Sender as TSpeedButton).tag of
+        0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, 6,  true);
+        1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, 29, true);
+        2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, 32, true);
+        5: BtnCamAtZeroClick(Sender);
+        6: BtnZeroZClick(Sender);
+        7: BtnCamAtPointClick(Sender);
+      end;
+  end;
+end;
+
+procedure TForm1.OverlayColorClick(Sender: TObject);
+begin
+  ColorDialog1.Color:= OverlayColor.Color;
+  if not ColorDialog1.Execute then Exit;
+  OverlayColor.Color:= ColorDialog1.Color;
+  overlay_color:= OverlayColor.Color;
+end;
+
+procedure TForm1.RadioGroupCamClick(Sender: TObject);
+begin
+  if fCamPresent then begin
+    CamIsOn:= RadioGroupCam.ItemIndex = 1;
+    SwitchCam(CamIsOn)
+  end else begin
+    RadioGroupCam.ItemIndex:= 0;
+  end;
+  Repaint;
+end;
+
+procedure TForm1.OnNewVideoFrame(Sender : TObject; Width, Height: integer; DataPtr: pointer);
+var
+  r : integer;
+  bm_center_x, bm_center_y: Integer;
+begin
+  inc(FrameCounter);
+  // Retreive latest video image
+  if not fCamActivated then
+    exit;
+  fVideoImage.GetBitmap(fVideoBitmap);
+  with fVideoBitmap do begin
+    // Paint a crosshair onto video image
+    bm_center_x:= VideoBox.width div 2;
+    bm_center_y:= VideoBox.height div 2;
+    Canvas.Brush.Style := bsClear;
+    Canvas.Pen.Width   := 1;
+    Canvas.Pen.Color:= overlay_color;
+    Canvas.moveto(0, bm_center_y);
+    Canvas.lineto(Width,  bm_center_y);
+    Canvas.moveto(bm_center_x, 0);
+    Canvas.lineto(bm_center_x, Height);
+    r := (VideoBox.height * TrackBar1.Position div 256);
+    Canvas.ellipse(bm_center_x -r, bm_center_y -r,
+        bm_center_x +r, bm_center_y +r);
+    VideoBox.Canvas.Draw(0, 0, fVideoBitmap);
+  end;
+end;
+
+procedure TForm1.SwitchCam(SwitchOn: boolean);
+begin
+  if fCamPresent and (SwitchOn <> fCamActivated) then begin
+    if SwitchOn then begin
+      Label43.Caption:='    Initializing Webcam...';
+      LabelMoveTo.Caption:= 'Move CAM to...';
+      Application.ProcessMessages;
+      fVideoImage.VideoStart(DeviceList[0]);
+    end else begin
+      Label43.Caption:='  Webcam/Video Device off';
+      LabelMoveTo.Caption:= 'Move Tool to...';
+      fVideoImage.VideoStop;
+    end;
+    fCamActivated := SwitchOn;
+  end;
+end;
+
+procedure TForm1.hide;
+begin
+  SwitchCam(false);
+  inherited hide;
 end;
 
 end.
