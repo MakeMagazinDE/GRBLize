@@ -474,7 +474,8 @@ begin
     spindle_on_off(false);
 
     if CheckEndPark.Checked then
-      BtnMoveParkClick(nil)
+      MoveToPos('park', job.park_x, job.park_y, job.park_z, false, false)
+//      BtnMoveParkClick(nil)
     else begin
       SendSingleCommandStr('G0 X0 Y0'); // Work Zero
     end;
@@ -598,7 +599,8 @@ begin
     spindle_on_off(false);
 
     if CheckEndPark.Checked then
-      BtnMoveParkClick(nil)
+      MoveToPos('park', job.park_x, job.park_y, job.park_z, false, false)
+//      BtnMoveParkClick(nil)
     else begin
       SendSingleCommandStr('G0 X0 Y0'); // Work Zero
     end;
@@ -665,7 +667,8 @@ begin
     if not isCancelled then begin
       // Immer abschlieﬂende Aktion wenn ATC enabled
       if CheckEndPark.Checked and HomingPerformed then
-        BtnMoveParkClick(nil)
+        MoveToPos('park', job.park_x, job.park_y, job.park_z, false, false)
+//        BtnMoveParkClick(nil)
       else begin
         SendSingleCommandStr('G0 X0 Y0'); // Work Zero
       end;
