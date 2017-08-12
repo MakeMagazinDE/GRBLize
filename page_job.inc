@@ -424,8 +424,8 @@ begin
     job.pens[i].enable:= job.pens[i].used;
   end;
 
-//  JobToPenGridList;
-//  apply_pen_change;
+  JobToPenGridList;
+  apply_pen_change;
   NeedsRedraw:= true;
 
   Form1.SgPens.Repaint;
@@ -711,17 +711,6 @@ end;
 // #############################################################################
 // ########################## JOB DEFAULTS #####################################
 // #############################################################################
-
-procedure TForm1.BitBtnClearFilesClick(Sender: TObject);
-begin
-  if fActivated then
-    exit;
-  ClearFiles;
-  NeedsRedraw:= true;
-  GLSneedsRedrawTimeout:= 1;
-  GLSneedsATCupdateTimeout:= 2;
-end;
-
 
 procedure TForm1.SgJobDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
   Rect: TRect; State: TGridDrawState);

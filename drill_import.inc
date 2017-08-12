@@ -237,7 +237,7 @@ var
   my_val, my_fac: Double;
   invalid_header, my_valid: boolean;
   my_char: char;
-  FirstLine : boolean;
+  LineNr : integer;
 
 begin
   if not FileExists(my_name) then begin
@@ -255,13 +255,15 @@ begin
   CurrentPen:= 10;
   PendingAction:= lift;
   invalid_header:= true;
-  FirstLine := true;
+  LineNr:= 0;;
   Reset(my_ReadFile);
 
   ///// Header mit Tool-Tabelle laden //////////////////////////////////////////
   my_fac:= 0.001;
   while not Eof(my_ReadFile) do begin
     Readln(my_ReadFile,my_line);
+    inc(LineNr);
+
     if length(my_line) > 0 then begin
       if my_line[1] = ';' then
         continue;
@@ -273,21 +275,10 @@ begin
 
     my_pos:= 1;
 
- {
- // @ Frank Kaiser: lädt Easy-PC-Dateien nicht
-    if (my_line = '%') then begin   //  and FirstLine
-      FirstLine := false;
-      if Eof(my_ReadFile) then
-        break
-      else begin
-        Readln(my_ReadFile,my_line);
-        ParseCommand(my_pos, my_line, my_val, my_char);
-        if (my_char <> 'M') or (my_val <> 48) then
-          break;
-        continue;
-      end;
-    end;
-}
+             // Eagle-Files contains a "%" in the first line, have to be ignored
+    if (my_line = '%') and (LineNr = 1) then
+      continue;
+
     if AnsiContainsStr(my_line, 'INCH') then
       use_inches_in_drillfile:= true;
     if AnsiContainsStr(my_line, 'METRIC') then
