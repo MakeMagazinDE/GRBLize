@@ -255,9 +255,9 @@ type
     LabelMoveTo: TLabel;
     BtnZcontact: TSpeedButton;
     BtnMoveXYzero: TSpeedButton;
-    BtnMoveHilite: TSpeedButton;
+    BtnMoveJobCenter: TSpeedButton;
     BtnMoveZzero: TSpeedButton;
-    BtnMoveToolChange: TSpeedButton;
+    BtnMoveHilite: TSpeedButton;
     BtnMoveFix2: TSpeedButton;
     BtnMoveFix1: TSpeedButton;
     Label9: TLabel;
@@ -277,6 +277,7 @@ type
     BtnCancelMill: TSpeedButton;
     BtnEmergStopMill: TBitBtn;
     Label16: TLabel;
+    BtnMoveToolChange: TSpeedButton;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -794,17 +795,17 @@ begin
   if (MachineState >= run) then
     my_state:= false;
   with Form1 do begin
-    BtnMovePark.Enabled:= my_state;
-    BtnMoveFix1.Enabled:= my_state;
-    BtnMoveFix2.Enabled:= my_state;
-    BtnMoveHilite.Enabled:= my_state;
-    BtnMoveToolChange.Enabled:= my_state;
+    BtnMovePark.Enabled:=       my_state;
+    BtnMoveFix1.Enabled:=       my_state;
+    BtnMoveFix2.Enabled:=       my_state;
+    BtnMoveHilite.Enabled:=     my_state and (HilitePoint >= 0);
+    BtnMoveJobCenter.Enabled:=  my_state and WorkZeroXdone and WorkZeroYdone;
+    BtnZcontact.Enabled:=       my_state and CheckPartProbeZ.Checked;
+    BtnMoveXYzero.Enabled:=     my_state;
+    BtnMoveZzero.Enabled:=      my_state;
+    BtnZeroC.Enabled:=          my_state;
 
-    BtnMoveXYzero.Enabled:= my_state;
-//    BtnMoveXYzero.Flat:= not (WorkZeroXdone and WorkZeroYdone);
-    BtnMoveZzero.Enabled:= my_state;
-//    BtnMoveZzero.Flat:= not WorkZeroZdone;
-    BtnZeroC.Enabled:= my_state;
+    BtnMoveToolChange.Enabled:= my_state;
 
 //    BtnMoveZzero.Enabled:= my_state;
 //    BtnZeroX.Enabled:= my_state;
@@ -812,7 +813,6 @@ begin
 //    BtnZeroZ.Enabled:= my_state;
     BtnZeroAll.Enabled:= my_state;
 //    Form1.BtnProbeTLC.Enabled:= my_state and Form1.CheckFixedProbeZ.checked;
-    BtnZcontact.Enabled:= my_state and CheckPartProbeZ.Checked;
     BtnEmergStop.Enabled:= isGrblActive;
 
     if WorkZeroXdone then

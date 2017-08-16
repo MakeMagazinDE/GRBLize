@@ -152,18 +152,19 @@ begin
 // verhindert, dass das Werkzeug in den Tisch rammt
 // nach Stopp durch Kontakt steht Maschinenposition in grbl_mpos.Z
 // wird in result übernommen, Z kehrt danach auf 0 zurück
-  Form1.Memo1.lines.add('Probing Z (20 mm max.), wait for contact');
+  Form1.Memo1.lines.add('Probing Z (25 mm max.), wait for contact');
   result:= 0;
   if isGrblActive then
     try
-      my_zval1:= grbl_mpos.Z;
-      my_zval2:= grbl_mpos.Z;
       result:= 0;
       if (MachineState = alarm) then
         exit;
       WaitForIdle;
       grbl_wait_for_timeout(25);
       DisableStatus;
+
+      my_zval1:= grbl_mpos.Z;
+      my_zval2:= grbl_mpos.Z;
 
       // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
 
@@ -172,9 +173,8 @@ begin
         TargetZ := -job.table_z;
       my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F200';
 
-
-      my_response:= SendReceive(my_cmd, 0);
-      grbl_receiveStr(25); // 'ok'
+      my_response:= SendReceive(my_cmd, 0);
+      grbl_receiveStr(25); // 'ok'
       if pos('ALARM', ansiuppercase(my_response)) = 0 then
         my_zval1:= extract_probe_pos(my_response)
       else begin

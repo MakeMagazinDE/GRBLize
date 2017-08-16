@@ -8,7 +8,7 @@ begin
     exit;
   LEDbusy.Checked:= true;
   Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move to ' + S + ' zero');
+  Form1.Memo1.lines.add('Move to ' + S );
   spindle_on_off(false);
   drawing_tool_down:= false;
   if CAM then begin
@@ -276,8 +276,8 @@ var dx, dy, dz: Double;
     grbl_sendRealTimeCmd(#$85);   // Jog Cancel
   end else begin
     //my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
-    first_loop_done:= false;
-    repeat
+//    first_loop_done:= false;
+//    repeat
       Jog.X:= grbl_mpos.X + dx;
       if Jog.X < 0            then Jog.X:= 0;        // begrenzen auf Tischgröße
       if Jog.X > job.table_x  then Jog.X:= job.table_x;
@@ -306,10 +306,10 @@ var dx, dy, dz: Double;
 
 //      if not first_loop_done then begin
 //        first_loop_done:= true;
-//        GetAsyncKeyState(VK_LBUTTON);
+        GetAsyncKeyState(VK_LBUTTON);
 //      end;
-    until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
-    Application.ProcessMessages;                // handle event on windows level
+//    until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
+//    Application.ProcessMessages;                // handle event on windows level
   end;
   NeedsRedraw:= true;
 end;
@@ -334,10 +334,11 @@ begin
         1: MoveToPos('fix1 position', job.fix1_x, job.fix1_y, job.fix1_z, true,  false);
         2: MoveToPos('fix2 position', job.fix2_x, job.fix2_y, job.fix2_z, true,  false);
         3: BtnMoveToolPointClick(Sender);
-        4: BtnMoveToolChangeClick(Sender);
-        5: BtnMoveXYzeroClick(Sender);
-        6: BtnMoveZzeroClick(Sender);
-        8: BtnZcontactClick(Sender);
+        4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
+        5: BtnZcontactClick(Sender);
+        6: BtnMoveXYzeroClick(Sender);
+        7: BtnMoveZzeroClick(Sender);
+        //BtnMoveToolChangeClick(Sender);
       end;
 
     if (Button = mbRight) or (D > 300) then        // set value to tool position
@@ -345,9 +346,9 @@ begin
         0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, 6,  false);
         1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, 29, false);
         2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, 32, false);
-        4: SetDefaultToPos('ToolChange', job.toolchange_x,job.toolchange_y,job.toolchange_z, 2, false);
-        5: begin BtnZeroXClick(Sender); BtnZeroYClick(Sender) end;
-        6: BtnZeroZClick(Sender);
+        6: begin BtnZeroXClick(Sender); BtnZeroYClick(Sender) end;
+        7: BtnZeroZClick(Sender);
+        //SetDefaultToPos('ToolChange', job.toolchange_x,job.toolchange_y,job.toolchange_z, 2, false);
       end;
 
   end else begin
@@ -356,9 +357,10 @@ begin
         0: MoveToPos('park', job.park_x, job.park_y, job.park_z, false, true);
         1: MoveToPos('fix1', job.fix1_x, job.fix1_y, job.fix1_z, true,  true);
         2: MoveToPos('fix2', job.fix2_x, job.fix2_y, job.fix2_z, true,  true);
-        5: BtnMoveCamZeroClick(Sender);
-        7: BtnMoveCamPointClick(Sender);
-        8: BtnZcontactClick(Sender);
+        3: BtnMoveCamPointClick(Sender);
+        4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
+        5: BtnZcontactClick(Sender);
+        6: BtnMoveCamZeroClick(Sender);
       end;
 
     if (Button = mbRight) or (D > 300) then         // set value to CAM position
@@ -366,9 +368,9 @@ begin
         0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, 6,  true);
         1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, 29, true);
         2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, 32, true);
-        5: BtnCamAtZeroClick(Sender);
-        6: BtnZeroZClick(Sender);
-        7: BtnCamAtPointClick(Sender);
+        3: if HilitePoint >= 0 then BtnCamAtPointClick(Sender);
+        6: BtnCamAtZeroClick(Sender);
+        7: BtnZeroZClick(Sender);
       end;
   end;
 end;

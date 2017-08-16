@@ -149,10 +149,22 @@ var
   LastAliveState: t_alivestates;
   grbl_is_connected: boolean;
 
+  GrblComm: TextFile;
+  DebugName: string = '';
+//  DebugName: string = 'd:\GrblComm.txt';
 
 implementation
 
 uses grbl_player_main, glscene_view, drawing_window, Graphics;
+
+procedure WriteGrblComm(s:string);
+begin
+  if DebugName <> '' then begin
+    Append(GrblComm);
+    writeln(GrblComm,s);
+    CloseFile(GrblComm);
+  end;
+end;
 
 {$I decodestatus_11.inc}
 {$I decodestatus_09.inc}
@@ -195,7 +207,8 @@ begin
       WorkZero.Z:= grbl_mpos.Z - job.z_gauge;
       Jog.Z:= WorkZero.Z;
       MposOnPartGauge:= grbl_mpos.Z;
-      WorkZero.Z:= MposOnPartGauge - job.z_gauge;
+// die folgende Zeile scheint überflüssig zu sein
+//      WorkZero.Z:= MposOnPartGauge - job.z_gauge;
       Form1.Memo1.lines.add('Cancel Tool Length Offset (TLO)');
       my_str:= 'G49';  // cancel tool offset
       my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
@@ -549,6 +562,7 @@ begin
     end;
   end;
   Result:= my_str;
+  WriteGrblComm('<<< ' + my_str);
 end;
 
 function COMsendStr(sendStr: String; my_getok: boolean): String;
@@ -559,6 +573,7 @@ var
   BytesWritten: DWORD;
   my_str: AnsiString;
 begin
+  WriteGrblComm('>>> ' + sendStr);
   my_str := AnsiString(sendStr);
   WriteFile(ComFile, my_str[1], Length(my_str), BytesWritten, nil);
   if my_getok then begin
@@ -617,6 +632,7 @@ begin
     end;
   end;
   Result:= my_str;
+  WriteGrblComm('<<< ' + my_str);
 end;
 
 function FTDIsendStr(sendStr: String; my_getok: boolean): String;
@@ -627,6 +643,7 @@ var
   i: longint;
   my_str: AnsiString;
 begin
+  WriteGrblComm('>>> ' + sendStr);
   my_str:= AnsiString(sendStr);
   Result:= '';
   ftdi.write(@my_str[1], length(my_str), i);
@@ -1256,4 +1273,9 @@ begin
   end;
 end;
 
+begin
+  if DebugName <> '' then begin
+    AssignFile(GrblComm, DebugName);
+    rewrite(GrblComm);
+  end;
 end.

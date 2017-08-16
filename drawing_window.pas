@@ -172,8 +172,6 @@ begin
   HiliteBlock:=-1;
   HilitePath:=-1;
   HilitePoint:=-1;
-                   // switch Button to 'Job Center' if no Hilite Point is active
-  Form1.BtnMoveHilite.Caption:= 'Job Center';
 end;
 
 procedure search_entry_in_drawing(mx, my: Integer);
@@ -227,8 +225,6 @@ begin
             HilitePath:= p;
             HiliteBlock:= f;
             HilitePen:= final_array[f].pen;
-                                              // switch button to 'Hilite Point'
-            Form1.BtnMoveHilite.Caption:= 'Hilite Point';
           end;
         end;
       end;
