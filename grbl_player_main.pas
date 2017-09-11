@@ -5,15 +5,14 @@ unit grbl_player_main;
 interface
 
 uses
-  Math, StdCtrls, ComCtrls, ToolWin, Buttons, ExtCtrls, ImgList,
+  Dialogs, Math, StdCtrls, ComCtrls, ToolWin, Buttons, ExtCtrls, ImgList,
   Controls, StdActns, Classes, ActnList, Menus, GraphUtil,
-  SysUtils, StrUtils, Windows, Graphics, Forms, Messages,
-  Dialogs, Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
+  SysUtils, StrUtils, Windows, Graphics, Messages,
+  Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
   VFrames, ExtDlgs, XPMan, CheckLst, drawing_window,
   glscene_view, GLColor, ValEdit, System.ImageList, System.Actions,
   FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes,
-  app_defaults, DateUtils;
-
+  app_defaults, DateUtils, TouchButton, Forms, GLScene, GLFullScreenViewer;
 
 const
   c_ProgNameStr: String = 'GRBLize ';
@@ -27,6 +26,13 @@ type
     up,down,left,right:boolean;
     raw: Integer;
     active: Boolean;
+  end;
+
+  T3dFloat = record
+    X: Double;
+    Y: Double;
+    Z: Double;
+    C: Double;
   end;
 
   TForm1 = class(TForm)
@@ -178,12 +184,6 @@ type
     mt_cone90: TMenuItem;
     mt_ballnose: TMenuItem;
     mt_drill: TMenuItem;
-    PopupMenuBlockShape: TPopupMenu;
-    MenuItem1: TMenuItem;
-    MenuItem2: TMenuItem;
-    MenuItem3: TMenuItem;
-    MenuItem4: TMenuItem;
-    MenuItem5: TMenuItem;
     TabUtils: TTabSheet;
     MemoUtils1: TMemo;
     BtnUtilsSquare: TSpeedButton;
@@ -236,16 +236,6 @@ type
     BitBtn13: TBitBtn;
     BitBtn12: TBitBtn;
     BitBtn11: TBitBtn;
-    BitBtn10: TBitBtn;
-    BitBtn3: TBitBtn;
-    BitBtn2: TBitBtn;
-    BitBtn1: TBitBtn;
-    BitBtn6: TBitBtn;
-    BitBtn5: TBitBtn;
-    BitBtn4: TBitBtn;
-    BitBtn7: TBitBtn;
-    BitBtn8: TBitBtn;
-    BitBtn9: TBitBtn;
     Bevel10: TBevel;
     BtnHomeOverride: TSpeedButton;
     BtnHomeCycle: TSpeedButton;
@@ -278,6 +268,22 @@ type
     BtnEmergStopMill: TBitBtn;
     Label16: TLabel;
     BtnMoveToolChange: TSpeedButton;
+    TouchButton1: TTouchButton;
+    TouchButton2: TTouchButton;
+    TouchButton3: TTouchButton;
+    TouchButton4: TTouchButton;
+    TouchButton5: TTouchButton;
+    TouchButton6: TTouchButton;
+    TouchButton7: TTouchButton;
+    TouchButton8: TTouchButton;
+    TouchButton9: TTouchButton;
+    TouchButton10: TTouchButton;
+    PopupMenuBlockShape: TPopupMenu;
+    MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -337,6 +343,8 @@ type
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure CheckBoxSimClick(Sender: TObject);
     procedure BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure BitBtnJogMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure BtnLoadGrblSetupClick(Sender: TObject);
     procedure BtnSaveGrblSetupClick(Sender: TObject);
@@ -415,9 +423,9 @@ type
     procedure SwitchCam(SwitchOn: boolean);
     procedure OverlayColorClick(Sender: TObject);
 
-    procedure MouseDown(Sender: TObject; Button: TMouseButton;
+    procedure BtnCntrMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure MouseUp(Sender: TObject; Button: TMouseButton;
+    procedure BtnCntrMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure BtnMoveCamZeroClick(Sender: TObject);
     procedure BtnCamAtZeroClick(Sender: TObject);
@@ -429,11 +437,17 @@ type
     procedure SetZero(axes: integer);
 
     procedure hide;
+    procedure ContinueJogging;
+    procedure StepJogging;
+    procedure ResetJogging;
 
   private
     { Private declarations }
-    JogDistance: integer;
+    JogDistance   : integer;
+    JogDirection  : T3dFloat;
+    JogDelay      : integer;
     MouseDownStart: int64;
+
   public
     { Public declarations }
     FrameCounter: integer;
@@ -531,13 +545,6 @@ type
   procedure ClearAlarmLock;
 
 type
-
-    T3dFloat = record
-      X: Double;
-      Y: Double;
-      Z: Double;
-      C: Double;
-    end;
     t_mstates = (none, idle, run, hold, alarm, zero);
     t_rstates = (s_reset, s_request, s_receive, s_sim);
     t_pstates = (s_notprobed, s_probed_manual, s_probed_contact);
@@ -556,7 +563,7 @@ var
   JobSettingsPath: String;
 
   grbl_mpos, grbl_wpos, old_grbl_wpos, grbl_wco: T3dFloat;
-  Jog, WorkZero:T3dFloat;  // Absolutwerte Werkstück-Null
+  Jog,WorkZero:T3dFloat;  // Absolutwerte Werkstück-Null
   grbl_feed_ov, grbl_seek_ov, grbl_speed_ov: Integer;
   grbl_feed, grbl_speed: Integer;
   MouseJogAction: Boolean;
@@ -589,7 +596,7 @@ var
   gcsim_tooltip: Integer;
   gcsim_color: TColor;
   StopWatch: TStopwatch;
-  StartupDone: Boolean = false;
+//  StartupDone: Boolean = false;
   SquareCorner_wpos, SquareCorner_mpos: T3dFloat;
   InstantZ_end, InstantZ_inc: Double;
   SquarePocket: Boolean;
@@ -1063,18 +1070,49 @@ begin
     end;
 end;
 
+procedure HandleAfterCreate(hwnd: HWND; uMsg: UINT; idEvent: UINT_PTR;
+  dwTime: DWORD); stdcall;
+begin
+  KillTimer(0, idEvent);
+
+  Form1.Memo1.lines.Clear;
+  Form1.Memo1.lines.add(c_ProgNameStr + c_VerStr);
+  Form1.Memo1.lines.add('with joystick/gamepad support');
+  Form1.Memo1.lines.add('for GRBL 1.1');
+
+  if FileExists(JobSettingsPath) then
+    OpenJobFile                                                      // load job
+  else
+    Form1.FileNew1Execute(nil);                        // or create an empty one
+
+  if ftdi_was_open then          // open interface to mill and do initialisation
+    OpenFTDIport
+  else if com_was_open then
+    OpenCOMport;
+  SavedPortnameForSim:= Form1.DeviceView.Text;
+  PortOpenedCheck;
+  EnableStatus;
+  grbl_sendStr(#$85, false);  // Jog Cancel
+  grbl_sendStr(#$90, false);  // Feed Reset
+
+  SetToolChangeChecks(job.toolchange_pause);
+  ResetCoordinates;
+  ResetToolflags;
+  Form1.Memo1.lines.add('');
+  ResetSimulation;
+end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 var
   grbl_ini: TRegistry;
   OldEvent: TNotifyEvent;
 begin
-  StartupDone:= false;
-  Show;
-  Memo1.lines.Clear;
-  Memo1.lines.add(c_ProgNameStr + c_VerStr);
-  Memo1.lines.add('with joystick/gamepad support');
-  Memo1.lines.add('for GRBL 1.1');
+//  StartupDone:= false;
+//  Show;
+//  Memo1.lines.Clear;
+//  Memo1.lines.add(c_ProgNameStr + c_VerStr);
+//  Memo1.lines.add('with joystick/gamepad support');
+//  Memo1.lines.add('for GRBL 1.1');
   StopWatch:= TStopWatch.Create() ;
   Width:= Constraints.MaxWidth;
   grbl_sendlist:= TStringList.create;
@@ -1085,10 +1123,14 @@ begin
   InitJob;
   UnHilite;
   Caption := c_ProgNameStr;
-  Form1.Show;
+//  Form1.Show;
+
+  ///// initialisation of serial device dialog /////////////////////////////////
   if not IsFormOpen('deviceselectbox') then
     deviceselectbox := Tdeviceselectbox.Create(Self);
   deviceselectbox.hide;
+
+  ///// read registration values ///////////////////////////////////////////////
   grbl_ini:= TRegistry.Create;
   JoyPad := TGamepad.Create;
   try
@@ -1101,7 +1143,6 @@ begin
     if grbl_ini.ValueExists('MainFormPage') then
       PageControl1.ActivePageIndex:= grbl_ini.ReadInteger('MainFormPage');
 
-
     if ParamStr(1) <> '' then begin
       JobSettingsPath:= ParamStr(1);
     end else begin
@@ -1110,6 +1151,7 @@ begin
       else
         JobSettingsPath:= ExtractFilePath(Application.ExeName)+'default.job';
     end;
+
     if grbl_ini.ValueExists('FTDIdeviceSerial') then
       ftdi_serial:= grbl_ini.ReadString('FTDIdeviceSerial')
     else
@@ -1125,13 +1167,16 @@ begin
 
     if grbl_ini.ValueExists('SceneFormVisible') then
       Show3DPreview1.Checked:= grbl_ini.ReadBool('SceneFormVisible');
+
     if grbl_ini.ValueExists('ComBaudrate') then
       deviceselectbox.EditBaudrate.Text:= grbl_ini.ReadString('ComBaudrate');
+
     if grbl_ini.ValueExists('ComPort') then
       com_name:= grbl_ini.ReadString('ComPort')
     else
       com_name:= '';
     deviceselectbox.ComboBoxCOMport.Text:= com_name;
+
     if grbl_ini.ValueExists('ComOpen') then
       com_was_open:= grbl_ini.ReadBool('ComOpen')
     else
@@ -1145,6 +1190,7 @@ begin
     grbl_ini.Free;
   end;
 
+  ///// Initialisation of 3D-View window ///////////////////////////////////////
   if not IsFormOpen('Form4') then
     Form4 := TForm4.Create(Self);
   if Show3DPreview1.Checked then
@@ -1152,13 +1198,7 @@ begin
   else
     Form4.hide;
 
-//  if not IsFormOpen('Form3') then
-//    Form3 := TForm3.Create(Self);
-//  if ShowSpindleCam1.Checked then
-//    Form3.show
-//  else
-//    Form3.hide;
-
+  ///// Initialisation of CAM //////////////////////////////////////////////////
   fCamActivated:= false;
   RadioGroupCam.ItemIndex:= 0;
 
@@ -1196,25 +1236,10 @@ begin
     RadioGroupCam.OnClick := OldEvent;                  // restore OnClick event
   end;
 
-//  grbl_ini:= TRegistry.Create;
-//  try
-//    grbl_ini.RootKey := HKEY_CURRENT_USER;
-//    grbl_ini.OpenKey('SOFTWARE\Make\GRBlize\'+c_VerStr,true);
-//    if grbl_ini.ValueExists('CamFormTop') then
-//      Top:= grbl_ini.ReadInteger('CamFormTop');
-//    if grbl_ini.ValueExists('CamFormLeft') then
-//      Left:= grbl_ini.ReadInteger('CamFormLeft');
-{
-    if grbl_ini.ValueExists('CamFormVisible') then
-      form_visible:= grbl_ini.ReadBool('CamFormVisible');
-}
-//  finally
-//    grbl_ini.Free;
-//  end;
-
   JogDistance:= 1; // 0.1mm
   LabelJogDistance.Caption:=  '0.1';
 
+  ///// Initialisation of drawing window ///////////////////////////////////////
   if not IsFormOpen('Form2') then
     Form2 := TForm2.Create(Self);
   if Showdrawing1.Checked then
@@ -1247,28 +1272,24 @@ begin
   end else
     BtnRescan.SetFocus;
   UpdateATC;
-  if FileExists(JobSettingsPath) then
-    OpenJobFile
-  else
-    Form1.FileNew1Execute(sender);
-  SetToolChangeChecks(job.toolchange_pause);
-  ResetCoordinates;
-  ResetToolflags;
-  Form1.Memo1.lines.add('');
-  ResetSimulation;
-  if ftdi_was_open then
-    OpenFTDIport
-  else if com_was_open then
-    OpenCOMport;
-  SavedPortnameForSim:= DeviceView.Text;
-  PortOpenedCheck;
-  EnableStatus;
-  StartupDone:= true;
+
+//  SetToolChangeChecks(job.toolchange_pause);
+//  ResetCoordinates;
+//  ResetToolflags;
+//  Form1.Memo1.lines.add('');
+//  ResetSimulation;
+//  if ftdi_was_open then
+//    OpenFTDIport
+//  else if com_was_open then
+//    OpenCOMport;
+//  SavedPortnameForSim:= DeviceView.Text;
+//  PortOpenedCheck;
+//  EnableStatus;
+//  StartupDone:= true;
   if Show3DPreview1.Checked then
     Form4.FormReset;
   BtnUtilsResetClick(Sender);
-  grbl_sendStr(#$85, false);  // Jog Cancel
-  grbl_sendStr(#$90, false);  // Feed Reset
+  SetTimer(0, 0, 200, @HandleAfterCreate);
 end;
 
 // #############################################################################
@@ -1340,7 +1361,6 @@ begin
 end;
 
 // #############################################################################
-
 
 procedure TForm1.GerberImport1Click(Sender: TObject);
 begin
@@ -1957,9 +1977,17 @@ begin
     if (MachineState = hold) and (old_machine_state <> hold) then
       Form1.Memo1.lines.add('HOLD state, press CONTINUE or click READY panel');
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
+
     if MachineOptions.NewGrblVersion then begin
+      if JogDelay = 0 then
+        ContinueJogging;
       {$I joypad_handling.inc}
+    end else begin
+      StepJogging;
     end;
+    if JogDelay > 0 then
+      dec(JogDelay);
+
     TimerStatus.Enabled:= true;
   finally
     TimerStatus.Tag:= 0;
@@ -2403,6 +2431,10 @@ begin
   PanelAlive.tag:= 1;
   BtnCancel.tag:= 1;
   BtnRunJob.Tag:= 0;
+  ResetJogging;                                                  // ResetJogging
+  JogDirection.Y := 0;
+  JogDirection.Z := 0;
+
   button_enable(false);
   ResetToolflags;
   SendActive:= false;
@@ -2444,6 +2476,7 @@ begin
     exit;
   BtnCancel.tag:= 1;
   BtnRunJob.Tag:= 0;
+  ResetJogging;                                                  // ResetJogging
   Memo1.lines.add('');
   Memo1.lines.add('Processing Cancel Request...');
   // Wird von Run-Thread erledigt
@@ -2454,6 +2487,7 @@ begin
   BtnEmergStop.tag:= 0;
   BtnCancel.tag:= 0;
   BtnRunjob.tag:= 0;
+  ResetJogging;                                                  // ResetJogging
   Memo1.lines.add('');
   if isSimActive then
     Memo1.lines.add('Home Cycle Override always on in simulation mode.')

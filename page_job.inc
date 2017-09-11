@@ -373,12 +373,23 @@ begin
       FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].scale:= StrToFloatDef(Cells[6, i], 100.0);
       FileParamArray[i-1].user1:= StrToFloatDef(Cells[7, i], 0.2);
+
       my_path:= Cells[0,i];
+
+      if length(my_path) < 3 then    // empty fields contains a space character,
+        continue;                    // but at least an extesion is necessary
+
+      if not FileExists(my_path) then begin
+        Form1.Memo1.lines.add('ERROR: File not found (' + my_path + ')!');
+        MessageDlg('ERROR: File not found (' + my_path + ')!', mtConfirmation, [mbCancel],0);
+        continue;
+      end;
+
       my_ext:= AnsiUpperCase(ExtractFileExt(my_path));
-      if my_ext = '' then
+      if my_ext = '' then begin
+        Form1.Memo1.lines.add('ERROR: No Extension (' + my_path + ')!');
         continue;
-      if not FileExists(my_path) then
-        continue;
+      end;
       FileParamArray[i-1].isdrillfile := (my_ext = '.DRL') or (my_ext = '.DRD');
       FileParamArray[i-1].enable:= true;
       pen_override:= StrToIntDef(Cells[1, i], -1);

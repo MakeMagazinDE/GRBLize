@@ -151,7 +151,7 @@ var
 
   GrblComm: TextFile;
   DebugName: string = '';
-//  DebugName: string = 'd:\GrblComm.txt';
+//  DebugName: string = 'c:\GrblComm.txt';
 
 implementation
 
@@ -353,7 +353,7 @@ var
 begin
   FirstTickCount := GetTickCount;
   while ((GetTickCount - FirstTickCount) < Milliseconds) do begin
-    if StartupDone then
+//    if StartupDone then
       Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
     sleep(0);
   end;
@@ -550,7 +550,7 @@ begin
       if my_char >= #32 then
         my_str:= my_str + my_char;
     end else begin
-      if StartupDone then
+//      if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
     end;
@@ -620,7 +620,7 @@ begin
       if my_char >= #32 then
         my_str:= my_str + my_char;
     end else begin
-      if StartupDone then
+//      if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
     end;
@@ -738,7 +738,7 @@ var my_str: String;
 begin
   if isGrblActive then
     repeat
-      if StartupDone then
+//      if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
       my_str:= grbl_receiveStr(timeout);
@@ -1276,6 +1276,7 @@ end;
 begin
   if DebugName <> '' then begin
     AssignFile(GrblComm, DebugName);
-    rewrite(GrblComm);
+{$i-}    rewrite(GrblComm);   {$i+}
+    if IOResult <> 0 then DebugName:= '';
   end;
 end.

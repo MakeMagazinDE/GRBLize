@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{B02209C1-1F38-4342-BCC5-CF09169E37CA}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="GRBLize.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TouchSupport.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="GRBLize">
+        <MSBuild Projects="GRBLize.dproj"/>
+    </Target>
+    <Target Name="GRBLize:Clean">
+        <MSBuild Projects="GRBLize.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GRBLize:Make">
+        <MSBuild Projects="GRBLize.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TouchSupport">
+        <MSBuild Projects="TouchSupport.dproj"/>
+    </Target>
+    <Target Name="TouchSupport:Clean">
+        <MSBuild Projects="TouchSupport.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TouchSupport:Make">
+        <MSBuild Projects="TouchSupport.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="GRBLize;TouchSupport"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="GRBLize:Clean;TouchSupport:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="GRBLize:Make;TouchSupport:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

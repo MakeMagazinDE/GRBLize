@@ -361,25 +361,4 @@ begin
 end;
 }
 
-procedure TForm1.SetDefaultToPos(s: String; var x,y,z: Double; idx: integer; CAM: boolean);
-var my_btn: Integer;
-begin
-  if isSimActive then
-    exit;
-  my_btn:= MessageDlg('This will set ' + S + ' postion'
-    + #13 + ' to current machine position'
-    + #13 + 'in GRBLize Application defaults. Proceed?', mtConfirmation, mbOKCancel, 0);
-  if my_btn = mrCancel then
-    exit;
-  x:= grbl_mpos.x; y:= grbl_mpos.y; z:= grbl_mpos.z;
-  if CAM then begin
-    x:= x - job.cam_x;
-    y:= y - job.cam_y;
-  end;
-  with Form1.SgAppDefaults do begin
-    Cells[1,idx]  := FormatFloat('0.00', x);
-    Cells[1,idx+1]:= FormatFloat('0.00', y);
-    Cells[1,idx+2]:= FormatFloat('0.00', z);
-  end;
-  SaveIniFile;
-end;
+

@@ -15,6 +15,15 @@ begin
     x:= x - job.cam_x;
     y:= y - job.cam_y;
   end;
+
+  // probe if position is on the table
+  if (x < 0) or (x > job.table_x) or
+     (y < 0) or (y > job.table_y) or
+     (z > 0) or (z > job.table_z) then begin
+    Form1.Memo1.lines.add('Error: Position outside the table!');
+    MessageDlg('Position outside the table.' + #13 + 'NO MOVE!', mtError, [mbOK], 0);
+  end;
+
   grbl_moveZ(0, true);  // Z ganz oben, absolut!
   grbl_moveXY(x, y, true);
   grbl_moveZ(z, true);
@@ -23,6 +32,38 @@ begin
   NeedsRedraw:= true;
   if Set0 then
     SetZero(3);
+end;
+
+procedure TForm1.SetDefaultToPos(s: String; var x,y,z: Double; idx: integer; CAM: boolean);
+var my_btn: Integer;
+begin
+  if isSimActive then
+    exit;
+  my_btn:= MessageDlg('This will set ' + S + ' postion'
+    + #13 + ' to current machine position'
+    + #13 + 'in GRBLize Application defaults. Proceed?', mtConfirmation, mbOKCancel, 0);
+  if my_btn = mrCancel then
+    exit;
+  x:= grbl_mpos.x; y:= grbl_mpos.y; z:= grbl_mpos.z;
+  if CAM then begin
+    x:= x - job.cam_x;
+    y:= y - job.cam_y;
+  end;
+
+  // probe if position is on the table
+  if (x < 0) or (x > job.table_x) or
+     (y < 0) or (y > job.table_y) or
+     (z > 0) or (z > job.table_z) then begin
+    Form1.Memo1.lines.add('Error: Position outside the table!');
+    MessageDlg('Position outside the table.' + #13 + 'NOT SET!', mtError, [mbOK], 0);
+  end;
+
+  with Form1.SgAppDefaults do begin
+    Cells[1,idx]  := FormatFloat('0.00', x);
+    Cells[1,idx+1]:= FormatFloat('0.00', y);
+    Cells[1,idx+2]:= FormatFloat('0.00', z);
+  end;
+  SaveIniFile;
 end;
 
 procedure TForm1.BtnMoveXYzeroClick(Sender: TObject);
@@ -186,146 +227,207 @@ begin
   NeedsRedraw:= true;
 end;
 
+procedure TForm1.ContinueJogging;
+var Feed: Integer;
+    Dist: Double;
+    S:    String;
+begin
+  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
+    exit;                                                     // nothing to move
+
+  if (abs(JogDirection.X)>5) or
+     (abs(JogDirection.Y)>5) or
+     (abs(JogDirection.Z)>5) then
+    Feed:= get_AppDefaults_int(37)                              // JogSpeed Fast
+  else
+    if (abs(JogDirection.X)>0.5) or
+       (abs(JogDirection.Y)>0.5) or
+       (abs(JogDirection.Z)>0.5) then
+      Feed:= get_AppDefaults_int(38)                            // JogSpeed Slow
+    else
+      Feed:= get_AppDefaults_int(38) div 5;
+
+// - using of relativ coordinates for jogging
+// - movement will be limit by the soft limits of the mill
+// - for continue movement this routine should be called by the timer
+//   TimerStatus with an interval of about 50ms. So the planning buffer of GRBL
+//   will be filled with jogging commands using only small distances
+  Dist:= 3*TimerStatus.Interval * Feed/60/1000;  // max. movement in timerinterval
+
+  S:= '$J=G91 ';
+
+  if JogDirection.X < 0 then
+    S:= S + ' X-' + FloatToStrDot(Dist);
+  if JogDirection.X > 0 then
+    S:= S + ' X'  + FloatToStrDot(Dist);
+  if JogDirection.Y < 0 then
+    S:= S + ' Y-' + FloatToStrDot(Dist);
+  if JogDirection.Y > 0 then
+    S:= S + ' Y' + FloatToStrDot(Dist);
+  if JogDirection.Z < 0 then
+    S:= S + ' Z-' + FloatToStrDot(Dist);
+  if JogDirection.Z > 0 then
+    S:= S + ' Z' + FloatToStrDot(Dist);
+
+  if length(S) > 7 then                     // nur wenn sich die Position ändert
+    SendSingleCommandStr(S + ' F'+ IntToStr(Feed));
+{
+  S:= '$J=G53 ';
+  if get_AppDefaults_bool(45) then begin
+  // Positive Machine Space (XY)
+    if JogDirection.X > 0 then
+      S:= S + ' X' + FloatToStrDot(job.table_x);
+    if JogDirection.X < 0 then
+      S:= S + ' X1';
+
+    if JogDirection.Y > 0 then
+      S:= S + ' Y' + FloatToStrDot(job.table_y);
+    if JogDirection.Y < 0 then
+      S:= S + ' Y1';
+
+    if length(s) > 6 then
+      S:= S + ' F'+ IntToStr(feed)
+    else begin
+      if JogDirection.Z > 0 then // Move Z up
+        S:= S + ' Z-1 F'+ IntToStr(feed div 3);
+      if JogDirection.Z < 0 then
+        S:= S + ' Z' + FloatToStrDot(-job.table_z) + 'F'+ IntToStr(feed div 3);
+    end;
+  end else begin
+  // Standard CNC: Negative machine space (XYZ)
+    if JogDirection.X > 0 then
+      S:= S + ' X-1';
+    if JogDirection.X < 0 then
+      S:= S + ' X' + FloatToStrDot(1-job.table_x);
+
+    if JogDirection.Y > 0 then
+      S:= S + ' Y-1';
+    if JogDirection.Y < 0 then
+      S:= S + ' Y' + FloatToStrDot(1-job.table_y);
+
+    if length(s) > 6 then
+      S:= S + ' F'+ IntToStr(feed)
+    else begin
+      if JogDirection.Z > 0 then // Move Z up
+        S:= S + ' Z-1 F'+ IntToStr(feed div 3);
+      if JogDirection.Z < 0 then
+        S:= S + ' Z' + FloatToStrDot(1-job.table_z) + 'F'+ IntToStr(feed div 3);
+    end;
+  end;
+
+  if length(S) > 6 then                 // nur wenn sich die Position ändert
+    SendSingleCommandStr(S);
+}//==> Warten auf OK!!!!!!!!!
+  NeedsRedraw:= true;
+end;
+
+procedure TForm1.StepJogging;
+var S:             String;
+    PositiveTable: boolean;
+begin
+  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
+    exit;                                                     // nothing to move
+
+  WaitForIdle;
+
+  PositiveTable := true;       // prove coordinate system (positive or negative)
+  if MachineOptions.NewGrblVersion then
+    PositiveTable:= get_AppDefaults_bool(45);
+
+  Jog.X:= grbl_mpos.X + JogDirection.X;                // calculate new position
+  Jog.Y:= grbl_mpos.Y + JogDirection.Y;
+  Jog.Z:= grbl_mpos.Z + JogDirection.Z;
+
+  if PositiveTable then begin                        // begrenzen auf Tischgröße
+    if Jog.X < 0             then Jog.X:= 0;
+    if Jog.X > job.table_x   then Jog.X:= job.table_x;
+    if Jog.Y < 0             then Jog.Y:= 0;
+    if Jog.Y > job.table_y   then Jog.Y:= job.table_y;
+    if Jog.Z > -1            then Jog.Z:= -1;
+    if Jog.Z < 1-job.table_z then Jog.Z:= 1-job.table_z;
+  end else begin
+    if Jog.X > -1            then Jog.X:= -1;
+    if Jog.X < 1-job.table_x then Jog.X:= 1-job.table_x;
+    if Jog.Y > -1            then Jog.Y:= -1;
+    if Jog.Y < 1-job.table_y then Jog.Y:= 1-job.table_y;
+    if Jog.Z > -1            then Jog.Z:= -1;
+    if Jog.Z < 1-job.table_z then Jog.Z:= 1-job.table_z;
+  end;
+
+  S:= 'G0 G53';
+  if Jog.X <> grbl_mpos.X then            // nur wenn sich die X-Position ändert
+    S:= S + ' X' + FloatToStrDot(Jog.X);
+  if Jog.Y <> grbl_mpos.Y then            // nur wenn sich die Y-Position ändert
+    S:= S + ' Y' + FloatToStrDot(Jog.Y);
+  if Jog.Z <> grbl_mpos.Z then            // nur wenn sich die Z-Position ändert
+    S:= S + ' Z' + FloatToStrDot(Jog.Z);
+
+  if length(S) > 6 then                     // nur wenn sich die Position ändert
+    SendSingleCommandStr(S);
+
+  NeedsRedraw:= true;
+end;
+
+procedure TForm1.ResetJogging;
+var i: integer;
+begin
+  JogDirection.X := 0;
+  JogDirection.Y := 0;
+  JogDirection.Z := 0;
+  grbl_sendRealTimeCmd(#$85);   // Jog Cancel
+end;
+
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
-var dx, dy, dz: Double;
-  f: Integer;
-  first_loop_done: boolean;
-  S: String;
-  begin
-//  if isSimActive then
-//    exit;
-  WaitForIdle;
-  dx := 0;
-  dy := 0;
-  dz := 0;
-  case (Sender as TBitBtn).tag of   // Welcher Jog-Button?
-    0:  begin          dy:=  1; end;     // Nord
-    1:  begin dx:=  1; dy:=  1; end;     // NordOst
-    2:  begin dx:=  1;          end;     // Ost
-    3:  begin dx:=  1; dy:= -1; end;     // Südost
-    4:  begin          dy:= -1; end;     // Süd
-    5:  begin dx:= -1; dy:= -1; end;     // SüdWest
-    6:  begin dx:= -1;          end;     // West
-    7:  begin dx:= -1; dy:=  1; end;     // NordWest
-    10: begin dz:=  1;          end;     // Auf
-    11: begin dz:= -1;          end;     // Ab
+begin
+  if isSimActive then
+    exit;
+  ResetJogging;
+  case (Sender as TBitBtn).tag of                         // Welcher Jog-Button?
+    0:  begin                      JogDirection.Y:=  1; end;             // Nord
+    1:  begin JogDirection.X:=  1; JogDirection.Y:=  1; end;          // NordOst
+    2:  begin JogDirection.X:=  1;                      end;              // Ost
+    3:  begin JogDirection.X:=  1; JogDirection.Y:= -1; end;           // Südost
+    4:  begin                      JogDirection.Y:= -1; end;              // Süd
+    5:  begin JogDirection.X:= -1; JogDirection.Y:= -1; end;          // SüdWest
+    6:  begin JogDirection.X:= -1;                      end;             // West
+    7:  begin JogDirection.X:= -1; JogDirection.Y:=  1; end;         // NordWest
+    10: begin JogDirection.Z:=  1;                      end;              // Auf
+    11: begin JogDirection.Z:= -1;                      end;               // Ab
     20: begin JogDistance:=1;    LabelJogDistance.Caption:= '0.1'; exit end;
     21: begin JogDistance:=10;   LabelJogDistance.Caption:= '1';   exit end;
     22: begin JogDistance:=100;  LabelJogDistance.Caption:= '10';  exit end;
     23: begin JogDistance:=1000; LabelJogDistance.Caption:= '100'; exit end;
   end;
 
-  if (dx = 0) and (dy = 0) and (dz = 0) then                 // nothing to move
-    exit;
+  JogDirection.X:= JogDirection.X * JogDistance /10;
+  JogDirection.Y:= JogDirection.Y * JogDistance /10;
+  JogDirection.Z:= JogDirection.Z * JogDistance /10;
 
-  dx:= dx * JogDistance /10;
-  dy:= dy * JogDistance /10;
-  dz:= dz * JogDistance /10;
-
-  if MachineOptions.NewGrblVersion then begin
-    if (abs(dx)>5) or (abs(dy)>5) or (abs(dz)>5) then
-      f:= get_AppDefaults_int(37) // JogSpeed Fast
-    else
-      if (abs(dx)>0.5) or (abs(dy)>0.5) or (abs(dz)>0.5) then
-        f:= get_AppDefaults_int(38) // JogSpeed Slow
-      else
-        f:= get_AppDefaults_int(38) div 5;
-
-    if get_AppDefaults_bool(45) then begin
-    // Positive Machine Space (XY)
-      if dx > 0 then
-        SendSingleCommandStr('$J=G53 X' + FloatToStrDot(job.table_x) + 'F'+ IntToStr(f));
-      if dx < 0 then
-        SendSingleCommandStr('$J=G53 X1 F'+ IntToStr(f));
-
-      if dy > 0 then
-        SendSingleCommandStr('$J=G53 Y' + FloatToStrDot(job.table_y) + 'F'+ IntToStr(f));
-      if dy < 0 then
-        SendSingleCommandStr('$J=G53 Y1 F'+ IntToStr(f));
-
-      if dz > 0 then // Move Z up
-        SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
-      if dz < 0 then
-        SendSingleCommandStr('$J=G53 Z' + FloatToStrDot(-job.table_z) + 'F'+ IntToStr(f div 3));
-
-    end else begin
-    // Standard CNC: Negative machine space (XYZ)
-      if dx > 0 then
-        SendSingleCommandStr('$J=G53 X-1 F'+ IntToStr(f));
-      if dx < 0 then
-        SendSingleCommandStr('$J=G53 X' + FloatToStrDot(1-job.table_x) + 'F'+ IntToStr(f));
-
-      if dy > 0 then
-        SendSingleCommandStr('$J=G53 Y-1 F'+ IntToStr(f));
-      if dy < 0 then
-        SendSingleCommandStr('$J=G53 Y' + FloatToStrDot(1-job.table_y) + 'F'+ IntToStr(f));
-
-      if dz > 0 then // Move Z up
-        SendSingleCommandStr('$J=G53 Z-1 F'+ IntToStr(f div 3));
-      if dz < 0 then
-        SendSingleCommandStr('$J=G53 Z' + FloatToStrDot(1-job.table_z) + 'F'+ IntToStr(f div 3));
-    end;
-
-    while GetAsyncKeyState(VK_LBUTTON) < 0 do begin
-      Application.ProcessMessages;
-      sleep(5);
-    end;
-    grbl_sendRealTimeCmd(#$85);   // Jog Cancel
-    sleep(10);
-    grbl_sendRealTimeCmd(#$85);   // Jog Cancel
-  end else begin
-    //my_delay:= (12 - Form1.TrackBarRepeatRate.Position) * 20;
-//    first_loop_done:= false;
-//    repeat
-      Jog.X:= grbl_mpos.X + dx;
-      if Jog.X < 0            then Jog.X:= 0;        // begrenzen auf Tischgröße
-      if Jog.X > job.table_x  then Jog.X:= job.table_x;
-      Jog.Y:= grbl_mpos.Y + dy;
-      if Jog.Y < 0            then Jog.Y:= 0;        // begrenzen auf Tischgröße
-      if Jog.Y > job.table_y  then Jog.Y:= job.table_y;
-      Jog.Z:= grbl_mpos.Z + dz;
-      if Jog.Z > 0            then Jog.Z:= 0;        // begrenzen auf Tischgröße
-      if Jog.Z < -job.table_z then Jog.Z:= -job.table_z;
-
-      s:= 'G0 G53';
-      if Jog.X <> grbl_mpos.X then        // nur wenn sich die X-Position ändert
-        s:= s + ' X' + FloatToStrDot(Jog.X);
-      if Jog.Y <> grbl_mpos.Y then        // nur wenn sich die Y-Position ändert
-        s:= s + ' Y' + FloatToStrDot(Jog.Y);
-      if Jog.Z <> grbl_mpos.Z then        // nur wenn sich die Z-Position ändert
-        s:= s + ' Z' + FloatToStrDot(Jog.Z);
-
-      if length(s) > 6 then                 // nur wenn sich die Position ändert
-        SendSingleCommandStr(s);
-
-      if not first_loop_done then
-        mdelay(300)
-      else
-        mdelay(100);
-
-//      if not first_loop_done then begin
-//        first_loop_done:= true;
-        GetAsyncKeyState(VK_LBUTTON);
-//      end;
-//    until GetAsyncKeyState(VK_LBUTTON) = 0; // stop when mouse released
-//    Application.ProcessMessages;                // handle event on windows level
-  end;
-  NeedsRedraw:= true;
+  StepJogging;                                         // only one step at first
+  JogDelay:= 6;                                   // delay in TimerStatus-Events
 end;
 
-procedure TForm1.MouseDown(Sender: TObject; Button: TMouseButton;
+procedure TForm1.BitBtnJogMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  MouseDownStart:= MillisecondOfTheYear(Now);
+  ResetJogging;
 end;
 
-procedure TForm1.MouseUp(Sender: TObject; Button: TMouseButton;
+procedure TForm1.BtnCntrMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if MouseDownStart = 0 then
+    MouseDownStart:= MillisecondOfTheYear(Now);
+end;
+
+procedure TForm1.BtnCntrMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var D: int64;
 begin
       // D: time [ms] of pressed mouse button, will be 0 in case of touch screen
   D:= MillisecondOfTheYear(Now) - MouseDownStart;
+  MouseDownStart:= 0;
 
   if not fCamActivated then begin
     if (Button = mbLeft) and (D < 300) then             // move tool to position
