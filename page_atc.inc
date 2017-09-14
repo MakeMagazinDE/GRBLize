@@ -189,7 +189,8 @@ begin
   grbl_moveZ(job.toolchange_z, true);
 // manuelle Wechselposition
   SendListToGrbl;
-  if Form1.CheckTLCprobe.Checked then
+  if job.toolchange_pause and
+     job.use_fixed_probe then
     my_dlg_result:= MessageDlg('Tool Change Pause. Change tool manually to'
         + #13 + #13 + pen_description(atcArray[atc_idx_new].pen)
         + #13 + #13 + 'Click YES when done and clear machine for TLC,'
@@ -206,7 +207,9 @@ begin
   if Form1.Show3DPreview1.checked and (my_dlg_result = mrYES) then
     GLSsetToolToATCidx(atc_idx_new);
 
-  if Form1.CheckTLCprobe.checked and (my_dlg_result = mrYES) then begin
+  if job.toolchange_pause and
+     job.use_fixed_probe and
+     (my_dlg_result = mrYES) then begin
     if do_tlc then
       if DoTLCandConfirm(false, atc_idx_new) then begin
         Form1.Memo1.lines.add('Tool changed, new Tool Delta Z applied');

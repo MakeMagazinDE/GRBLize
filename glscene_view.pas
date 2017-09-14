@@ -919,14 +919,16 @@ begin
   if not Form1.Show3DPreview1.Checked then
     exit;
   with Form4 do begin
-    GLDummyCubeZprobe.Visible:= Form1.CheckTLCprobe.Checked;
+    GLDummyCubeZprobe.Visible:= job.toolchange_pause and job.use_fixed_probe;
     if GLDummyCubeZprobe.Visible then begin
       GLDummyCubeZprobe.Position.X:= (job.probe_x - WorkZero.X) / c_GLscale;
       GLDummyCubeZprobe.Position.Y:= (job.probe_y - WorkZero.y) / c_GLscale;
       GLDummyCubeZprobe.Position.Z:= (job.probe_z - WorkZero.z) / c_GLscale;
     end;
 
-    GLDummyCubeATC.Visible:= Form1.CheckUseATC2.Checked;
+    GLDummyCubeATC.Visible:= job.toolchange_pause and
+                             job.use_fixed_probe  and
+                             job.atc_enabled;
     if GLDummyCubeATC.Visible then begin
       GLDummyCubeATC.Position.X:= (job.atc_zero_x - WorkZero.x) / c_GLscale;
       GLDummyCubeATC.Position.Y:= (job.atc_zero_y - WorkZero.y) / c_GLscale;

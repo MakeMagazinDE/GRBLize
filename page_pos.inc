@@ -232,7 +232,8 @@ var Feed: Integer;
     Dist: Double;
     S:    String;
 begin
-  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
+  if JogDelay < 0 then
+//  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
     exit;                                                     // nothing to move
 
   if (abs(JogDirection.X)>5) or
@@ -325,7 +326,8 @@ procedure TForm1.StepJogging;
 var S:             String;
     PositiveTable: boolean;
 begin
-  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
+  if JogDelay < 0 then
+//  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
     exit;                                                     // nothing to move
 
   WaitForIdle;
@@ -371,18 +373,19 @@ end;
 procedure TForm1.ResetJogging;
 var i: integer;
 begin
-  JogDirection.X := 0;
+  JogDelay:= -1;                                              // disable jogging
+  JogDirection.X := 0;                                        // reset direction
   JogDirection.Y := 0;
   JogDirection.Z := 0;
-  grbl_sendRealTimeCmd(#$85);   // Jog Cancel
+  grbl_sendRealTimeCmd(#$85);                          // cancel jogging on mill
 end;
 
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if isSimActive then
+  if isSimActive or (JogDelay <> -1) then
     exit;
-  ResetJogging;
+//  ResetJogging;
   case (Sender as TBitBtn).tag of                         // Welcher Jog-Button?
     0:  begin                      JogDirection.Y:=  1; end;             // Nord
     1:  begin JogDirection.X:=  1; JogDirection.Y:=  1; end;          // NordOst
@@ -402,10 +405,11 @@ begin
 
   JogDirection.X:= JogDirection.X * JogDistance /10;
   JogDirection.Y:= JogDirection.Y * JogDistance /10;
-  JogDirection.Z:= JogDirection.Z * JogDistance /10;
+  if JogDistance > 100          // limit moving in Z direction for safety reason
+    then JogDirection.Z:= JogDirection.Z * 100
+    else JogDirection.Z:= JogDirection.Z * JogDistance /10;
 
-  StepJogging;                                         // only one step at first
-  JogDelay:= 6;                                   // delay in TimerStatus-Events
+  JogDelay:= c_JogDelay;                          // delay in TimerStatus-Events
 end;
 
 procedure TForm1.BitBtnJogMouseUp(Sender: TObject; Button: TMouseButton;

@@ -20,6 +20,7 @@ const
   c_unloadATCstr: String = 'M8';
   c_loadATCstr: String = 'M9';
   c_Grbl_VerStr: String = 'for GRBL 0.9 and 1.1 ';
+  c_JogDelay: integer = 6;                      // delay start jogging in [50ms]
 
 type
   TPOVControl = record   // Joystick control
@@ -436,10 +437,14 @@ type
     procedure MoveToPos(S: String; x, y, z: Double; Set0, CAM: boolean);
     procedure SetZero(axes: integer);
 
+    procedure CheckEndParkClick(Sender: TObject);
+    procedure CheckPartProbeZClick(Sender: TObject);
     procedure hide;
     procedure ContinueJogging;
     procedure StepJogging;
     procedure ResetJogging;
+    procedure SetToolInSpindle(Tool: integer);
+
 
   private
     { Private declarations }
@@ -859,26 +864,6 @@ begin
   end;
 end;
 
-procedure SetToolChangeChecks(pause_is_enabled: Boolean);
-begin
-  with Form1 do begin
-    CheckToolChange.Checked:= pause_is_enabled;
-    if pause_is_enabled then begin
-      CheckPartProbeZ.Enabled:= true;
-      CheckTLCprobe.Enabled:= true;
-      CheckTLCprobe.Checked:= job.use_fixed_probe;
-      CheckUseATC2.Checked:= job.atc_enabled;
-      CheckPartProbeZ.Checked:= job.use_part_probe;
-    end else begin
-      CheckUseATC2.Checked:= false;
-      CheckPartProbeZ.Checked:= false;
-      CheckPartProbeZ.Enabled:= false;
-      CheckTLCprobe.Enabled:= false;
-      CheckTLCprobe.Checked:= false;
-    end;
-  end;
-end;
-
 // #############################################################################
 
 procedure uncheck_ms;
@@ -1095,7 +1080,7 @@ begin
   grbl_sendStr(#$85, false);  // Jog Cancel
   grbl_sendStr(#$90, false);  // Feed Reset
 
-  SetToolChangeChecks(job.toolchange_pause);
+//  SetToolChangeChecks(job.toolchange_pause);
   ResetCoordinates;
   ResetToolflags;
   Form1.Memo1.lines.add('');
@@ -1236,6 +1221,7 @@ begin
     RadioGroupCam.OnClick := OldEvent;                  // restore OnClick event
   end;
 
+  JogDelay:= -1;                                              // disable jogging
   JogDistance:= 1; // 0.1mm
   LabelJogDistance.Caption:=  '0.1';
 
@@ -1255,10 +1241,10 @@ begin
   LoadIniFile;
 //  BtnProbeTLC.Enabled:= CheckFixedProbeZ.Checked;
   BtnZcontact.Enabled:= CheckPartProbeZ.Checked;
-  CheckUseATC2.Enabled:= CheckTLCprobe.Checked;
-  if not CheckTLCprobe.Checked then begin
-    CheckUseATC2.Checked:= false;
-  end;
+//  CheckUseATC2.Enabled:= CheckTLCprobe.Checked;
+//  if not CheckTLCprobe.Checked then begin
+//    CheckUseATC2.Checked:= false;
+//  end;
 
   SgGrblSettings.FixedCols:= 1;
   SgAppdefaults.FixedCols:= 1;
@@ -1847,25 +1833,50 @@ end;
 // #############################################################################
 // #############################################################################
 
+procedure TForm1.CheckToolChangeClick(Sender: TObject);
+begin
+  set_AppDefaults_bool(1,CheckToolChange.Checked);
+  job.toolchange_pause:= CheckToolChange.Checked;
+  CheckTLCprobe.Enabled:=   CheckToolChange.Checked;
+  CheckPartProbeZ.Enabled:= CheckToolChange.Checked;
+  CheckUseATC2.Enabled:=    CheckToolChange.Checked and job.use_fixed_probe;
+end;
+
 procedure TForm1.CheckTLCprobeClick(Sender: TObject);
 begin
-//  BtnProbeTLC.Enabled:= CheckFixedProbeZ.Checked;
-  CheckUseATC2.Enabled:= CheckTLCprobe.Checked;
-  if not CheckTLCprobe.Checked then begin
-    CheckUseATC2.Checked:= false;
-  end;
+  set_AppDefaults_bool(12,CheckTLCProbe.Checked);
+  job.use_fixed_probe:=   CheckTLCProbe.Checked;
+  Form1.CheckUseATC2.Enabled:= CheckTLCProbe.Checked and job.toolchange_pause;
+
   if Form1.CheckBoxSim.Checked then
     ResetCoordinates;
   if Form1.Show3DPreview1.Checked then
     GLSsetATCandProbe;
 end;
 
-procedure TForm1.CheckToolChangeClick(Sender: TObject);
+procedure TForm1.CheckUseATC2Click(Sender: TObject);
 begin
-  job.toolchange_pause:= CheckToolChange.Checked;
-  SetToolChangeChecks(job.toolchange_pause);
+  set_AppDefaults_bool(20,CheckUseATC2.Checked);
+  job.atc_enabled:=       CheckUseATC2.Checked;
+// Verwendete Werkzeuge in Pen/Tools-Liste (Job) eintragen
+  ListBlocks;
+  if isSimActive then
+    ResetCoordinates;
+  GLSneedsRedrawTimeout:= 0;
+  GLSneedsATCupdateTimeout:= 0;
 end;
 
+procedure TForm1.CheckEndParkClick(Sender: TObject);
+begin
+  set_AppDefaults_bool(5,   CheckEndPark.Checked);
+  job.parkposition_on_end:= CheckEndPark.Checked
+end;
+
+procedure TForm1.CheckPartProbeZClick(Sender: TObject);
+begin
+  set_AppDefaults_bool(16,CheckPartProbeZ.Checked);
+  job.use_part_probe:=    CheckPartProbeZ.Checked;
+end;
 
 // #############################################################################
 // ############################## T I M E R ####################################
@@ -1979,11 +1990,14 @@ begin
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
 
     if MachineOptions.NewGrblVersion then begin
+      if JogDelay = c_JogDelay then
+        StepJogging;                        // do one step first without waiting
       if JogDelay = 0 then
         ContinueJogging;
       {$I joypad_handling.inc}
     end else begin
-      StepJogging;
+      if (JogDelay = c_JogDelay) or (JogDelay = 0) then
+        StepJogging;
     end;
     if JogDelay > 0 then
       dec(JogDelay);
@@ -2297,26 +2311,6 @@ begin
     Form2.Hide;
 end;
 
-//procedure TForm1.ShowSpindleCam1Click(Sender: TObject);
-//begin
-//  ShowSpindleCam1.Checked:= not ShowSpindleCam1.Checked;
-//  if ShowSpindleCam1.Checked then
-//    Form3.Show
-//  else
-//    Form3.Hide;
-//end;
-
-procedure TForm1.CheckUseATC2Click(Sender: TObject);
-begin
-// Verwendete Werkzeuge in Pen/Tools-Liste (Job) eintragen
-  ListBlocks;
-  if isSimActive then
-    ResetCoordinates;
-  GLSneedsRedrawTimeout:= 0;
-  GLSneedsATCupdateTimeout:= 0;
-end;
-
-
 procedure TForm1.Show3DPreview1Click(Sender: TObject);
 begin
   if isSimActive then
@@ -2389,7 +2383,9 @@ begin
   if machine_busy_msg then
     exit;
   LEDbusy.Checked:= true;
-  if Form1.CheckUseATC2.Checked then
+  if job.toolchange_pause and
+     job.use_fixed_probe  and
+     job.atc_enabled then
     LoadATCtool(sgATC.Row, false); // legt altes Tool automatisch ab
   WorkZeroZdone:= false;
 end;
@@ -2589,11 +2585,29 @@ begin
   UpdateATC;
 end;
 
+procedure TForm1.SetToolInSpindle(Tool: integer);
+var NrTools, i: integer;
+begin
+  NrTools:= CountUsedATCtools;
+  if Tool <= NrTools then begin              // do nothing if new tool is unused
+    if Tool <> ToolInSpindle then                        // anderes Tool gewählt
+      WorkZeroZDone:= false;
+
+    ToolInSpindle:= Tool;
+    for i:= 1 to NrTools do                        // atcArray[0] ist unbenutzt!
+      atcArray[i].isInSpindle:= false;
+    atcArray[ToolInSpindle].isInSpindle:= true;
+    GLSsetToolToATCidx(ToolInSpindle);
+    GLSupdateATC;
+    UpdateATC;
+  end;
+end;
+
 procedure TForm1.sgATCMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 // Popup-Menu mit rechter Maustaste
 var pt: TPoint;
-  my_row, my_col, i, k: integer;
+  my_row, my_col: integer;
 begin
   sgATC.MouseToCell( X,Y, my_col, my_row );
   if my_row < 1 then
@@ -2601,8 +2615,6 @@ begin
   pt.X:= X;
   pt.Y:= Y;
   pt := sgATC.ClientToScreen(pt);
-  if my_row <> ToolInSpindle then // anderes Tool gewählt
-    WorkZeroZDone:= false;
   sgATC.Col := 1;
 
   if button = mbRight then begin
@@ -2613,18 +2625,11 @@ begin
       pu_ProbetoolLengthComp.Enabled:= atcArray[my_row].TREFok;
     end;
     pu_LoadFromATCslot.Enabled:= not pu_ProbetoolLengthComp.Enabled;
-    pu_LoadfromATCslot.Enabled:= CheckUseATC2.Checked;
+    pu_LoadfromATCslot.Enabled:= job.toolchange_pause and job.use_fixed_probe and job.atc_enabled;
     PopupMenuATC.Popup(pt.X, pt.Y);
   end;
 
-  ToolInSpindle := my_row;
-  k:= CountUsedATCtools;
-  for i:= 1 to k do      // atcArray[0] ist unbenutzt!
-    atcArray[i].isInSpindle:= false;
-  atcArray[ToolInSpindle].isInSpindle:= true;
-  GLSsetToolToATCidx(ToolInSpindle);
-  GLSupdateATC;
-  UpdateATC;
+  SetToolInSpindle(my_row);
 end;
 
 procedure TForm1.PanelHoldClick(Sender: TObject);
@@ -2673,7 +2678,7 @@ begin
 
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
 {
-  if Form1.CheckTLCprobe.checked then begin
+  if job.toolchange_pause and job.use_fixed_probe then begin
     if MessageDlg('Manual Tool Change'
     + #13 + 'For this job, load spindle with:'
     + #13 + #13 + pen_description(atcArray[FirstToolUsed].pen)

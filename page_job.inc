@@ -197,7 +197,7 @@ begin
   with Form1.SgAppDefaults do begin
     RowCount:= 46;
     Rows[0].DelimitedText:= 'Parameter,Value';
-    Rows[1].DelimitedText:= '"Tool Change in Job",OFF';
+    Rows[1].DelimitedText:= '"Enable Tool Change in Job",OFF';
     Rows[2].DelimitedText:= '"Tool Change Position X absolute",10';
     Rows[3].DelimitedText:= '"Tool Change Position Y absolute",100';
     Rows[4].DelimitedText:= '"Tool Change Position Z absolute",-5';
@@ -271,13 +271,16 @@ begin
     if RowCount < 3 then begin
       InitAppdefaults;
     end;
+
     job.toolchange_pause:= get_AppDefaults_bool(1);
+    Form1.CheckToolChange.Checked:= job.toolchange_pause;
 
     job.toolchange_x:= get_AppDefaults_float(2);
     job.toolchange_y:= get_AppDefaults_float(3);
     job.toolchange_z:= get_AppDefaults_float(4);
 
     job.parkposition_on_end:= get_AppDefaults_bool(5);
+    Form1.CheckEndPark.Checked:= job.parkposition_on_end;
 
     job.park_x:= get_AppDefaults_float(6);
     job.park_y:= get_AppDefaults_float(7);
@@ -288,16 +291,23 @@ begin
     job.cam_z_abs:= get_AppDefaults_float(11);
 
     job.use_fixed_probe:= get_AppDefaults_bool(12);
+    Form1.CheckTLCprobe.Checked:= job.use_fixed_probe;
+
     job.probe_x:= get_AppDefaults_float(13);
     job.probe_y:= get_AppDefaults_float(14);
     job.probe_z:= get_AppDefaults_float(15);
 
     job.use_part_probe:= Cells[1,16] = 'ON';
+    Form1.CheckPartProbeZ.Checked:= job.use_part_probe;
+
     job.probe_z_gauge:= get_AppDefaults_float(17);
 
     job.invert_z:= get_AppDefaults_bool(18);
     job.spindle_wait:= get_AppDefaults_int(19);
+
     job.atc_enabled:= get_AppDefaults_bool(20);
+    Form1.CheckUseATC2.Checked:= job.atc_enabled;
+
     job.atc_zero_x:= get_AppDefaults_float(21);
     job.atc_zero_y:= get_AppDefaults_float(22);
     job.atc_pickup_z:= get_AppDefaults_float(23);
@@ -817,7 +827,6 @@ begin
   with SgAppDefaults do
     Options:= Options - [goEditing, goAlwaysShowEditor];
   DefaultsGridListToJob;
-  SetToolChangeChecks(job.toolchange_pause);
 end;
 
 
@@ -887,7 +896,6 @@ begin
     end;
   end;
   DefaultsGridListToJob;
-  SetToolChangeChecks(job.toolchange_pause);
 end;
 
 procedure TForm1.SgAppDefaultsClick(Sender: TObject);

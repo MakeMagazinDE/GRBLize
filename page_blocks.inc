@@ -113,7 +113,9 @@ begin
       Form1.Memo1.lines.add('WARNING: Tool paths outside work area disabled');
     end;
     AutoAssignATCtoolsToJob;
-    if Form1.CheckUseATC2.checked then
+    if job.toolchange_pause and
+       job.use_fixed_probe  and
+       job.atc_enabled then
       Form1.LabelATCmsg.Caption:= 'ATC placement'
     else
       Form1.LabelATCmsg.Caption:= 'Tools used';

@@ -173,8 +173,10 @@ begin
         TargetZ := -job.table_z;
       my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F200';
 
-      my_response:= SendReceive(my_cmd, 0);
-      grbl_receiveStr(25); // 'ok'
+
+      my_response:= SendReceive(my_cmd, 0);
+
+      grbl_receiveStr(25); // 'ok'
       if pos('ALARM', ansiuppercase(my_response)) = 0 then
         my_zval1:= extract_probe_pos(my_response)
       else begin
@@ -300,7 +302,7 @@ begin
   if (MachineState = alarm) then
     exit;
   result:= true;
-  if not Form1.CheckTLCprobe.Checked then
+  if not (job.toolchange_pause and job.use_fixed_probe) then
     exit;
   if confirm then
     my_dlg_result:= MessageDlg('Please clear machine to probe Tool Length Offset/Reference (TLC).',
@@ -482,8 +484,7 @@ begin
   finally
     ExitJobMsg(true);
   end;
-  if sgATC.Row < c_numATCslots then          // auf nächstes Tool weiterschalten
-    sgATC.Row:= sgATC.Row + 1;
+  SetToolInSpindle(ToolInSpindle + 1);       // auf nächstes Tool weiterschalten
 end;
 
 procedure TForm1.BtnRunJobClick(Sender: TObject);
@@ -571,7 +572,9 @@ begin
         spindle_on_off(false);
         SendSingleCommandStr('G0 G53 Z-1'); // move Z up
         GLSclearPathNodes;
-        if CheckUseATC2.checked then begin
+        if job.toolchange_pause and
+           job.use_fixed_probe  and
+           job.atc_enabled then begin
 // automatischer Werkzeugwechsel, zum Ende erstes Werkzeug wiederaufnehmen
           if atc_idx >= my_used_tools_count then
             ChangeATCtool(atc_idx, 1, true) // zurück zum ersten Tool
@@ -677,5 +680,4 @@ begin
     ExitJobMsg(true);
   end;
 end;
-
 
