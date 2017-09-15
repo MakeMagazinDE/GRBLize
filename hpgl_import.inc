@@ -71,6 +71,11 @@ begin
     my_pos:= my_pos+2;
     exit;
   end;
+  if pos('AA',my_line) = my_pos then begin
+    result:= cmd_aa;
+    my_pos:= my_pos+2;
+    exit;
+  end;
   result:= cmd_exit;  // alle anderen Befehle ignorieren
 end;
 
@@ -82,6 +87,7 @@ var
   my_valid: boolean;
   my_pen: Integer;
   xx, yy: Double;
+  ca, res, dir, a, dx, dy, r: Double;
   dummy_str: String;
 
 begin
@@ -154,6 +160,43 @@ begin
           end else
             CurrentPen:= 0;
           LastAction:= lift;
+        end;
+      cmd_aa:      // AA x,y,CentralAngel[°] [,Resolution[°]]
+        begin
+          my_valid:=               ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
+          my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
+          my_valid:= my_valid and (ParseLine(my_pos, my_line, ca, dummy_str) = p_number);
+          if not (ParseLine(my_pos, my_line, res, dummy_str) = p_number)
+            then res:= 5;
+          if my_valid then begin
+            ca:=  pi * ca / 180;                            // convert to radian
+            res:= pi * res/ 180;
+            dx:= LastPoint.x-xx; dy:= LastPoint.y-yy;
+            r:= sqrt( dx*dx + dy*dy );                       // calculate radius
+            a:= arccos( dx / r );   // angle to LastPoint, correct for Q1 und Q2
+            if dy < 0 then a:= 2*pi - a;                            // Q3 und Q4
+
+            if LastAction >= mill then begin                         // was down
+              dir:= 1; if ca < 0 then begin dir:= -1; ca:= -ca; end;
+              while ca > 0 do begin                      // calculate new points
+                if res < ca then begin               // calc angle to next point
+                  a:= a + (res * dir);
+                  ca:= ca - res;
+                end else begin
+                  a:= a + (ca * dir);
+                  ca:= 0;
+                end;
+                LastPoint.x:= round(xx + r*cos(a));  // calculate next LastPoint
+                LastPoint.y:= round(yy + r*sin(a));
+                append_point(fileID, CurrentBlockID, LastPoint);
+                blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
+                check_filebounds(FileID, LastPoint);
+              end;
+            end else begin                                             // was up
+              LastPoint.x:= round(xx + r*sin(a+ca));  // calculate new LastPoint
+              LastPoint.y:= round(yy + r*cos(a+ca));
+            end;
+          end;
         end;
     end;
   until false;

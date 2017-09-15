@@ -12,7 +12,7 @@ const
 
   type
 
-  Thpgl_cmd = (cmd_none, cmd_pa, cmd_pu, cmd_pd, cmd_sp, cmd_in,
+  Thpgl_cmd = (cmd_none, cmd_pa, cmd_pu, cmd_pd, cmd_sp, cmd_in, cmd_aa,
               cmd_number, cmd_drill, cmd_exit, cmd_nextline);
   Taction = (none, lift, seek, mill, drill);
   Tshape = (contour, inside, outside, pocket, drillhole);
