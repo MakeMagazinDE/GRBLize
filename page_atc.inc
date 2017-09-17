@@ -109,6 +109,7 @@ begin
     sgATC.cells[1,0]:= 'Tool/Description';
     sgATC.cells[2,0]:= 'REF/TLC';
     sgATC.Col:= 1;
+    sgATC.Row:= ToolInSpindle;
   end;
   GLSneedsATCupdateTimeout:= 1;
 end;

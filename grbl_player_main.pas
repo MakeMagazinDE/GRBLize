@@ -384,7 +384,7 @@ type
     procedure pu_MovetoATCslotClick(Sender: TObject);
     procedure pu_LoadFromATCslotClick(Sender: TObject);
     procedure pu_ProbeToolLengthRefClick(Sender: TObject);
-    procedure sgATCMouseDown(Sender: TObject; Button: TMouseButton;
+    procedure sgATCMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure pu_ProbetoolLengthCompClick(Sender: TObject);
     procedure BtnRunToolClick(Sender: TObject);
@@ -1092,12 +1092,6 @@ var
   grbl_ini: TRegistry;
   OldEvent: TNotifyEvent;
 begin
-//  StartupDone:= false;
-//  Show;
-//  Memo1.lines.Clear;
-//  Memo1.lines.add(c_ProgNameStr + c_VerStr);
-//  Memo1.lines.add('with joystick/gamepad support');
-//  Memo1.lines.add('for GRBL 1.1');
   StopWatch:= TStopWatch.Create() ;
   Width:= Constraints.MaxWidth;
   grbl_sendlist:= TStringList.create;
@@ -1108,7 +1102,6 @@ begin
   InitJob;
   UnHilite;
   Caption := c_ProgNameStr;
-//  Form1.Show;
 
   ///// initialisation of serial device dialog /////////////////////////////////
   if not IsFormOpen('deviceselectbox') then
@@ -1239,12 +1232,8 @@ begin
   SgFiles.Col:=4;
 
   LoadIniFile;
-//  BtnProbeTLC.Enabled:= CheckFixedProbeZ.Checked;
+
   BtnZcontact.Enabled:= CheckPartProbeZ.Checked;
-//  CheckUseATC2.Enabled:= CheckTLCprobe.Checked;
-//  if not CheckTLCprobe.Checked then begin
-//    CheckUseATC2.Checked:= false;
-//  end;
 
   SgGrblSettings.FixedCols:= 1;
   SgAppdefaults.FixedCols:= 1;
@@ -1259,19 +1248,6 @@ begin
     BtnRescan.SetFocus;
   UpdateATC;
 
-//  SetToolChangeChecks(job.toolchange_pause);
-//  ResetCoordinates;
-//  ResetToolflags;
-//  Form1.Memo1.lines.add('');
-//  ResetSimulation;
-//  if ftdi_was_open then
-//    OpenFTDIport
-//  else if com_was_open then
-//    OpenCOMport;
-//  SavedPortnameForSim:= DeviceView.Text;
-//  PortOpenedCheck;
-//  EnableStatus;
-//  StartupDone:= true;
   if Show3DPreview1.Checked then
     Form4.FormReset;
   BtnUtilsResetClick(Sender);
@@ -2599,11 +2575,11 @@ begin
     atcArray[ToolInSpindle].isInSpindle:= true;
     GLSsetToolToATCidx(ToolInSpindle);
     GLSupdateATC;
-    UpdateATC;
   end;
+  UpdateATC;
 end;
 
-procedure TForm1.sgATCMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TForm1.sgATCMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 // Popup-Menu mit rechter Maustaste
 var pt: TPoint;
