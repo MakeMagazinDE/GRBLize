@@ -151,7 +151,7 @@ var
 
   GrblComm: TextFile;
   DebugName: string = '';
-//  DebugName: string = 'c:\GrblComm.txt';
+//  DebugName: string = 'c:\temp\GrblComm.txt';
 
 implementation
 
@@ -1277,6 +1277,7 @@ begin
   if DebugName <> '' then begin
     AssignFile(GrblComm, DebugName);
 {$i-}    rewrite(GrblComm);   {$i+}
-    if IOResult <> 0 then DebugName:= '';
+    if IOResult <> 0 then
+      DebugName:= '';
   end;
 end.

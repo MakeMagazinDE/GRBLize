@@ -285,6 +285,13 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
+    SpeedButton1: TSpeedButton;
+    LabelWorkX_2: TLabel;
+    LabelWorkY_2: TLabel;
+    LabelWorkZ_2: TLabel;
+    Label8: TLabel;
+    Label17: TLabel;
+    Label18: TLabel;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -444,6 +451,7 @@ type
     procedure StepJogging;
     procedure ResetJogging;
     procedure SetToolInSpindle(Tool: integer);
+    procedure BtnProbeZAssistentClick(Sender: TObject);
 
 
   private
@@ -568,6 +576,7 @@ var
   JobSettingsPath: String;
 
   grbl_mpos, grbl_wpos, old_grbl_wpos, grbl_wco: T3dFloat;
+  PosProbeZ :                              T3dFloat; // last prosition of ProbeZ
   Jog,WorkZero:T3dFloat;  // Absolutwerte Werkstück-Null
   grbl_feed_ov, grbl_seek_ov, grbl_speed_ov: Integer;
   grbl_feed, grbl_speed: Integer;
@@ -985,8 +994,11 @@ begin
     PosZ.Caption:=  FormatFloat('000.00', grbl_wpos.z);
     PosC.Caption:=  FormatFloat('000.0', grbl_wpos.z);
     LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X);
+    LabelWorkX_2.Caption:= LabelWorkX.Caption;
     LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y);
+    LabelWorkY_2.Caption:= LabelWorkY.Caption;
     LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z);
+    LabelWorkZ_2.Caption:= LabelWorkZ.Caption;
   end;
   InvalidateTLCs;
   UpdateATC;
@@ -1965,18 +1977,21 @@ begin
       Form1.Memo1.lines.add('HOLD state, press CONTINUE or click READY panel');
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
 
-    if MachineOptions.NewGrblVersion then begin
-      if JogDelay = c_JogDelay then
-        StepJogging;                        // do one step first without waiting
-      if JogDelay = 0 then
-        ContinueJogging;
+    if JogDelay = c_JogDelay then
+      StepJogging;                          // do one step first without waiting
+
+    if JogDelay = 0 then
+      if MachineOptions.NewGrblVersion then begin
+        ContinueJogging;            // only newer versions supports real jogging
       {$I joypad_handling.inc}
-    end else begin
-      if (JogDelay = c_JogDelay) or (JogDelay = 0) then
+      end else begin
         StepJogging;
-    end;
+      end;
+
     if JogDelay > 0 then
       dec(JogDelay);
+    if JogDelay < -1 then
+      inc(JogDelay);
 
     TimerStatus.Enabled:= true;
   finally
@@ -2156,9 +2171,10 @@ begin
     grbl_sendStr('G0 G53 Z-1' + #13, true);  // Move Z up
     grbl_sendStr('G4 P1' + #13, true);       // Dwell/Pause
     Memo1.lines.add('');
-    grbl_sendStr('G92 Z'+FloatToStrDot(-WorkZero.Z) + #13, true); // wir sind auf 0
-    grbl_sendStr('G92 X'+ FloatToSTrDot(grbl_mpos.X - WorkZero.X)
-      +' Y'+ FloatToSTrDot(grbl_mpos.Y - WorkZero.Y) + #13, true);
+    grbl_sendStr('G92.1' + #13, true);           // reset work coordinate system
+//    grbl_sendStr('G92 Z'+ FloatToStrDot(WorkZero.Z) + #13, true); // wir sind auf 0
+//    grbl_sendStr('G92 X'+ FloatToSTrDot(grbl_mpos.X - WorkZero.X)
+//      +' Y'+ FloatToSTrDot(grbl_mpos.Y - WorkZero.Y) + #13, true);
     Memo1.lines.add('Done.');
     repeat
       Application.processmessages;
@@ -2640,45 +2656,6 @@ end;
 // #############################################################################
 // #############################################################################
 // #############################################################################
-procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
-begin
-  if machine_busy_msg then
-    exit;
-  spindle_on_off(false);
-  grbl_moveZ(0, true);  // Z ganz oben, absolut!
-  Form1.Memo1.lines.add('Move to manual tool change position');
-  grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
-  grbl_moveZ(job.toolchange_z, true);
-// manuelle Wechselposition
-  SendListToGrbl;
-
-// vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
-{
-  if job.toolchange_pause and job.use_fixed_probe then begin
-    if MessageDlg('Manual Tool Change'
-    + #13 + 'For this job, load spindle with:'
-    + #13 + #13 + pen_description(atcArray[FirstToolUsed].pen)
-    + #13 + #13 + 'Click OK when tool has been changed'
-    + #13 + 'to proceed with TLC probing. If using ATC,'
-    + #13 + 'first slot (#1) must be empty.',
-    mtConfirmation, mbOKCancel, 0) = mrCancel then
-      exit;
-    if DoTLCandConfirm(false, 1) then
-      Form1.Memo1.lines.add('Tool changed, new Tool Delta Z applied');
-  end else
-}
-    if MessageDlg('Manual Tool Change'
-    + #13 + 'For this job, load spindle with:'
-    + #13 + #13 + pen_description(atcArray[ToolInSpindle].pen)
-    + #13 + #13 + 'Click OK when tool has been changed.',
-    mtConfirmation, mbOKCancel, 0) = mrCancel then
-      exit;
-  if Form1.Show3DPreview1.checked then
-    GLSupdateATC;
-  InvalidateTLCs;
-  CancelG43offset;
-  WorkZeroZdone:= false;
-end;
 
 procedure TForm1.hide;
 begin

@@ -143,8 +143,7 @@ end;
 
 function probe_z: double;
 var my_zval1, my_zval2, TargetZ: Double;
-  pos_changed: Boolean;
-  my_cmd, my_response: String;
+    my_cmd, my_response: String;
 begin
 // von aktueller Position ausgehend Z nach unten fahren.
 // Stoppt wenn Kontakt erreicht.
@@ -163,17 +162,16 @@ begin
       grbl_wait_for_timeout(25);
       DisableStatus;
 
-      my_zval1:= grbl_mpos.Z;
-      my_zval2:= grbl_mpos.Z;
+      WorkZeroZDone:= false;                                 // reset part ZeroZ
+      grbl_sendStr('G92 Z'+FloatToStrDot(grbl_mpos.z) + #13, true);
 
-      // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
+      my_zval1:= grbl_mpos.Z;
 
       TargetZ := my_zval1 - 25;                          // auf max. Z begrenzen
       if -job.table_z > TargetZ then
-        TargetZ := -job.table_z;
+        TargetZ := -job.table_z + 1;
       my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F200';
-
-
+                     // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
       my_response:= SendReceive(my_cmd, 0);
 
       grbl_receiveStr(25); // 'ok'
@@ -183,7 +181,6 @@ begin
         MachineState:= alarm;
         exit;
       end;
-
 
       // 2 mm abheben (falls möglich) und nochmal langsam
       if (my_zval1 + 2) > 0 then
@@ -195,7 +192,7 @@ begin
 
       TargetZ := my_zval1 - 1;                          // auf max. Z begrenzen
       if -job.table_z > TargetZ then
-        TargetZ := -job.table_z;
+        TargetZ := -job.table_z + 1;
       my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F50';
 
       my_response:= SendReceive(my_cmd, 0);
@@ -681,3 +678,53 @@ begin
   end;
 end;
 
+procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
+begin
+  if machine_busy_msg then
+    exit;
+  spindle_on_off(false);
+  grbl_moveZ(0, true);  // Z ganz oben, absolut!
+  Form1.Memo1.lines.add('Move to manual tool change position');
+  grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
+  grbl_moveZ(job.toolchange_z, true);
+// manuelle Wechselposition
+  SendListToGrbl;
+
+// vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
+{
+  if job.toolchange_pause and job.use_fixed_probe then begin
+    if MessageDlg('Manual Tool Change'
+    + #13 + 'For this job, load spindle with:'
+    + #13 + #13 + pen_description(atcArray[FirstToolUsed].pen)
+    + #13 + #13 + 'Click OK when tool has been changed'
+    + #13 + 'to proceed with TLC probing. If using ATC,'
+    + #13 + 'first slot (#1) must be empty.',
+    mtConfirmation, mbOKCancel, 0) = mrCancel then
+      exit;
+    if DoTLCandConfirm(false, 1) then
+      Form1.Memo1.lines.add('Tool changed, new Tool Delta Z applied');
+  end else
+}
+    if MessageDlg('Manual Tool Change'
+    + #13 + 'For this job, load spindle with:'
+    + #13 + #13 + pen_description(atcArray[ToolInSpindle].pen)
+    + #13 + #13 + 'Click OK when tool has been changed.',
+    mtConfirmation, mbOKCancel, 0) = mrCancel then
+      exit;
+  if Form1.Show3DPreview1.checked then
+    GLSupdateATC;
+  InvalidateTLCs;
+  CancelG43offset;
+  WorkZeroZdone:= false;
+end;
+
+procedure TForm1.BtnProbeZAssistentClick(Sender: TObject);
+begin
+  if machine_busy_msg or
+     (MessageDlg('Calibrate tool length at last position?', mtConfirmation, mbOKCancel, 0) = mrCancel) then
+    exit;
+
+  MoveToPos('Z-Probe position', PosProbeZ.X, PosProbeZ.y, 0, false, false);
+
+  BtnZcontactClick(Sender);
+end;

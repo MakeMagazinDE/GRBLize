@@ -17,9 +17,9 @@ begin
   end;
 
   // probe if position is on the table
-  if (x < 0) or (x > job.table_x) or
-     (y < 0) or (y > job.table_y) or
-     (z > 0) or (z > job.table_z) then begin
+  if (x < 0) or (x >  job.table_x) or
+     (y < 0) or (y >  job.table_y) or
+     (z > 0) or (z < -job.table_z) then begin
     Form1.Memo1.lines.add('Error: Position outside the table!');
     MessageDlg('Position outside the table.' + #13 + 'NO MOVE!', mtError, [mbOK], 0);
   end;
@@ -371,13 +371,14 @@ begin
 end;
 
 procedure TForm1.ResetJogging;
-var i: integer;
 begin
-  JogDelay:= -1;                                              // disable jogging
+  JogDelay:= -3;      // disable jogging, wait 2 tick before accept new requests
   JogDirection.X := 0;                                        // reset direction
   JogDirection.Y := 0;
   JogDirection.Z := 0;
   grbl_sendRealTimeCmd(#$85);                          // cancel jogging on mill
+  mdelay(50);
+  grbl_sendRealTimeCmd(#$85);                  // for safety, cancel second time
 end;
 
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
@@ -559,13 +560,19 @@ begin
       +#13+'Is tool placed above Z floating probe sensor?', mtConfirmation, mbYesNo, 0)
   else
    my_dlg_result:= mrYes;
+
   if my_dlg_result = mrYes then begin
     LEDbusy.Checked:= true;
     Memo1.lines.add('');
     Memo1.lines.add('Probe tool on part (floating probe), will set Z to ');
     Memo1.lines.add('Z Gauge value ' + FormatFloat('00.00', job.probe_z_gauge) + ' mm above part');
+
+    PosProbeZ.X:= grbl_wpos.x;                         // save probe coordinates
+    PosProbeZ.Y:= grbl_wpos.y;
+
     if isSimActive then
       ResetSimulation;
+
     InvalidateTLCs;
     CancelG43offset;
     MposOnPartGauge:= probe_z;
@@ -578,8 +585,8 @@ begin
       WorkZero.Z:= MposOnPartGauge - job.probe_z_gauge;
       Jog.Z:= WorkZero.Z;
       DisableStatus;
-      SendReceiveAndDwell('G0 G53 Z0' + #13);  // Ganz oben
-      // WorkZero ist negativ. Wird sind um -Workzero über dem Werkstück
+      SendReceiveAndDwell('G0 G53 Z0' + #13);                       // Ganz oben
+               // WorkZero ist negativ. Wird sin um -Workzero über dem Werkstück
       grbl_SendStr('G92 Z'+FloatToStrDot(-WorkZero.Z) + #13, true);
       EnableStatus;
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
