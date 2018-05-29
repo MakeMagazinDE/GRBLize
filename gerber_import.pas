@@ -57,6 +57,46 @@ implementation
 
 uses grbl_player_main;
 
+procedure ExecuteFile(const AFilename: String;
+                 AParameter, ACurrentDir: String; AWait, AHide: Boolean);
+var
+  si: TStartupInfo;
+  pi: TProcessInformation;
+
+begin
+  if Length(ACurrentDir) = 0 then
+    ACurrentDir := ExtractFilePath(AFilename)
+  else if AnsiLastChar(ACurrentDir) = '\' then
+    Delete(ACurrentDir, Length(ACurrentDir), 1);
+
+  FillChar(si, SizeOf(si), 0);
+  with si do begin
+    cb := SizeOf(si);
+    dwFlags := STARTF_USESHOWWINDOW;
+    if AHide then
+      wShowWindow := SW_HIDE
+    else
+      wShowWindow := SW_NORMAL;
+  end;
+  FillChar(pi, SizeOf(pi), 0);
+  AParameter := Format('"%s" %s', [AFilename, TrimRight(AParameter)]);
+
+  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, False,
+                   CREATE_DEFAULT_ERROR_MODE or CREATE_NEW_CONSOLE or
+                   NORMAL_PRIORITY_CLASS, Nil, PChar(ACurrentDir), si, pi) then
+  try
+    if AWait then
+      while WaitForSingleObject(pi.hProcess, 50) <> Wait_Object_0 do begin
+
+
+      end;
+    TerminateProcess(pi.hProcess, Cardinal(-1));
+  finally
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  end;
+end;
+
 function CopyFileEx(const ASource, ADest: string; ARenameCheck: boolean = false): boolean;
 var
   sh: TSHFileOpStruct;
@@ -429,7 +469,8 @@ begin
   if image_loaded and FileExists(ConvertedFileName) then begin
     Form1.sgFiles.Cells[0, GerberFileNumber]:= ConvertedFileName;
     Form1.sgFiles.Cells[1, GerberFileNumber]:= '9';
-    job.fileDelimStrings[GerberFileNumber-1]:= Form1.sgFiles.Rows[GerberFileNumber].DelimitedText;
+    job.fileDelimStrings[GerberFileNumber-1]:=
+      ShortString(Form1.sgFiles.Rows[GerberFileNumber].DelimitedText);
     Memo2.Lines.Add('Added file '+ ConvertedFileName);
     OpenFilesInGrid;
   end else

@@ -80,7 +80,7 @@ begin
           result:= true;
         end;
         Cells[3,my_row]:= FormatFloat('0.0', job.pens[final_array[i].pen].diameter);
-        Cells[4,my_row]:= ShapeArray[ord(final_array[i].shape)];
+        Cells[4,my_row]:= string(ShapeArray[ord(final_array[i].shape)]);
         // Enable-Flag für einzelne Pfade setzen
         my_millingcount:= length(final_array[i].millings);
         my_str:='';
@@ -141,7 +141,7 @@ var
   aRect: TRect;
   aStr: String;
 begin
-  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   with SgBlocks,Canvas do begin
     aStr:= Cells[ACol, ARow];
     if (aRow = 0) or (aCol = 0) then begin
@@ -181,7 +181,7 @@ begin
             aRect := Rect;
             if aCol = 4 then begin
               i:= ord(final_array[aRow-1].shape);
-              aStr:= ShapeArray[i];
+              aStr:= string(ShapeArray[i]);
               Font.Color:= ShapeColorArray[i];
               if (not final_array[aRow-1].closed)
               and (final_array[aRow-1].shape in [inside, pocket]) then

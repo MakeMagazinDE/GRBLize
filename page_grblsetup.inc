@@ -52,7 +52,7 @@ begin
   ResetToolflags;
 end;
 
-procedure TForm1.BtnRescanClick(Sender: TObject);
+{procedure TForm1.BtnRescanClick(Sender: TObject);
 // Auswahl des Frosches unter FTDI-Devices
 var i : Integer; LV : TListItem;
 begin
@@ -90,6 +90,59 @@ begin
       OpenCOMport;
     end else if (ftdi_device_count > 0) then begin
       ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
+      ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
+      OpenFTDIport;
+    end;
+  end;
+  PortOpenedCheck;
+end;
+}
+
+procedure TForm1.BtnRescanClick(Sender: TObject);
+// Auswahl des Frosches unter FTDI-Devices
+var COMcount : word;
+    i        : word;
+    LV       : TListItem;
+begin
+// Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
+  InitMachineOptions;
+  com_isopen:=        false;
+  ftdi_isopen:=       false;
+  grbl_is_connected:= false;
+  HomingPerformed:=   false;
+  com_name:='';
+  deviceselectbox.ListView1.Items.clear;
+
+  SetUpFTDI;                                              // search FTDI devices
+  if ftdi_device_count > 0 then
+    for i := 0 to ftdi_device_count - 1 do begin
+      LV := deviceselectbox.ListView1.Items.Add;
+      LV.Caption := 'FTDI'+IntToStr(i);
+      LV.SubItems.Add(ftdi_sernum_arr[i]);
+      LV.SubItems.Add(ftdi_desc_arr[i]);
+    end;
+
+  COMcount := 0;                                       // search for COM devices
+  for  i:= 0 to 31 do
+    if CheckCom(i) = 0 then begin
+      LV := deviceselectbox.ListView1.Items.Add;
+      LV.Caption := 'COM'+IntToStr(i+ftdi_device_count);
+      inc(COMcount);
+    end;
+
+  if ftdi_device_count + COMcount > 0 then      // select first entry (if exist)
+    deviceselectbox.ListView1.Items[0].Selected := true;
+
+  deviceselectbox.ShowModal;                                     // start dialog
+
+  if (deviceselectbox.ModalResult=MrOK) then begin
+    i := deviceselectbox.ListView1.itemindex;;
+    if i >= ftdi_device_count then begin
+      com_selected_port:= i - ftdi_device_count + 1;
+      com_name:= deviceselectbox.ListView1.Items[com_selected_port].Caption;
+      OpenCOMport;
+    end else if (ftdi_device_count > 0) then begin
+      ftdi_selected_device:= i;
       ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
       OpenFTDIport;
     end;
@@ -139,7 +192,7 @@ end;
 procedure TForm1.SgGrblSettingsDrawCell(Sender: TObject; ACol,
   ARow: Integer; Rect: TRect; State: TGridDrawState);
 begin
-  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   if aRow = 0 then with (Sender as TStringGrid),Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
@@ -185,25 +238,25 @@ begin
 
           my_str0:= copy(my_str, 0, pos('=', my_str));
           if MachineOptions.Caxis then
-            Cells[0,RowCount-1]:= my_str0 + SettingCodes_11_4[RowCount-2]
+            Cells[0,RowCount-1]:= my_str0 + string(SettingCodes_11_4[RowCount-2])
           else
-            Cells[0,RowCount-1]:= my_str0 + SettingCodes_11_3[RowCount-2];
+            Cells[0,RowCount-1]:= my_str0 + string(SettingCodes_11_3[RowCount-2]);
         end else
           Cells[0,RowCount-1]:= my_str;
         Cells[1,RowCount-1]:= setting_val_extr(my_str);
         if pos('$130', my_str) > 0 then begin
           job.table_x:= StrDotToFloat(setting_val_extr(my_str));
-          Form1.SgAppDefaults.Rows[26].DelimitedText:=
+          Form1.SgAppDefaults.Rows[defTableX].DelimitedText:=
             '"Max. Travel X (from GRBL)",'+FormatFloat('0.0',job.table_x);
         end;
         if pos('$131', my_str) > 0 then begin
           job.table_y:= StrDotToFloat(setting_val_extr(my_str));
-          Form1.SgAppDefaults.Rows[27].DelimitedText:=
+          Form1.SgAppDefaults.Rows[defTableY].DelimitedText:=
             '"Max. Travel Y (from GRBL)",'+FormatFloat('0.0',job.table_y);
         end;
         if pos('$132', my_str) > 0 then begin
           job.table_z:= StrDotToFloat(setting_val_extr(my_str));
-          Form1.SgAppDefaults.Rows[28].DelimitedText:=
+          Form1.SgAppDefaults.Rows[defTableZ].DelimitedText:=
             '"Max. Travel Z (from GRBL)",'+FormatFloat('0.0',job.table_z);
         end;
 
@@ -289,76 +342,5 @@ begin
     end;
   end;
 end;
-
-// #############################################################################
-// #############################################################################
-
-{
-procedure TForm1.BtnSetParkClick(Sender: TObject);
-var my_btn: Integer;
-begin
-  if isSimActive then
-    exit;
-  my_btn:= MessageDlg('This will set PARK postion'
-    + #13 + ' to current machine position'
-    + #13 + 'in GRBLize Application defaults. Proceed?', mtConfirmation, mbOKCancel, 0);
-  if my_btn = mrCancel then
-    exit;
-
-  job.park_x:= grbl_mpos.x;
-  job.park_y:= grbl_mpos.y;
-  job.park_z:= grbl_mpos.z;
-  with Form1.SgAppDefaults do begin
-    Cells[1,6]:= FormatFloat('0.00', job.park_x);
-    Cells[1,7]:= FormatFloat('0.00', job.park_y);
-    Cells[1,8]:= FormatFloat('0.00', job.park_z);
-  end;
-  SaveIniFile;
-end;
-
-procedure TForm1.BtnSetFix1Click(Sender: TObject);
-// Fixture-Position in Tabelle auf aktuelle Maschinenposition setzen
-var my_btn: Integer;
-begin
-  if isSimActive then
-    exit;
-  my_btn:= MessageDlg('This will set FIXTURE 1 postion'
-    + #13 + ' to current machine position'
-    + #13 + 'in GRBLize Application defaults. Proceed?', mtConfirmation, mbOKCancel, 0);
-  if my_btn = mrCancel then
-    exit;
-  job.fix1_x:= grbl_mpos.x;
-  job.fix1_y:= grbl_mpos.y;
-  job.fix1_z:= grbl_mpos.z;
-  with Form1.SgAppDefaults do begin
-    Cells[1,29]:= FormatFloat('0.00', job.fix1_x);
-    Cells[1,30]:= FormatFloat('0.00', job.fix1_y);
-    Cells[1,31]:= FormatFloat('0.00', job.fix1_z);
-  end;
-  SaveIniFile;
-end;
-
-procedure TForm1.BtnSetFix2Click(Sender: TObject);
-// Fixture-Position in Tabelle auf aktuelle Maschinenposition setzen
-var my_btn: Integer;
-begin
-  if isSimActive then
-    exit;
-  my_btn:= MessageDlg('This will set FIXTURE 2 postion'
-    + #13 + ' to current machine position'
-    + #13 + 'in GRBLize Application defaults. Proceed?', mtConfirmation, mbOKCancel, 0);
-  if my_btn = mrCancel then
-    exit;
-  job.fix2_x:= grbl_mpos.x;
-  job.fix2_y:= grbl_mpos.y;
-  job.fix2_z:= grbl_mpos.z;
-  with Form1.SgAppDefaults do begin
-    Cells[1,32]:= FormatFloat('0.00', job.fix2_x);
-    Cells[1,33]:= FormatFloat('0.00', job.fix2_y);
-    Cells[1,34]:= FormatFloat('0.00', job.fix2_z);
-  end;
-  SaveIniFile;
-end;
-}
 
 

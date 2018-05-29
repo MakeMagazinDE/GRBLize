@@ -150,8 +150,8 @@ var
   grbl_is_connected: boolean;
 
   GrblComm: TextFile;
+//  DebugName: string = 'd:\temp\serial.txt';
   DebugName: string = '';
-//  DebugName: string = 'c:\temp\GrblComm.txt';
 
 implementation
 
@@ -419,14 +419,17 @@ end;
 function COMOpen(com_name: String): Boolean;
 var
   DeviceName: array[0..15] of Char;
-  my_Name: AnsiString;
+//  my_Name: AnsiString;
+  my_Name: String;
 begin
 // Wir versuchen, COM1 zu öffnen.
 // Sollte dies fehlschlagen, gibt die Funktion false zurück.
   if length(com_name) > 4 then
-    my_name:= AnsiString('\\.\'+com_name)  // COM10 und darüber
+//    my_name:= AnsiString('\\.\'+com_name)  // COM10 und darüber
+    my_name:= '\\.\'+com_name  // COM10 und darüber
   else
-    my_name:= AnsiString(com_name); // in AnsiSTring kopieren
+//    my_name:= AnsiString(com_name); // in AnsiSTring kopieren
+    my_name:= com_name; // in AnsiSTring kopieren
 
   StrPCopy(DeviceName, my_name);
   ComFile := CreateFile(DeviceName, GENERIC_READ or GENERIC_WRITE,
@@ -473,7 +476,8 @@ const
   TxBufferSize = 256;
 var
   DCB: TDCB;
-  Config: AnsiString;
+//  Config: AnsiString;
+  Config: String;
   CommTimeouts: TCommTimeouts;
 begin
 // wir gehen davon aus das das Einstellen des COM Ports funktioniert.
@@ -529,7 +533,8 @@ end;
 function COMReceiveStr(timeout: DWORD): string;
 // wartet unendlich, wenn timeout = 0
 var
-  my_str: AnsiString;
+//  my_str: AnsiString;
+  my_str: String;
   i: Integer;
   my_char: Char;
   target_time, current_time: TLargeInteger;
@@ -601,9 +606,11 @@ end;
 function FTDIreceiveStr(timeout: Integer): string;
 // wartet unendlich, wenn timeout = 0
 var
-  my_str: AnsiString;
+//  my_str: AnsiString;
+  my_str: String;
   i: Integer;
-  my_char: AnsiChar;
+//  my_char: AnsiChar;
+  my_char: Char;
   target_time, current_time: TLargeInteger;
   has_timeout: Boolean;
 
@@ -757,7 +764,7 @@ end;
 
 function grbl_checkResponse: Boolean;
 var my_str1, my_str2: String;
-  i, my_btn: Integer;
+  i: Integer;
   sl_options: TSTringList;
   realtime_request_ok: Boolean;
 
@@ -824,7 +831,7 @@ begin
       sl_options.Free;
     end;
 
-    if MachineOptions.HomingOrigin <> get_AppDefaults_bool(45) then begin
+    if MachineOptions.HomingOrigin <> get_AppDefaults_bool(defPositivMachineSpace) then begin
     // Positive Maschinenrichtung?
       PlaySound('SYSTEMHAND', 0, SND_ASYNC);
       Form1.Memo1.lines.add('');
@@ -832,7 +839,7 @@ begin
       Form1.Memo1.lines.add('Please set positive machine space in App Defaults,');
       Form1.Memo1.lines.add('otherwise jog functions will not work properly.');
     end;
-    MachineOptions.PositiveSpace:= get_AppDefaults_bool(45);
+    MachineOptions.PositiveSpace:= get_AppDefaults_bool(defPositivMachineSpace);
     HomingPerformed:= false;
     MachineState:= none;
     grbl_wait_for_timeout(50);

@@ -63,7 +63,7 @@ begin
     Cells[1,idx+1]:= FormatFloat('0.00', y);
     Cells[1,idx+2]:= FormatFloat('0.00', z);
   end;
-  SaveIniFile;
+//  SaveIniFile;
 end;
 
 procedure TForm1.BtnMoveXYzeroClick(Sender: TObject);
@@ -208,9 +208,6 @@ begin
   if HilitePoint >= 0 then begin
     Form1.Memo1.lines.add('Offset cam to point');
     hilite_to(x,y);
-  end else begin
-    Form1.Memo1.lines.add('Offset cam to center');
-    hilite_center_to(x,y);
   end;
   x:= x - job.cam_x;
   y:= y - job.cam_y;
@@ -228,7 +225,7 @@ begin
 end;
 
 procedure TForm1.ContinueJogging;
-var Feed: Integer;
+var Feed: LongWord;
     Dist: Double;
     S:    String;
 begin
@@ -236,17 +233,15 @@ begin
 //  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
     exit;                                                     // nothing to move
 
-  if (abs(JogDirection.X)>5) or
-     (abs(JogDirection.Y)>5) or
-     (abs(JogDirection.Z)>5) then
-    Feed:= get_AppDefaults_int(37)                              // JogSpeed Fast
+  if JogDistance > 500                                                // [10*mm]
+  then Feed:= get_AppDefaults_int(defJoypadFeedVeryFast)    // JogSpeed VeryFast
   else
-    if (abs(JogDirection.X)>0.5) or
-       (abs(JogDirection.Y)>0.5) or
-       (abs(JogDirection.Z)>0.5) then
-      Feed:= get_AppDefaults_int(38)                            // JogSpeed Slow
+    if JogDistance > 50                                               // [10*mm]
+    then Feed:= get_AppDefaults_int(defJoypadFeedFast)          // JogSpeed Fast
     else
-      Feed:= get_AppDefaults_int(38) div 5;
+      if JogDistance > 5                                              // [10*mm]
+      then Feed:= get_AppDefaults_int(defJoypadFeedSlow)        // JogSpeed Slow
+      else Feed:= get_AppDefaults_int(defJoypadFeedVerySlow);       // very slow
 
 // - using of relativ coordinates for jogging
 // - movement will be limit by the soft limits of the mill
@@ -272,53 +267,7 @@ begin
 
   if length(S) > 7 then                     // nur wenn sich die Position ändert
     SendSingleCommandStr(S + ' F'+ IntToStr(Feed));
-{
-  S:= '$J=G53 ';
-  if get_AppDefaults_bool(45) then begin
-  // Positive Machine Space (XY)
-    if JogDirection.X > 0 then
-      S:= S + ' X' + FloatToStrDot(job.table_x);
-    if JogDirection.X < 0 then
-      S:= S + ' X1';
 
-    if JogDirection.Y > 0 then
-      S:= S + ' Y' + FloatToStrDot(job.table_y);
-    if JogDirection.Y < 0 then
-      S:= S + ' Y1';
-
-    if length(s) > 6 then
-      S:= S + ' F'+ IntToStr(feed)
-    else begin
-      if JogDirection.Z > 0 then // Move Z up
-        S:= S + ' Z-1 F'+ IntToStr(feed div 3);
-      if JogDirection.Z < 0 then
-        S:= S + ' Z' + FloatToStrDot(-job.table_z) + 'F'+ IntToStr(feed div 3);
-    end;
-  end else begin
-  // Standard CNC: Negative machine space (XYZ)
-    if JogDirection.X > 0 then
-      S:= S + ' X-1';
-    if JogDirection.X < 0 then
-      S:= S + ' X' + FloatToStrDot(1-job.table_x);
-
-    if JogDirection.Y > 0 then
-      S:= S + ' Y-1';
-    if JogDirection.Y < 0 then
-      S:= S + ' Y' + FloatToStrDot(1-job.table_y);
-
-    if length(s) > 6 then
-      S:= S + ' F'+ IntToStr(feed)
-    else begin
-      if JogDirection.Z > 0 then // Move Z up
-        S:= S + ' Z-1 F'+ IntToStr(feed div 3);
-      if JogDirection.Z < 0 then
-        S:= S + ' Z' + FloatToStrDot(1-job.table_z) + 'F'+ IntToStr(feed div 3);
-    end;
-  end;
-
-  if length(S) > 6 then                 // nur wenn sich die Position ändert
-    SendSingleCommandStr(S);
-}//==> Warten auf OK!!!!!!!!!
   NeedsRedraw:= true;
 end;
 
@@ -327,14 +276,13 @@ var S:             String;
     PositiveTable: boolean;
 begin
   if JogDelay < 0 then
-//  if (JogDirection.X = 0) and (JogDirection.Y = 0) and (JogDirection.Z = 0) then
     exit;                                                     // nothing to move
 
   WaitForIdle;
 
   PositiveTable := true;       // prove coordinate system (positive or negative)
   if MachineOptions.NewGrblVersion then
-    PositiveTable:= get_AppDefaults_bool(45);
+    PositiveTable:= get_AppDefaults_bool(defPositivMachineSpace);
 
   Jog.X:= grbl_mpos.X + JogDirection.X;                // calculate new position
   Jog.Y:= grbl_mpos.Y + JogDirection.Y;
@@ -345,7 +293,7 @@ begin
     if Jog.X > job.table_x   then Jog.X:= job.table_x;
     if Jog.Y < 0             then Jog.Y:= 0;
     if Jog.Y > job.table_y   then Jog.Y:= job.table_y;
-    if Jog.Z > -1            then Jog.Z:= -1;
+    if Jog.Z > 0             then Jog.Z:= 0;
     if Jog.Z < 1-job.table_z then Jog.Z:= 1-job.table_z;
   end else begin
     if Jog.X > -1            then Jog.X:= -1;
@@ -384,9 +332,10 @@ end;
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if isSimActive or (JogDelay <> -1) then
-    exit;
-//  ResetJogging;
+//  if isSimActive then exit;
+  if JogDelay <> -1 then exit;                      // new movement only in idle
+
+  JogDirection.X := 0; JogDirection.Y := 0; JogDirection.Z := 0;
   case (Sender as TBitBtn).tag of                         // Welcher Jog-Button?
     0:  begin                      JogDirection.Y:=  1; end;             // Nord
     1:  begin JogDirection.X:=  1; JogDirection.Y:=  1; end;          // NordOst
@@ -407,7 +356,7 @@ begin
   JogDirection.X:= JogDirection.X * JogDistance /10;
   JogDirection.Y:= JogDirection.Y * JogDistance /10;
   if JogDistance > 100          // limit moving in Z direction for safety reason
-    then JogDirection.Z:= JogDirection.Z * 100
+    then JogDirection.Z:= JogDirection.Z * 100 / 10
     else JogDirection.Z:= JogDirection.Z * JogDistance /10;
 
   JogDelay:= c_JogDelay;                          // delay in TimerStatus-Events
@@ -422,63 +371,67 @@ end;
 procedure TForm1.BtnCntrMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if MouseDownStart = 0 then
-    MouseDownStart:= MillisecondOfTheYear(Now);
+  CntrDelay:= c_CntrDelay;
+  CntrButtomId:= (Sender as TSpeedButton).tag;
+end;
+
+procedure TForm1.BtnCntrLongEvent;
+begin
+  if fCamActivated then begin
+    case CntrButtomId of
+      0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, defParkX, true);
+      1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, defFix1X, true);
+      2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, defFix2X, true);
+      3: if HilitePoint >= 0 then BtnCamAtPointClick(nil);
+      6: BtnCamAtZeroClick(nil);
+      7: BtnZeroZClick(nil);
+    end;
+  end else begin
+    case CntrButtomId of
+      0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, defParkX, false);
+      1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, defFix1X, false);
+      2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, defFix2X, false);
+      6: begin BtnZeroXClick(nil); BtnZeroYClick(nil) end;
+      7: BtnZeroZClick(nil);
+    end;
+  end;
+  CntrDelay:= -1;                                                    // all done
 end;
 
 procedure TForm1.BtnCntrMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
-var D: int64;
 begin
-      // D: time [ms] of pressed mouse button, will be 0 in case of touch screen
-  D:= MillisecondOfTheYear(Now) - MouseDownStart;
-  MouseDownStart:= 0;
+  if CntrDelay = -1 then                             // was handled by LongEvent
+    exit;
 
-  if not fCamActivated then begin
-    if (Button = mbLeft) and (D < 300) then             // move tool to position
-      case (Sender as TSpeedButton).tag of
-        0: MoveToPos('park position', job.park_x, job.park_y, job.park_z, false, false);
-        1: MoveToPos('fix1 position', job.fix1_x, job.fix1_y, job.fix1_z, true,  false);
-        2: MoveToPos('fix2 position', job.fix2_x, job.fix2_y, job.fix2_z, true,  false);
-        3: BtnMoveToolPointClick(Sender);
-        4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
-        5: BtnZcontactClick(Sender);
-        6: BtnMoveXYzeroClick(Sender);
-        7: BtnMoveZzeroClick(Sender);
-        //BtnMoveToolChangeClick(Sender);
+  if (Button = mbRight) then BtnCntrLongEvent
+  else begin
+    if (Button = mbLeft) then begin
+      if fCamActivated then begin
+        case CntrButtomId of
+          0: MoveToPos('park', job.park_x, job.park_y, job.park_z, false, true);
+          1: MoveToPos('fix1', job.fix1_x, job.fix1_y, job.fix1_z, true,  true);
+          2: MoveToPos('fix2', job.fix2_x, job.fix2_y, job.fix2_z, true,  true);
+          3: BtnMoveCamPointClick(Sender);
+          4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
+          5: BtnZcontactClick(Sender);
+          6: BtnMoveCamZeroClick(Sender);
+        end;
+      end else begin
+        case CntrButtomId of
+          0: MoveToPos('park position', job.park_x, job.park_y, job.park_z, false, false);
+          1: MoveToPos('fix1 position', job.fix1_x, job.fix1_y, job.fix1_z, true,  false);
+          2: MoveToPos('fix2 position', job.fix2_x, job.fix2_y, job.fix2_z, true,  false);
+          3: BtnMoveToolPointClick(Sender);
+          4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
+          5: BtnZcontactClick(Sender);
+          6: BtnMoveXYzeroClick(Sender);
+          7: BtnMoveZzeroClick(Sender);
+          //BtnMoveToolChangeClick(Sender);
+        end;
       end;
-
-    if (Button = mbRight) or (D > 300) then        // set value to tool position
-      case (Sender as TSpeedButton).tag of
-        0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, 6,  false);
-        1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, 29, false);
-        2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, 32, false);
-        6: begin BtnZeroXClick(Sender); BtnZeroYClick(Sender) end;
-        7: BtnZeroZClick(Sender);
-        //SetDefaultToPos('ToolChange', job.toolchange_x,job.toolchange_y,job.toolchange_z, 2, false);
-      end;
-
-  end else begin
-    if (Button = mbLeft) and (D < 300) then              // move CAM to position
-      case (Sender as TSpeedButton).tag of
-        0: MoveToPos('park', job.park_x, job.park_y, job.park_z, false, true);
-        1: MoveToPos('fix1', job.fix1_x, job.fix1_y, job.fix1_z, true,  true);
-        2: MoveToPos('fix2', job.fix2_x, job.fix2_y, job.fix2_z, true,  true);
-        3: BtnMoveCamPointClick(Sender);
-        4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
-        5: BtnZcontactClick(Sender);
-        6: BtnMoveCamZeroClick(Sender);
-      end;
-
-    if (Button = mbRight) or (D > 300) then         // set value to CAM position
-      case (Sender as TSpeedButton).tag of
-        0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, 6,  true);
-        1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, 29, true);
-        2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, 32, true);
-        3: if HilitePoint >= 0 then BtnCamAtPointClick(Sender);
-        6: BtnCamAtZeroClick(Sender);
-        7: BtnZeroZClick(Sender);
-      end;
+      CntrDelay:= -1;                                                // all done
+    end;
   end;
 end;
 

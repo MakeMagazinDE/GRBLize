@@ -120,7 +120,7 @@ procedure TForm1.sgATCDrawCell(Sender: TObject; ACol, ARow: Integer;
   Rect: TRect; State: TGridDrawState);
 var my_color: TColor;
 begin
-  Rect.Left:= Rect.Left-4;    // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4;    // Workaround für XE8-Darstellung
   if aRow = 0 then with sgATC,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
@@ -253,7 +253,7 @@ begin
   SendListToGrbl;
   grbl_moveZ(job.atc_pickup_z + 10, true);  // move Z down
   grbl_sendlist.add('G4 P0'); // dwell
-  grbl_sendlist.add(get_AppDefaults_str(35));  // Ausblasen
+  grbl_sendlist.add(get_AppDefaults_str(defAtcToolReleaseCmd));  // Ausblasen
   SendListToGrbl;
   atcArray[atc_idx].isInSpindle:= false;
 //    atcArray[tool_idx].tool_pen:= tool_idx;
@@ -288,7 +288,7 @@ begin
   grbl_moveSlowZ(job.atc_pickup_z, true);  // move Z down
   grbl_sendlist.add('G4 P0'); // dwell
   SendListToGrbl;
-  grbl_sendlist.add(get_AppDefaults_str(36));   // Tool aufnehmen
+  grbl_sendlist.add(get_AppDefaults_str(defAtcToolClampCmd));  // Tool aufnehmen
   grbl_sendlist.add('G4 P1'); // dwell
   grbl_moveZ(0, true);  // move Z up
   SendListToGrbl;

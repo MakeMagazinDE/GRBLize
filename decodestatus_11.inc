@@ -12,13 +12,15 @@ function GetStatus11: Boolean;
 // 1 Zeichen dauert bei 19200  Bd 1/1920 s  = ca. 0,5 ms,   d.h. 35 ms für gesamten Satz
 
 var
-  i, zero_mask: Integer;
+  i: Integer;
   is_valid: Boolean;
   sl_fields, sl_values: TSTringList;
   pins_received: Boolean;
   my_response: String;
 
   begin
+    sl_fields:= TStringList.Create;
+    sl_values:= TStringList.Create;
   try
     my_response:= grbl_statusStr; // anfordern
     result:= false;
@@ -39,8 +41,6 @@ var
       exit;
     end;
 
-    sl_fields:= TStringList.Create;
-    sl_values:= TStringList.Create;
     is_valid:= false;
 
     with Form1 do begin

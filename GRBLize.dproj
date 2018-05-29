@@ -140,6 +140,10 @@
         </DCCReference>
         <DCCReference Include="import_files.pas"/>
         <DCCReference Include="app_Defaults.pas"/>
+        <DCCReference Include="ParamAssist.pas">
+            <Form>FormParamAssist</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <None Include="drill_import.inc">
             <ContainerId>File</ContainerId>
         </None>

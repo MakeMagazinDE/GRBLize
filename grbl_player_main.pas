@@ -6,13 +6,12 @@ interface
 
 uses
   Dialogs, Math, StdCtrls, ComCtrls, ToolWin, Buttons, ExtCtrls, ImgList,
-  Controls, StdActns, Classes, ActnList, Menus, GraphUtil,
-  SysUtils, StrUtils, Windows, Graphics, Messages,
-  Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
-  VFrames, ExtDlgs, XPMan, CheckLst, drawing_window,
-  glscene_view, GLColor, ValEdit, System.ImageList, System.Actions,
-  FTDItypes, deviceselect, grbl_com, Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes,
-  app_defaults, DateUtils, TouchButton, Forms, GLScene, GLFullScreenViewer;
+  Controls, StdActns, Classes, ActnList, Menus, GraphUtil, StrUtils, Windows,
+  Graphics, Messages, Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
+  VFrames, ExtDlgs, XPMan, CheckLst, drawing_window, glscene_view, GLColor,
+  ValEdit, System.ImageList, System.Actions, FTDItypes, deviceselect, grbl_com,
+  Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes, app_defaults, DateUtils,
+  TouchButton, Forms, GLScene, GLFullScreenViewer, System.IniFiles, SysUtils;
 
 const
   c_ProgNameStr: String = 'GRBLize ';
@@ -20,7 +19,19 @@ const
   c_unloadATCstr: String = 'M8';
   c_loadATCstr: String = 'M9';
   c_Grbl_VerStr: String = 'for GRBL 0.9 and 1.1 ';
-  c_JogDelay: integer = 6;                      // delay start jogging in [50ms]
+
+// Jogging Controll:
+//                 c_JogDealy
+// MouseDown -->   v(50ms)  6 --> JogStep
+//                 v(50ms)  5
+//                    ...
+//                 v(50ms)  1
+//                          0 --> JogStep or JogContinue
+//                  (50ms> -1 --> Idle (wait for MouseDown)
+//                 ^(50ms> -2 --> MouseDown blocked
+// MouseUp   -->   ^(50ms> -3 --> MouseDown blocked
+  c_JogDelay:  integer = 6;                     // delay start jogging in [50ms]
+  c_CntrDelay: integer = 6;            // delay of second buttom level in [50ms]
 
 type
   TPOVControl = record   // Joystick control
@@ -292,6 +303,7 @@ type
     Label8: TLabel;
     Label17: TLabel;
     Label18: TLabel;
+    PopupMenuMaterial: TPopupMenu;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -332,7 +344,6 @@ type
     procedure SgFilesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
     procedure BtnCancelClick(Sender: TObject);
-//    procedure BitBtnClearFilesClick(Sender: TObject);
     procedure FileNew1Execute(Sender: TObject);
     procedure SgPensDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -433,6 +444,7 @@ type
 
     procedure BtnCntrMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
+    procedure BtnCntrLongEvent;
     procedure BtnCntrMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure BtnMoveCamZeroClick(Sender: TObject);
@@ -452,6 +464,7 @@ type
     procedure ResetJogging;
     procedure SetToolInSpindle(Tool: integer);
     procedure BtnProbeZAssistentClick(Sender: TObject);
+    procedure PopupMenuMaterialClick(Sender: TObject);
 
 
   private
@@ -459,7 +472,10 @@ type
     JogDistance   : integer;
     JogDirection  : T3dFloat;
     JogDelay      : integer;
-    MouseDownStart: int64;
+    CntrDelay     : integer;
+    CntrButtomId  : integer;
+    //    MouseDownStart: int64;
+    SgPenT0       : integer;
 
   public
     { Public declarations }
@@ -720,7 +736,7 @@ const
 
 implementation
 
-uses import_files, Clipper, About, bsearchtree, gerber_import;
+uses import_files, Clipper, About, bsearchtree, gerber_import, ParamAssist;
 
 {$R *.dfm}
 
@@ -1040,6 +1056,8 @@ end;
 // ############################# I N C L U D E S ###############################
 // #############################################################################
 
+procedure DefaultsGridListToJob; forward;
+
 {$I page_blocks.inc}
 {$I page_job.inc}
 {$I page_pens.inc}
@@ -1049,6 +1067,13 @@ end;
 {$I page_atc.inc}
 {$I gcode_interpreter.inc}
 
+// ############################# Supportfunction ###############################
+procedure DefaultsGridListToJob;
+begin
+  JobDefaultGridlistToJob;
+  AppDefaultGridListToJob;
+//  ClearFiles;
+end;
 
 // #############################################################################
 // ###################### M A I N  F O R M  O P E N ############################
@@ -1103,6 +1128,8 @@ procedure TForm1.FormCreate(Sender: TObject);
 var
   grbl_ini: TRegistry;
   OldEvent: TNotifyEvent;
+  i:        integer;
+  mi:       TMenuItem;
 begin
   StopWatch:= TStopWatch.Create() ;
   Width:= Constraints.MaxWidth;
@@ -1119,6 +1146,19 @@ begin
   if not IsFormOpen('deviceselectbox') then
     deviceselectbox := Tdeviceselectbox.Create(Self);
   deviceselectbox.hide;
+
+  ///// initialisation of Mill Parameter Assistent /////////////////////////////
+  if not IsFormOpen('FormParamAssist') then
+    FormParamAssist := TFormParamAssist.Create(Self);
+  FormParamAssist.hide;
+
+  ///// initialisation of PopupMenuMaterial ////////////////////////////////////
+  for i:=0 to Nmaterial-1 do begin
+    mi:= TMenuItem.Create(self);
+    mi.Caption:= string(Materials[i].Name);
+    mi.OnClick:= PopupMenuMaterialClick;
+    PopupMenuMaterial.Items.Add(mi);
+  end;
 
   ///// read registration values ///////////////////////////////////////////////
   grbl_ini:= TRegistry.Create;
@@ -1165,7 +1205,7 @@ begin
       com_name:= grbl_ini.ReadString('ComPort')
     else
       com_name:= '';
-    deviceselectbox.ComboBoxCOMport.Text:= com_name;
+//    deviceselectbox.ComboBoxCOMport.Text:= com_name;
 
     if grbl_ini.ValueExists('ComOpen') then
       com_was_open:= grbl_ini.ReadBool('ComOpen')
@@ -1179,6 +1219,14 @@ begin
   finally
     grbl_ini.Free;
   end;
+
+  ///// exchange '@' with <CR> in hints ////////////////////////////////////////
+  with Form1 do
+    for i:=0 to ComponentCount-1 do begin
+      if Components[i] is TSpeedButton then
+        TWinControl(Components[i]).hint:=
+          StringReplace(TWinControl(Components[i]).hint,'@',#13,[rfReplaceAll]);
+    end;
 
   ///// Initialisation of 3D-View window ///////////////////////////////////////
   if not IsFormOpen('Form4') then
@@ -1230,6 +1278,8 @@ begin
   JogDistance:= 1; // 0.1mm
   LabelJogDistance.Caption:=  '0.1';
 
+  CntrDelay:= -1;                                       // no Cnrt-Buttom active
+
   ///// Initialisation of drawing window ///////////////////////////////////////
   if not IsFormOpen('Form2') then
     Form2 := TForm2.Create(Self);
@@ -1263,6 +1313,7 @@ begin
   if Show3DPreview1.Checked then
     Form4.FormReset;
   BtnUtilsResetClick(Sender);
+
   SetTimer(0, 0, 200, @HandleAfterCreate);
 end;
 
@@ -1327,6 +1378,8 @@ begin
     AboutBox.Close;
   if IsFormOpen('DeviceSelectbox') then
     DeviceSelectbox.Close;
+  if IsFormOpen('FormParamAssist') then
+    FormParamAssist.Close;
   if IsFormOpen('Form4') then
     Form4.Close;
   if IsFormOpen('Form2') then
@@ -1823,17 +1876,17 @@ end;
 
 procedure TForm1.CheckToolChangeClick(Sender: TObject);
 begin
-  set_AppDefaults_bool(1,CheckToolChange.Checked);
-  job.toolchange_pause:= CheckToolChange.Checked;
-  CheckTLCprobe.Enabled:=   CheckToolChange.Checked;
-  CheckPartProbeZ.Enabled:= CheckToolChange.Checked;
-  CheckUseATC2.Enabled:=    CheckToolChange.Checked and job.use_fixed_probe;
+  set_AppDefaults_bool(defToolchangePause,CheckToolChange.Checked);
+  job.toolchange_pause:=                  CheckToolChange.Checked;
+  CheckTLCprobe.Enabled:=                 CheckToolChange.Checked;
+  CheckPartProbeZ.Enabled:=               CheckToolChange.Checked;
+  CheckUseATC2.Enabled:= job.use_fixed_probe and CheckToolChange.Checked;
 end;
 
 procedure TForm1.CheckTLCprobeClick(Sender: TObject);
 begin
-  set_AppDefaults_bool(12,CheckTLCProbe.Checked);
-  job.use_fixed_probe:=   CheckTLCProbe.Checked;
+  set_AppDefaults_bool(defUseFixedProbe,CheckTLCProbe.Checked);
+  job.use_fixed_probe:=                 CheckTLCProbe.Checked;
   Form1.CheckUseATC2.Enabled:= CheckTLCProbe.Checked and job.toolchange_pause;
 
   if Form1.CheckBoxSim.Checked then
@@ -1844,8 +1897,8 @@ end;
 
 procedure TForm1.CheckUseATC2Click(Sender: TObject);
 begin
-  set_AppDefaults_bool(20,CheckUseATC2.Checked);
-  job.atc_enabled:=       CheckUseATC2.Checked;
+  set_AppDefaults_bool(defAtcEnabled,CheckUseATC2.Checked);
+  job.atc_enabled:=                  CheckUseATC2.Checked;
 // Verwendete Werkzeuge in Pen/Tools-Liste (Job) eintragen
   ListBlocks;
   if isSimActive then
@@ -1856,14 +1909,14 @@ end;
 
 procedure TForm1.CheckEndParkClick(Sender: TObject);
 begin
-  set_AppDefaults_bool(5,   CheckEndPark.Checked);
-  job.parkposition_on_end:= CheckEndPark.Checked
+  set_AppDefaults_bool(defParkpositionOnEnd,   CheckEndPark.Checked);
+  job.parkposition_on_end:=                    CheckEndPark.Checked
 end;
 
 procedure TForm1.CheckPartProbeZClick(Sender: TObject);
 begin
-  set_AppDefaults_bool(16,CheckPartProbeZ.Checked);
-  job.use_part_probe:=    CheckPartProbeZ.Checked;
+  set_AppDefaults_bool(defUsePartProbe,CheckPartProbeZ.Checked);
+  job.use_part_probe:=                 CheckPartProbeZ.Checked;
 end;
 
 // #############################################################################
@@ -1927,11 +1980,11 @@ begin
   with Form1.SgAppDefaults do begin
   if RowCount < 44 then
     exit;
-  if Cells[1,39] = 'R' then
+  if Cells[1,defJoypadZaxisButton] = 'R' then
     result := JoyPad.R
-  else if Cells[1,39] = 'U' then
+  else if Cells[1,defJoypadZaxisButton] = 'U' then
     result := JoyPad.U
-  else if Cells[1,39] = 'V' then
+  else if Cells[1,defJoypadZaxisButton] = 'V' then
     result := JoyPad.V
   else
     result := JoyPad.Z;
@@ -1948,13 +2001,13 @@ end;
 
 
 procedure TForm1.TimerStatusElapsed(Sender: TObject);
-// alle 25 ms aufgerufen. Statemachine, über Semaphoren gesteuert.
+// alle 50 ms aufgerufen. Statemachine, über Semaphoren gesteuert.
 type
   TprioDir = (dir_none, dir_x, dir_y, dir_z);
 const
   c_jp_feedscale = 50;
 var
-  i: integer;
+//  i: integer;
   old_machine_state: t_mstates;
   btn_idx, feed, feed_old, z_temp: integer;
   feed_v: TIntPoint; // Feed-Vektor
@@ -1963,10 +2016,8 @@ var
 
 begin
   try
-    if isJobRunning or isEmergency then
-      exit;
-    if isSimActive then
-      exit;
+    if isJobRunning or isEmergency then exit;
+//    if isSimActive then exit;
     TimerStatus.Tag:= 1;
     old_machine_state:= MachineState;
     TimerStatus.Enabled:= false;
@@ -1992,6 +2043,12 @@ begin
       dec(JogDelay);
     if JogDelay < -1 then
       inc(JogDelay);
+
+    if CntrDelay > 0 then begin
+      dec(CntrDelay);
+      if CntrDelay = 0 then
+        BtnCntrLongEvent;
+    end;
 
     TimerStatus.Enabled:= true;
   finally
@@ -2022,7 +2079,6 @@ end;
 
 procedure WaitForIdle;
 // Warte auf Idle
-var pos_changed: Boolean;
 begin
   if isGrblActive then
     while (MachineState = run) do begin // noch beschäftigt?
@@ -2333,7 +2389,7 @@ begin
   with SgBlocks do begin
     my_shape:= TShape(PopupMenuBlockShape.Items.IndexOf(TMenuItem(Sender)));
     final_array[HiliteBlock].shape:= my_shape;
-    Cells[4,row]:= ShapeArray[ord(my_shape)];
+    Cells[4,row]:= string(ShapeArray[ord(my_shape)]);
     item_change(HiliteBlock);
   end;
 end;
@@ -2350,7 +2406,6 @@ begin
   GLSneedsATCupdateTimeout:= 0;
 end;
 
-
 procedure TForm1.mt_Click(Sender: TObject);
 begin
   with SgPens do begin
@@ -2366,7 +2421,15 @@ begin
   NeedsRedraw:= true;
   GLSneedsRedrawTimeout:= 0;
   GLSneedsATCupdateTimeout:= 0;
+end;
 
+procedure TForm1.PopupMenuMaterialClick(Sender: TObject);
+begin
+  with SgJobDefaults do
+  begin
+    Job.Material:= PopupMenuMaterial.Items.IndexOf(TMenuItem(Sender));
+    Cells[col,row]:= string(Materials[Job.Material].Name);
+  end;
 end;
 
 procedure TForm1.pu_LoadFromATCslotClick(Sender: TObject);

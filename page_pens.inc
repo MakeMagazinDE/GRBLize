@@ -11,7 +11,6 @@ var
   my_tooltip: Integer;
 
 begin
-  Rect.Left:= Rect.Left-4;    // Workaround für XE8-Darstellung
   if aRow = 0 then with SgPens,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
@@ -25,7 +24,6 @@ begin
       end;
       TextRect(Rect, Rect.Left + 2, Rect.Top + 2, cells[acol, arow]);
     end;
-
 {
     if (ACol = Col) and (ARow= Row) then begin
     // statt schraffierter Umrandung, besser sichtbar
@@ -90,7 +88,7 @@ begin
         aRect := Rect;
         my_shape:= job.pens[aRow-1].shape;
         Font.Color:= ShapeColorArray[ord(my_shape)];
-        aStr:= ShapeArray[ord(my_shape)];
+        aStr:= string(ShapeArray[ord(my_shape)]);
         aRect.Top := aRect.Top + 1; // adjust top to center vertical
         DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
       end;
@@ -117,7 +115,7 @@ begin
         FillRect(Rect);
         aRect := Rect;
         my_tooltip:= job.pens[aRow-1].tooltip;
-        aStr:= ToolTipArray[my_tooltip];
+        aStr:= string(ToolTipArray[my_tooltip]);
         aRect.Top := aRect.Top + 1; // adjust top to center vertical
         DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
       end;
@@ -139,8 +137,8 @@ end;
 procedure TForm1.SgPensMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
-  my_shape: Tshape;
   my_row, my_col: integer;
+  T: integer;
 begin
   SgPens.MouseToCell( X,Y, my_col, my_row );
   if (my_row < 1) or (my_col < 1) then
@@ -148,17 +146,30 @@ begin
   SgPens.Col := my_col;
   SgPens.Row := my_row;
   UnHilite;
+
+  T:= gettickcount;                                     // check for doubleclick
+  if T - SgPenT0 < 500 then begin
+    FormParamAssist.ShowModal(my_row-1);                         // start dialog
+
+    SgJobDefaults.Cells[1,4]:= string(Materials[Job.material].Name);//update GUI
+    JobToPenGridList;
+    SgPens.Cells[3,my_row]:=   FloatToStr(job.pens[my_row-1].diameter);
+    SgPens.Cells[13,my_row]:=  IntToStr(job.pens[my_row-1].blades);
+  end;
+
+  SgPenT0 := T;
+
   with SgPens do begin
     Options:= Options - [goEditing, goAlwaysShowEditor];
     case my_Col of
-    1:  // Color
+    1:                                                                  // Color
       begin
         Options:= Options - [goEditing];
         ColorDialog1.Color:= job.pens[my_row-1].color;
         if not ColorDialog1.Execute then Exit;
         Cells[1,my_row]:= IntToStr(ColorDialog1.Color);
       end;
-    2:  // Enable
+    2:                                                                 // Enable
       begin
         Options:= Options - [goEditing];
         job.pens[my_row-1].enable:= not job.pens[my_row-1].enable;
@@ -167,11 +178,11 @@ begin
         else
           Cells[2,my_row]:= 'OFF';
       end;
-    3:  // F
+    3:                                                               // Diameter
       begin
         Options:= Options + [goEditing];
       end;
-    4, 5, 6, 7, 10:  // Xofs, Yofs, Z+
+    4, 5, 6, 7, 10:                                 // Z, F, Xofs, Yofs, Z/Cycle
       begin
         Options:= Options + [goEditing];
       end;
@@ -194,6 +205,7 @@ begin
         PopupMenuTooltip.Items[ord(job.pens[Row-1].tooltip)].Checked:= true;
         PopupMenuTooltip.Popup(X+left+Form1.left, Y+ top+Form1.top);
       end;
+
     end; //case
     PenGridListToJob;
     apply_pen_change; // setzt Timeouts über ListBlocks auf 1
@@ -203,5 +215,4 @@ begin
     end;
   end;
 end;
-
 

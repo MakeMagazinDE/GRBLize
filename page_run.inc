@@ -15,7 +15,7 @@ begin
   while grbl_str[start_idx] < #33 do
     inc(start_idx);
   for i:= start_idx to length(grbl_str) do begin
-    if grbl_str[i] in ['0'..'9', '+', '-', ',', '.'] then
+    if CharInSet(grbl_str[i], ['0'..'9', '+', '-', ',', '.']) then
       my_str:= my_str + grbl_str[i]
     else
       break;
@@ -36,7 +36,7 @@ begin
   while grbl_str[start_idx] < #33 do
     inc(start_idx);
   for i:= start_idx to length(grbl_str) do begin
-    if grbl_str[i] in ['0'..'9', '+', '-'] then
+    if CharInSet(grbl_str[i], ['0'..'9', '+', '-']) then
       my_str:= my_str + grbl_str[i]
     else
       break;
@@ -57,7 +57,7 @@ begin
   if job.pens[pen].shape = drillhole then
     my_tooltip:= 6;
   my_str:= 'Tool #' + IntToStr(pen)+ ': ' + FormatFloat('0.00',job.pens[pen].diameter) + ' mm'
-    + #32 + ToolTipArray[my_tooltip];
+    + #32 + string(ToolTipArray[my_tooltip]);
   result:= my_str;
 end;
 

@@ -10,24 +10,18 @@ const
   c_numOfFiles = 8 -1;
   c_numOfPens = 32 -1;
 
-  type
+type
 
   Thpgl_cmd = (cmd_none, cmd_pa, cmd_pu, cmd_pd, cmd_sp, cmd_in, cmd_aa,
               cmd_number, cmd_drill, cmd_exit, cmd_nextline);
-  Taction = (none, lift, seek, mill, drill);
-  Tshape = (contour, inside, outside, pocket, drillhole);
+  Tshape  = (contour, inside, outside, pocket, drillhole);
   Trotate = (deg0, deg90, deg180, deg270);
+  Taction = (none, lift, seek, mill, drill);
   T_parseReturnType = (p_none, p_endofline, p_letters, p_number);
 
   TFloatPoint = record
     X: Double;
     Y: Double;
-  end;
-
-  Tbounds = record
-    min: TIntPoint;
-    max: TIntPoint;
-    mid: TIntPoint;
   end;
 
   TfloatBounds = record
@@ -36,17 +30,21 @@ const
     mid: TFloatPoint;
   end;
 
-  Tfile_param = record
-    valid: boolean;
-    enable: boolean;
-    penoverride: Integer;
-    rotate: Trotate;
-    mirror: Boolean;
-    scale: Double;
-    isdrillfile:Boolean;
-    bounds: Tbounds;
-    offset: TintPoint;
-    user1: Double;
+  Tatc_record = record
+//    enable: boolean; // ... und Pen ist eingeschaltet
+    used: boolean; // ... und Pen ist eingeschaltet
+    isInSpindle: boolean; // Flag wird von Wechsler-Routine aktualisiert
+    pen: Integer;
+    TREFok: boolean;
+    TLCok: boolean;
+    TLCref: Double;
+    TLCdelta: Double;
+  end;
+
+  Tbounds = record
+    min: TIntPoint;
+    max: TIntPoint;
+    mid: TIntPoint;
   end;
 
   Tpen_record = record
@@ -63,18 +61,72 @@ const
     z_inc: Double;
     atc: Integer;
     tooltip: Integer;
+    blades: integer;
     force_closed: Boolean;
   end;
 
-  Tatc_record = record
-//    enable: boolean; // ... und Pen ist eingeschaltet
-    used: boolean; // ... und Pen ist eingeschaltet
-    isInSpindle: boolean; // Flag wird von Wechsler-Routine aktualisiert
-    pen: Integer;
-    TREFok: boolean;
-    TLCok: boolean;
-    TLCref: Double;
-    TLCdelta: Double;
+  Tjob = record
+    fileDelimStrings: Array[0..c_numOfFiles] of String[255];
+    pens: Array[0..31] of Tpen_record;
+    partsize_x: Double;
+    partsize_y: Double;
+    partsize_z: Double;
+    material: Integer;
+    z_feed: Integer;
+    z_penlift: Double;
+    z_penup: Double;
+    z_gauge: Double;
+    cam_x: Double;
+    cam_y: Double;
+    cam_z_abs: Double;
+    park_x: Double;
+    park_y: Double;
+    park_z: Double;
+    toolchange_x: Double;
+    toolchange_y: Double;
+    toolchange_z: Double;
+    probe_x: Double;
+    probe_y: Double;
+    probe_z: Double;
+    probe_z_gauge: Double;
+    invert_z: Boolean;
+    parkposition_on_end: Boolean;
+    toolchange_pause: Boolean;
+    use_excellon_dia: Boolean;
+    optimize_drills: Boolean;
+    use_fixed_probe: Boolean;
+    use_part_probe: Boolean;
+    spindle_wait: Integer; // Hochlaufzeit
+    rotation: integer;
+    max_rotation: integer;
+    atc_enabled: Boolean;
+    atc_zero_x: Double;
+    atc_zero_y: Double;
+    atc_pickup_z: Double;
+    atc_delta_x: Double;
+    atc_delta_y: Double;
+    table_x: Double;
+    table_y: Double;
+    table_z: Double;
+    fix1_x: Double;
+    fix1_y: Double;
+    fix1_z: Double;
+    fix2_x: Double;
+    fix2_y: Double;
+    fix2_z: Double;
+  end;
+
+  Tfile_param = record
+    valid: boolean;
+    enable: boolean;
+    penoverride: Integer;
+    rotate: Trotate;
+    mirror: Boolean;
+    scale: Double;
+    isdrillfile:Boolean;
+    bounds: Tbounds;
+    offset: TintPoint;
+    user1: Double;
   end;
 
   Tblock_record = record
@@ -105,53 +157,6 @@ const
     milling_enables: array of Boolean; // äußere [0] und Child-Pfade
   end;
 
-  Tjob = record
-    fileDelimStrings: Array[0..c_numOfFiles] of String[255];
-    pens: Array[0..31] of Tpen_record;
-    partsize_x: Double;
-    partsize_y: Double;
-    partsize_z: Double;
-    z_feed: Integer;
-    z_penlift: Double;
-    z_penup: Double;
-    z_gauge: Double;
-    cam_x: Double;
-    cam_y: Double;
-    cam_z_abs: Double;
-    park_x: Double;
-    park_y: Double;
-    park_z: Double;
-    toolchange_x: Double;
-    toolchange_y: Double;
-    toolchange_z: Double;
-    probe_x: Double;
-    probe_y: Double;
-    probe_z: Double;
-    probe_z_gauge: Double;
-    invert_z: Boolean;
-    parkposition_on_end: Boolean;
-    toolchange_pause: Boolean;
-    use_excellon_dia: Boolean;
-    optimize_drills: Boolean;
-    use_fixed_probe: Boolean;
-    use_part_probe: Boolean;
-    spindle_wait: Integer; // Hochlaufzeit
-    atc_enabled: Boolean;
-    atc_zero_x: Double;
-    atc_zero_y: Double;
-    atc_pickup_z: Double;
-    atc_delta_x: Double;
-    atc_delta_y: Double;
-    table_x: Double;
-    table_y: Double;
-    table_z: Double;
-    fix1_x: Double;
-    fix1_y: Double;
-    fix1_z: Double;
-    fix2_x: Double;
-    fix2_y: Double;
-    fix2_z: Double;
-  end;
 
 const
   ActionArray: Array [0..4] of String[7] =
@@ -178,6 +183,7 @@ const
       speed: 400;
       z_end: 2.0;
       z_inc: 1.0;
+      blades: 2;
     );
 
   BlockZeroEntry: Tblock_record =
@@ -188,14 +194,15 @@ const
       isChild: false;
       parentID: -1;
       isParent: false;
-      );
+    );
 
 var
-  jp_old: TIntPoint;
-  job: Tjob;
-  use_inches_in_drillfile: Boolean;
+  job:            Tjob;
   FileParamArray: Array[0..c_numOfFiles] of Tfile_param;
-  blockArrays: Array [0..c_numOfFiles] of Array of Tblock_record;
+  blockArrays:    Array[0..c_numOfFiles] of Array of Tblock_record;
+
+  jp_old: TIntPoint;
+  use_inches_in_drillfile: Boolean;
 
   final_array: Array of Tfinal;
   final_bounds: Tbounds; // Abmessungen gesamt inkl. Offsets in HPGL-Units, wird in ListBlocks gesetzt
@@ -223,8 +230,9 @@ var
   procedure item_change(arr_idx: Integer);
 
   function RoundToDigits(zahl: double; n: integer): double;
-  function FloatToStrDot(my_val: Double):String;
-  function StrDotToFloat(my_str: String): Double;
+  function  FloatToStrDot(my_val: Double):String;
+  function  StrDotToFloat(my_str: String): Double;
+
 
 // alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
   procedure enable_all_millings(var my_entry: Tfinal; enable_status: Boolean);
@@ -251,8 +259,6 @@ var
   function ParseCommand(var position: Integer; var linetoparse: string;
     var value: Double; var letter: char): boolean;
 
-  procedure ExecuteFile(const AFilename: String;
-    AParameter, ACurrentDir: String; AWait, AHide: Boolean);
 
 implementation
 
@@ -299,50 +305,8 @@ begin
   result:=zahl/multi;
 end;
 
-procedure ExecuteFile(const AFilename: String;
-                 AParameter, ACurrentDir: String; AWait, AHide: Boolean);
-var
-  si: TStartupInfo;
-  pi: TProcessInformation;
-
-begin
-  if Length(ACurrentDir) = 0 then
-    ACurrentDir := ExtractFilePath(AFilename)
-  else if AnsiLastChar(ACurrentDir) = '\' then
-    Delete(ACurrentDir, Length(ACurrentDir), 1);
-
-  FillChar(si, SizeOf(si), 0);
-  with si do begin
-    cb := SizeOf(si);
-    dwFlags := STARTF_USESHOWWINDOW;
-    if AHide then
-      wShowWindow := SW_HIDE
-    else
-      wShowWindow := SW_NORMAL;
-  end;
-  FillChar(pi, SizeOf(pi), 0);
-  AParameter := Format('"%s" %s', [AFilename, TrimRight(AParameter)]);
-
-  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, False,
-                   CREATE_DEFAULT_ERROR_MODE or CREATE_NEW_CONSOLE or
-                   NORMAL_PRIORITY_CLASS, Nil, PChar(ACurrentDir), si, pi) then
-  try
-    if AWait then
-      while WaitForSingleObject(pi.hProcess, 50) <> Wait_Object_0 do begin
-
-
-      end;
-    TerminateProcess(pi.hProcess, Cardinal(-1));
-  finally
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-  end;
-end;
-
-
 function FloatToStrDot(my_val: Double):String;
-var
-  my_Settings: TFormatSettings;
+var my_Settings: TFormatSettings;
 begin
   my_Settings.Create;
   my_Settings.DecimalSeparator := '.';
@@ -350,8 +314,7 @@ begin
 end;
 
 function StrDotToFloat(my_str: String): Double;
-var
-  my_Settings: TFormatSettings;
+var my_Settings: TFormatSettings;
 begin
   my_Settings.Create;
   my_Settings.DecimalSeparator := '.';
@@ -371,7 +334,6 @@ var
   my_char: char;
   my_end, i: integer;
 begin
-  result:= p_endofline;
   my_end:= length(linetoparse);
   value:= 0;
   letters:= '';
@@ -383,7 +345,7 @@ begin
   repeat
     my_char := linetoparse[position]; // erstes Zeichen
     inc(position);
-  until (my_char in ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end);
+  until CharInSet(my_char, ['0'..'9', '.',  '+', '-', 'A'..'z']) or (position > my_end);
 
   dec(position);   // Zeigt auf erstes relevantes Zeichen oder Ende
   if position > my_end then
@@ -396,19 +358,19 @@ begin
 
   end;
   my_str:='';
-  if my_char in ['A'..'z'] then begin
+  if CharInSet(my_char, ['A'..'z']) then begin
     result:= p_letters;
     for i:= position to my_end do begin
-      if not (linetoparse[i] in ['A'..'z']) then
+      if not CharInSet(linetoparse[i], ['A'..'z']) then
         break;
       my_str:= my_str+ linetoparse[i];
     end;
     position:= i;
     letters:= my_str;
-  end else if my_char in ['0'..'9', '.',  '+', '-', 'e', 'E'] then begin
+  end else if CharInSet(my_char, ['0'..'9', '.',  '+', '-', 'e', 'E']) then begin
     result:= p_number;
     for i:= position to my_end do begin
-      if not (linetoparse[i] in ['0'..'9', '.',  '+', '-', 'e', 'E']) then
+      if not CharInSet(linetoparse[i], ['0'..'9', '.',  '+', '-', 'e', 'E']) then
         break;
       my_str:= my_str+ linetoparse[i];
     end;
@@ -416,8 +378,6 @@ begin
     value:= StrDotToFloat(my_str);
   end;
 end;
-
-
 
 function ParseCommand(var position: Integer; var linetoparse: string;
   var value: Double; var letter: char): boolean;

@@ -36,8 +36,8 @@ object FormGerber: TFormGerber
   object Label29: TLabel
     Left = 8
     Top = 60
-    Width = 54
-    Height = 13
+    Width = 68
+    Height = 16
     Caption = 'Inflate (mm)'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -65,8 +65,8 @@ object FormGerber: TFormGerber
   object Label1: TLabel
     Left = 77
     Top = 60
-    Width = 73
-    Height = 13
+    Width = 94
+    Height = 16
     Caption = 'Resolution (dpi)'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -224,11 +224,9 @@ object FormGerber: TFormGerber
   end
   object OpenFileDialog: TOpenDialog
     Filter = 
-       'Vector/Drill Files|*.plt;*.hpgl; *.hpg;*.pen;*.svg|' +
-       'G-Code Files|*.tap; *.dat; *.nc?; *.gc?; *.ngc|' +
-       'GRBL Setup|*.grb|' +
-       'Gerber Files|*.gbr;*.drl;*.drd|' +
-       'All Files|*.*'
+      'Vector/Drill Files|*.plt;*.hpgl; *.hpg;*.pen;*.svg|G-Code Files|' +
+      '*.tap; *.dat; *.nc?; *.gc?; *.ngc|GRBL Setup|*.grb|Gerber Files|' +
+      '*.gbr;*.drl;*.drd|All Files|*.*'
     FilterIndex = 0
     Options = [ofFileMustExist, ofEnableSizing]
     Left = 664

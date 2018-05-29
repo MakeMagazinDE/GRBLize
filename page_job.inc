@@ -1,328 +1,29 @@
-// #############################################################################
-// ############################### FILES AND JOBS ##############################
-// #############################################################################
-
-
-procedure CalcTipDia;
-var j: Integer;
-begin
-  for j := 0 to 31 do begin
-    case job.pens[j].tooltip of
-      1:
-        job.pens[j].tipdia:= job.pens[j].z_end * 0.53; // tan(30°) * 2
-      2:
-        job.pens[j].tipdia:= job.pens[j].z_end * 0.82;
-      3:
-        job.pens[j].tipdia:= job.pens[j].z_end * 1.15;
-      4:
-        job.pens[j].tipdia:= job.pens[j].z_end * 2;
-    else
-      job.pens[j].tipdia:= job.pens[j].diameter;
-    end;
-    if job.pens[j].tipdia > job.pens[j].diameter then
-      job.pens[j].tipdia:= job.pens[j].diameter;
-  end;
-
-end;
-
-
-procedure PenGridListToJob;
-var i, j: Integer;
-begin
-  for i:= 0 to c_numOfFiles do
-    job.fileDelimStrings[i]:= Form1.SgFiles.Rows[i+1].DelimitedText;
-  for i := 1 to 32 do with Form1.SgPens do begin
-    // Color und Enable in DrawCell erledigt!
-    j:= i-1;
-    job.pens[j].color:= StrToIntDef(Cells[1,i],0);
-    job.pens[j].enable:= (Cells[2,i]) = 'ON';
-
-    job.pens[j].z_end:= StrToFloatDef(Cells[4,i],0);
-    job.pens[j].speed:= StrToIntDef(Cells[5,i],250);
-    job.pens[j].offset.x:= round(StrToFloatDef(Cells[6,i],0) * c_hpgl_scale);
-    job.pens[j].offset.y:= round(StrToFloatDef(Cells[7,i],0) * c_hpgl_scale);
-    job.pens[j].scale:= StrToFloatDef(Cells[8,i],100);
-    job.pens[j].shape:= Tshape(StrToIntDef(Cells[9,i],0));
-    job.pens[j].z_inc:= StrToFloatDef(Cells[10,i],1);
-    job.pens[j].tooltip:= StrToIntDef(Cells[12,i],0);
-    job.pens[j].atc:= StrToIntDef(Cells[11,i],0);
-    job.pens[j].diameter:= StrToFloatDef(Cells[3,i],1);
-    CalcTipDia;
-  end;
-  NeedsRedraw:= true;
-end;
-
-procedure JobToPenGridList;
-var i: Integer;
-begin
-  for i := 0 to 31 do with Form1.SgPens do begin
-    if i < 10 then
-      Cells[0,i+1]:= 'P' + IntToStr(i)
-    else
-      Cells[0,i+1]:= 'D' + IntToStr(i);
-    Cells[1,i+1]:= IntToStr(job.pens[i].color);
-    if job.pens[i].enable then
-      Cells[2,i+1]:= 'ON'
-    else
-      Cells[2,i+1]:= 'OFF';
-    // Color und Enable in DrawCell erledigt!
-    Cells[3,i+1]:=  FormatFloat('0.00',job.pens[i].diameter);
-    Cells[4,i+1]:=  FormatFloat('0.0',job.pens[i].z_end);
-    Cells[5,i+1]:=  IntToStr(job.pens[i].speed);
-    Cells[6,i+1]:=  FormatFloat('00.0',job.pens[i].offset.x / c_hpgl_scale);
-    Cells[7,i+1]:=  FormatFloat('00.0',job.pens[i].offset.y / c_hpgl_scale);
-    Cells[8,i+1]:=  FormatFloat('00.0',job.pens[i].scale);
-    // Shape in DrawCell erledigt!
-    Cells[9,i+1]:=  IntToStr(ord(job.pens[i].shape));
-    Cells[10,i+1]:= FormatFloat('0.0',job.pens[i].z_inc);
-    Cells[11,i+1]:= IntToStr(job.pens[i].atc);
-    Cells[12,i+1]:= IntToStr(job.pens[i].tooltip);
-  end;
-  Form1.SgPens.Repaint;
-  for i:= 0 to c_numOfFiles do
-    Form1.SgFiles.Rows[i+1].DelimitedText:= job.fileDelimStrings[i];
-end;
 
 // #############################################################################
 // ################################## FILES ####################################
 // #############################################################################
 
-procedure ClearFiles;
-var i: Integer;
-begin
-  init_blockarrays;
-  for i := 0 to c_numOfFiles do with Form1.SgFiles do begin
-    Cells[0,i+1]:= '';
-    Cells[1,i+1]:= 'OFF';
-    Cells[2,i+1]:= '0°';
-    Cells[3,i+1]:= 'OFF';
-    Cells[4,i+1]:= '0';
-    Cells[5,i+1]:= '0';
-    Cells[6,i+1]:= '100';
-    Cells[6,i+1]:= 'YES';
-    Cells[7,i+1]:= '0.9';
-    Cells[8,i+1]:= '';
-    job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100';
-    with FileParamArray[i] do begin
-      bounds.min.x := high(Integer);
-      bounds.min.y := high(Integer);
-      bounds.max.x := low(Integer);
-      bounds.max.y := low(Integer);
-      valid := false;
-      isdrillfile:= false;
-    end;
-  end;
-
-  with job do begin
-    for i := 0 to 31 do begin
-      pens[i].used:= false;
-    end;
-  end;
-  JobToPenGridList;
-  UnHilite;
-  setlength(final_array,0);
-  NeedsRedraw:= true;
-  ClearATCarray;
-  UpdateATC;
-  ListBlocks;
-end;
-
-procedure InitJob;
-var i: Integer;
-begin
-  Form1.SgPens.Rows[0].DelimitedText:=
-    'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc",ATC,Tip';
-  Form1.SgFiles.Rows[0].DelimitedText:=
-    '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %",Clear,"Remark"';
-  Form1.SgBlocks.Rows[0].DelimitedText:=
-    '#,Tool,Ena,Dia,Shape,"Polygons [closed vectors] -open vectors-"';
-  Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
-  with job do begin
-    for i := 0 to 31 do begin
-      pens[i]:= PenInit;
-      pens[i].offset.x:= 0;
-      pens[i].offset.y:= 0;
-      pens[i].atc:= 0;
-    end;
-    pens[0].color:=clblack;
-    pens[1].color:=$00004080;
-    pens[2].color:=clred;
-    pens[3].color:=$000080FF;
-    pens[4].color:=clyellow;
-    pens[5].color:=cllime;
-    pens[6].color:=$00FF8000;
-    pens[7].color:=clfuchsia;
-    pens[8].color:= $A2DCA2;
-    pens[9].color:= $DCA2A2;
-    pens[10].color:=clsilver;
-    pens[11].color:= 11254230;
-    pens[12].color:=11579647;
-    pens[13].color:=10801663;
-    pens[14].color:=9367540;
-    pens[15].color:=10485663;
-    pens[16].color:=15913395;
-    pens[17].color:=16755455;
-    pens[18].color:=12632256;
-    pens[19].color:=15987699;;
-    for i := 20 to 31 do begin
-      pens[i].color:=clgray;
-    end;
-    for i := 10 to 31 do begin
-      pens[i].shape:= drillhole;
-      pens[i].tooltip:= 6;
-      pens[i].diameter:= 1.0;
-      pens[i].tipdia:= 1.0;
-      pens[i].z_end:= 2.5;
-      pens[i].z_inc:= 3.0;
-      pens[i].speed:= 400;
-    end;
-  end;
-  with Form1.SgJobDefaults do begin
-    RowCount:= 10;
-    Rows[1].DelimitedText:='"Part Size X",250';
-    Rows[2].DelimitedText:='"Part Size Y",150';
-    Rows[3].DelimitedText:='"Part Size Z",5';
-    Rows[4].DelimitedText:='"Z Feed for Milling",100';
-    Rows[5].DelimitedText:='"Z Lift above Part",10';
-    Rows[6].DelimitedText:='"Z Up above Part",5';
-    Rows[7].DelimitedText:='"Z Gauge Height",10';
-    Rows[8].DelimitedText:='"Optimize Drill Path",ON';
-    Rows[9].DelimitedText:= '"Use Excellon Drill Diameters",ON';
-  end;
-  ClearFiles;
-end;
-
-procedure InitAppdefaults;
-begin
-  with Form1.SgAppDefaults do begin
-    RowCount:= 46;
-    Rows[0].DelimitedText:= 'Parameter,Value';
-    Rows[1].DelimitedText:= '"Enable Tool Change in Job",OFF';
-    Rows[2].DelimitedText:= '"Tool Change Position X absolute",10';
-    Rows[3].DelimitedText:= '"Tool Change Position Y absolute",100';
-    Rows[4].DelimitedText:= '"Tool Change Position Z absolute",-5';
-    Rows[5].DelimitedText:= '"Park Position on End",ON';
-    Rows[6].DelimitedText:= '"Park X absolute",100';
-    Rows[7].DelimitedText:= '"Park Y absolute",100';
-    Rows[8].DelimitedText:= '"Park Z absolute",0';
-    Rows[9].DelimitedText:= '"Cam X Offset","-20"';
-    Rows[10].DelimitedText:='"Cam Y Offset","20"';
-    Rows[11].DelimitedText:='"Cam Z absolute",0';
-    Rows[12].DelimitedText:='"Enable fixed Z Probe",OFF';
-    Rows[13].DelimitedText:='"Fixed Probe X absolute",30';
-    Rows[14].DelimitedText:='"Fixed Probe Y absolute",30';
-    Rows[15].DelimitedText:='"Fixed Probe Z absolute",-5';
-    Rows[16].DelimitedText:='"Enable Floating Z Probe",OFF';
-    Rows[17].DelimitedText:='"Floating Z Probe ON Height",25';
-    Rows[18].DelimitedText:='"Invert Z in G-Code",OFF';
-    Rows[19].DelimitedText:='"Spindle Accel Time (s)",4';
-    Rows[20].DelimitedText:='"ATC enable",OFF';
-    Rows[21].DelimitedText:='"ATC zero X absolute",50';
-    Rows[22].DelimitedText:='"ATC zero Y absolute",20';
-    Rows[23].DelimitedText:='"ATC pickup height Z abs",-20';
-    Rows[24].DelimitedText:='"ATC row X distance",20';
-    Rows[25].DelimitedText:='"ATC row Y distance",0';
-    Rows[26].DelimitedText:='"Table max travel X",200';
-    Rows[27].DelimitedText:='"Table max travel Y",200';
-    Rows[28].DelimitedText:='"Table max travel Z",60';
-    Rows[29].DelimitedText:='"Fixture 1 Zero X","50,00"';
-    Rows[30].DelimitedText:='"Fixture 1 Zero Y","70,00"';
-    Rows[31].DelimitedText:='"Fixture 1 Zero Z","-25,00"';
-    Rows[32].DelimitedText:='"Fixture 2 Zero X","50,00"';
-    Rows[33].DelimitedText:='"Fixture 2 Zero Y","70,00"';
-    Rows[34].DelimitedText:='"Fixture 2 Zero Z","-25,00"';
-    Rows[35].DelimitedText:='"ATC tool release Cmd","M8"';
-    Rows[36].DelimitedText:='"ATC tool clamp Cmd","M9"';
-    Rows[37].DelimitedText:='"Joypad Feed fast","2000"';
-    Rows[38].DelimitedText:='"Joypad Feed slow","500"';
-    Rows[39].DelimitedText:='"Joypad Z axis (R, U, V or Z)",Z';
-    Rows[40].DelimitedText:='"Joypad Fast Jog Button",4';
-    Rows[41].DelimitedText:='"Joypad ZeroAll Button",0';
-    Rows[42].DelimitedText:='"Joypad FloodToggle Button",2';
-    Rows[43].DelimitedText:='"Joypad SpindleToggle Button",3';
-    Rows[44].DelimitedText:='"Joypad FeedHold Button",1';
-    Rows[45].DelimitedText:='"Positive Machine Space",OFF';
-  end;
-  ClearFiles;
-  Form1.Memo1.lines.add('Job/application default settings applied');
-end;
-
-procedure DefaultsGridListToJob;
-var r: Integer;
+procedure JobDefaultGridlistToJob;
 begin
   with Form1.SgJobDefaults do begin
-    if RowCount < 3 then begin
-      InitJob;
-     end;
+    if RowCount < 3 then InitJob;
+
     job.partsize_x:= StrToFloatDef(Cells[1,1], 0);
     job.partsize_y:= StrToFloatDef(Cells[1,2], 0);
     job.partsize_z:= StrToFloatDef(Cells[1,3], 0);
 
-    job.z_feed:= StrToIntDef(Cells[1,4], 200);
-    job.z_penlift:= StrToFloatDef(Cells[1,5], 10.0);
-    job.z_penup:= StrToFloatDef(Cells[1,6], 5.0);
-    job.z_gauge:= StrToFloatDef(Cells[1,7], 10);
+    job.Material:= Nmaterial;
+    repeat
+      dec(job.Material)
+    until (Cells[1,4] = string(Materials[job.Material].Name)) or (job.Material = 0);
 
-    job.optimize_drills:= Cells[1,8] = 'ON';
-    job.use_excellon_dia:= Cells[1,9] = 'ON';
-  end;
+    job.z_feed:= StrToIntDef(Cells[1,5], 200);
+    job.z_penlift:= StrToFloatDef(Cells[1,6], 10.0);
+    job.z_penup:= StrToFloatDef(Cells[1,7], 5.0);
+    job.z_gauge:= StrToFloatDef(Cells[1,8], 10);
 
-  with Form1.SgAppDefaults do begin
-    if RowCount < 3 then begin
-      InitAppdefaults;
-    end;
-
-    job.toolchange_pause:= get_AppDefaults_bool(1);
-    Form1.CheckToolChange.Checked:= job.toolchange_pause;
-
-    job.toolchange_x:= get_AppDefaults_float(2);
-    job.toolchange_y:= get_AppDefaults_float(3);
-    job.toolchange_z:= get_AppDefaults_float(4);
-
-    job.parkposition_on_end:= get_AppDefaults_bool(5);
-    Form1.CheckEndPark.Checked:= job.parkposition_on_end;
-
-    job.park_x:= get_AppDefaults_float(6);
-    job.park_y:= get_AppDefaults_float(7);
-    job.park_z:= get_AppDefaults_float(8);
-
-    job.cam_x:= get_AppDefaults_float(9);
-    job.cam_y:= get_AppDefaults_float(10);
-    job.cam_z_abs:= get_AppDefaults_float(11);
-
-    job.use_fixed_probe:= get_AppDefaults_bool(12);
-    Form1.CheckTLCprobe.Checked:= job.use_fixed_probe;
-
-    job.probe_x:= get_AppDefaults_float(13);
-    job.probe_y:= get_AppDefaults_float(14);
-    job.probe_z:= get_AppDefaults_float(15);
-
-    job.use_part_probe:= Cells[1,16] = 'ON';
-    Form1.CheckPartProbeZ.Checked:= job.use_part_probe;
-
-    job.probe_z_gauge:= get_AppDefaults_float(17);
-
-    job.invert_z:= get_AppDefaults_bool(18);
-    job.spindle_wait:= get_AppDefaults_int(19);
-
-    job.atc_enabled:= get_AppDefaults_bool(20);
-    Form1.CheckUseATC2.Checked:= job.atc_enabled;
-
-    job.atc_zero_x:= get_AppDefaults_float(21);
-    job.atc_zero_y:= get_AppDefaults_float(22);
-    job.atc_pickup_z:= get_AppDefaults_float(23);
-    job.atc_delta_x:= get_AppDefaults_float(24);
-    job.atc_delta_y:= get_AppDefaults_float(25);
-    job.table_x:= get_AppDefaults_float(26);
-    job.table_y:= get_AppDefaults_float(27);
-    job.table_z:= get_AppDefaults_float(28);
-
-    job.fix1_x:= get_AppDefaults_float(29);
-    job.fix1_y:= get_AppDefaults_float(30);
-    job.fix1_z:= get_AppDefaults_float(31);
-    job.fix2_x:= get_AppDefaults_float(32);
-    job.fix2_y:= get_AppDefaults_float(33);
-    job.fix2_z:= get_AppDefaults_float(34);
+    job.optimize_drills:= Cells[1,9] = 'ON';
+    job.use_excellon_dia:= Cells[1,10] = 'ON';
   end;
 end;
 
@@ -358,7 +59,7 @@ Procedure OpenFilesInGrid;
 var
   i, pen_override: Integer;
   my_path, my_ext: String;
-  use_excellon, file_was_changed: Boolean;
+  use_excellon: Boolean;
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -436,7 +137,7 @@ begin
         job.pens[pen_override].enable:= true;
         job.pens[pen_override].used:= true;
       end;
-      job.fileDelimStrings[i-1]:= Rows[i].DelimitedText;
+      job.fileDelimStrings[i-1]:= ShortString(Rows[i].DelimitedText);
     end;
   end;
 
@@ -456,19 +157,21 @@ begin
 end;
 
 Procedure OpenJobFile;
-var
-// mySaveFile: File of Tjob;
- sl, sl_p: TstringList;
- i, j, k, s, my_len, my_row, my_date: Integer;
- my_path, my_datestr: String;
+var i, my_date: integer;
+    my_path:    String;
 
-begin
-  ResetToolFlags;
-  Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
-  if FileExists(JobSettingsPath) then begin
-    sl:= Tstringlist.Create;
-    sl.LoadfromFile(JobSettingsPath);
+  ///// load Job-File in Windows-Ini-Format ////////////////////////////////////
+  procedure LoadIniFormat;
+  var Ini:                  TIniFile;
+      i, j, k, LengthFinal: integer;
+      Section, Name:        string;
+      sl_p:                 TstringList;
+  begin
+    Ini := TIniFile.Create(JobSettingsPath);                        // open file
 
+// offen: - Fehlerbehandlung bei Files, wenn etwas nicht gesetzt ist
+    try
+{
   // load defaults first, because size of table influence the settings of blocks
     s:= sl.indexof('#Defaults');
     if s >= 0 then begin
@@ -483,7 +186,22 @@ begin
       end;
       Form1.SgJobDefaults.Repaint;
     end;
-
+}
+  // load defaults first, because size of table influence the settings of blocks
+      with Form1.SgJobDefaults do begin
+        Cells[1, 1]:= Ini.ReadString('Defaults', 'PartSizeX',    Cells[1, 1]);
+        Cells[1, 2]:= Ini.ReadString('Defaults', 'PartSizeY',    Cells[1, 2]);
+        Cells[1, 3]:= Ini.ReadString('Defaults', 'PartSizeZ',    Cells[1, 3]);
+        Cells[1, 4]:= Ini.ReadString('Defaults', 'Material',     Cells[1, 4]);
+        Cells[1, 5]:= Ini.ReadString('Defaults', 'ZFeedMilling', Cells[1, 5]);
+        Cells[1, 6]:= Ini.ReadString('Defaults', 'ZLiftPart',    Cells[1, 6]);
+        Cells[1, 7]:= Ini.ReadString('Defaults', 'ZUpPart',      Cells[1, 7]);
+        Cells[1, 8]:= Ini.ReadString('Defaults', 'ZGauge',       Cells[1, 8]);
+        Cells[1, 9]:= Ini.ReadString('Defaults', 'OptDrillPath', Cells[1, 9]);
+        Cells[1,10]:= Ini.ReadString('Defaults', 'UseExcellon',  Cells[1,10]);
+        Repaint;
+      end;
+{
     s:= sl.indexof('#Files');
     if s >= 0 then begin
       inc(s);
@@ -497,7 +215,26 @@ begin
       Form1.SgFiles.Repaint;
       OpenFilesInGrid;
     end;
+}
+      with Form1.SgFiles do begin
+        for i:= 1 to c_numOfFiles do begin                          // files table
+          Section:= 'File' + IntToStr(i);
+          Cells[0,i]:= Ini.ReadString(Section, 'Name',    Cells[0,i]);
+          Cells[1,i]:= Ini.ReadString(Section, 'Replace', Cells[1,i]);
+          Cells[2,i]:= Ini.ReadString(Section, 'Rotate',  Cells[2,i]);
+          Cells[3,i]:= Ini.ReadString(Section, 'Mirror',  Cells[3,i]);
+          Cells[4,i]:= Ini.ReadString(Section, 'Xofs',    Cells[4,i]);
+          Cells[5,i]:= Ini.ReadString(Section, 'Yofs',    Cells[5,i]);
+          Cells[6,i]:= Ini.ReadString(Section, 'Scale',   Cells[6,i]);
+          Cells[7,i]:= Ini.ReadString(Section, 'User1',   Cells[7,i]);
+          Cells[8,i]:= Ini.ReadString(Section, 'Remark',  Cells[8,i]);
+          Cells[9,i]:= Ini.ReadString(Section, 'Date',    Cells[9,i]);
+        end;
+        Repaint;
+        OpenFilesInGrid;
+      end;
 
+{
     s:= sl.indexof('#Pens');
     if s >= 0 then begin
       inc(s);
@@ -512,7 +249,32 @@ begin
       PenGridListToJob;
       apply_pen_change;
     end;
+}
+      with Form1.SgPens do begin
+        for i:=1 to c_numOfPens do begin                             // pens table
+          Section:= 'Pen' + IntToStr(i-1);
+          Cells[ 1,i]:= Ini.ReadString(Section, 'Color',    Cells[ 1,i]);
+          Cells[ 2,i]:= Ini.ReadString(Section, 'Enable',   Cells[ 2,i]);
+          Cells[ 3,i]:= Ini.ReadString(Section, 'Diameter', Cells[ 3,i]);
+          Cells[ 4,i]:= Ini.ReadString(Section, 'Z',        Cells[ 4,i]);
+          Cells[ 5,i]:= Ini.ReadString(Section, 'Feed',     Cells[ 5,i]);
+          Cells[ 6,i]:= Ini.ReadString(Section, 'Xofs',     Cells[ 6,i]);
+          Cells[ 7,i]:= Ini.ReadString(Section, 'Yofs',     Cells[ 7,i]);
+          Cells[ 8,i]:= Ini.ReadString(Section, 'Scale',    Cells[ 8,i]);
+          Cells[ 9,i]:= Ini.ReadString(Section, 'Shape',    Cells[ 9,i]);
+          Cells[10,i]:= Ini.ReadString(Section, 'Zcycle',   Cells[10,i]);
+          Cells[11,i]:= Ini.ReadString(Section, 'ATC',      Cells[11,i]);
+          Cells[12,i]:= Ini.ReadString(Section, 'Tip',      Cells[12,i]);
+          Cells[13,i]:= Ini.ReadString(Section, 'Blade',    Cells[13,i]);
+        end;
+        Repaint;
+        PenGridListToJob;
+        apply_pen_change;
+      end;
 
+// wird hier nicht nur "Enable" gebraucht? Alles andere sollte doch nicht änderbar sein!!!
+
+{
     s:= sl.indexof('#Blocks');
     if s >= 0 then begin
       inc(s);
@@ -534,7 +296,22 @@ begin
       end;
       Form1.SgBlocks.Repaint;
     end;
+}
+      LengthFinal:= length(final_array);                               // Blocks
+      i:= 1; Name:= 'Block1';
+      while Ini.ValueExists('Blocks',Name) and (i<=LengthFinal) do begin
+        Form1.SgBlocks.Rowcount:= i+1;
+        Form1.SgBlocks.Rows[i].DelimitedText:= Ini.ReadString('Blocks', Name, '');
+        for j:= 0 to high(ShapeArray) do
+          if Form1.SgBlocks.Cells[4,i] = string(ShapeArray[ord(j)]) then
+            final_array[i-1].shape:= Tshape(j);
+        final_array[i-1].enable:= Form1.SgBlocks.Cells[2,i] = 'ON';
+        enable_all_millings(final_array[i-1], final_array[i-1].enable);
+        inc(i); Name:= 'Block' + IntToStr(i);
+      end;
+      Form1.SgBlocks.Repaint;
 
+{
     s:= sl.indexof('#PathEnables');
     if s >= 0 then begin
       sl_p:= Tstringlist.Create;
@@ -555,7 +332,25 @@ begin
       end;
       sl_p.Free;
     end;
+}
 
+      i:= 1; Name:= 'Path1';                                      // PathEnables
+      sl_p:= Tstringlist.Create;
+      j:= 0;
+      while Ini.ValueExists('PathEnable',Name) and (i<=LengthFinal) do begin
+        sl_p.Clear;
+        sl_p.CommaText:= Ini.ReadString('PathEnable', Name, '');
+        if j <= high(final_array) then
+          if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
+            for k := 0 to sl_p.Count-1 do
+              if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
+                final_array[j].milling_enables[k]:= sl_p[k] = '1';
+            inc(j);
+          end;
+        inc(i); Name:= 'Path' + IntToStr(i);
+      end;
+      sl_p.Free;
+{
     s:= sl.indexof('#Comment');
     if s >= 0 then begin
       inc(s);
@@ -566,14 +361,32 @@ begin
         Form1.MemoComment.Lines.Add(sl.Strings[i]);
       end;
     end;
-    sl.Free;
-    Form1.Memo1.lines.add('');
-    Form1.Memo1.lines.add('Job and block/path settings applied.');
-  end else begin
-    InitJob;
+}
+      Form1.MemoComment.Clear;
+      i:= 1; Name:= 'Line1';
+      while Ini.ValueExists('Comment',Name) do begin
+        Form1.MemoComment.Lines.Add(Ini.ReadString('Comment', Name, ''));
+        inc(i); Name:= 'Line' + IntToStr(i);
+      end;
+
+    finally
+      Ini.Free;
+    end;
+  end;
+
+//// load Job //////////////////////////////////////////////////////////////////
+begin
+  ResetToolFlags;
+//  InitJob;          // wird schon in FormCreate bzw. JobOpenExecute aufgerufen
+  Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
+  if not FileExists(JobSettingsPath) then begin
     PenGridListToJob;
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Job reset and initialized.');
+  end else begin
+    LoadIniFormat;
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('Job and block/path settings applied.');
   end;
   // sind Files noch aktuell?
   for i:= 1 to c_numOfFiles +1 do begin
@@ -597,97 +410,99 @@ begin
   NeedsRedraw:= true;
 end;
 
-Procedure LoadIniFile;
-var
-// mySaveFile: File of Tjob;
- sl: TstringList;
- i: Integer;
- my_ini_name: String;
-begin
-  InitAppdefaults;
-  sl:= Tstringlist.Create;
-  my_ini_name:= ExtractFilePath(Application.exename) + 'GRBLize.ini';
-  if FileExists(my_ini_name) then begin
-    sl.LoadfromFile(my_ini_name);
-    for i := 1 to sl.Count-1 do begin
-      if sl.strings[i]='#End' then
-        break;
-//      Form1.SgAppDefaults.Rowcount:= my_row+1;
-      Form1.SgAppDefaults.Rows[i].DelimitedText:= sl.Strings[i];
-    end;
-  end;
-  sl.Free;
-end;
-
-procedure SaveIniFile;
-var
-// mySaveFile: File of Tjob;
- sl: TstringList;
- i: Integer;
-begin
-  sl:= Tstringlist.Create;
-  sl.Add('#AppDefaults');
-  for i:= 1 to Form1.SgAppDefaults.Rowcount-1 do
-    sl.Add(Form1.SgAppDefaults.Rows[i].CommaText);
-  sl.Add('#End');
-  sl.SaveToFile(ExtractFilePath(Application.exename) + 'GRBLize.ini');
-  sl.Free;
-end;
-
 procedure SaveJob;
-var
-// mySaveFile: File of Tjob;
- sl: TstringList;
- i, p, my_date: Integer;
- block_str, my_filename: String;
-
+var i, p, my_date:   Integer;
+    my_filename:        String;
+    block_str, Section: String;
+    Ini:                TIniFile;
 begin
   JobToPenGridList;
-  sl:= Tstringlist.Create;
-  sl.clear;
-  sl.Add('#Files');
-  for i:= 1 to Form1.SgFiles.Rowcount - 1 do begin
-    my_filename:= Form1.SgFiles.Cells[0,i];
-    // Letztes Änderungsdatum einsetzen und abspeichern
-    if (length(my_filename) > 3) and FileExists(my_filename) then begin
-      my_date:= FileAge(Form1.SgFiles.Cells[0,i]);
-//      Form1.SgFiles.Cells[9,i]:= DateToStr(FileDateToDateTime(my_date));
-      Form1.SgFiles.Cells[9,i]:= IntToStr(my_date);
+  DeleteFile(JobSettingsPath);
+  Ini := TIniFile.Create(JobSettingsPath);                          // open file
+
+  try
+    for i:= 1 to Form1.SgFiles.Rowcount-1 do begin                // files table
+      Section:= 'File' + IntToStr(i);
+      my_filename:= Form1.SgFiles.Cells[0,i];
+      if (length(my_filename) <= 3) then continue;                 // line empty
+      if FileExists(my_filename)                             // save change date
+        then my_date:= FileAge(Form1.SgFiles.Cells[0,i])
+        else my_date:= 0;
+      Ini.WriteString(Section, 'Name',    Form1.SgFiles.Cells[0,i]);
+      Ini.WriteString(Section, 'Date',    IntToStr(my_date));
+      Ini.WriteString(Section, 'Replace', Form1.SgFiles.Cells[1,i]);
+      Ini.WriteString(Section, 'Rotate',  Form1.SgFiles.Cells[2,i]);
+      Ini.WriteString(Section, 'Mirror',  Form1.SgFiles.Cells[3,i]);
+      Ini.WriteString(Section, 'Xofs',    Form1.SgFiles.Cells[4,i]);
+      Ini.WriteString(Section, 'Yofs',    Form1.SgFiles.Cells[5,i]);
+      Ini.WriteString(Section, 'Scale',   Form1.SgFiles.Cells[6,i]);
+      Ini.WriteString(Section, 'User1',   Form1.SgFiles.Cells[7,i]);
+      Ini.WriteString(Section, 'Remark',  Form1.SgFiles.Cells[8,i]);
     end;
-    sl.Add(Form1.SgFiles.Rows[i].CommaText);
+
+    for i:=1 to Form1.SgPens.Rowcount-1 do begin                   // pens table
+      Section:= 'Pen' + IntToStr(i-1);
+      Ini.WriteString(Section, 'Color',    Form1.SgPens.Cells[ 1,i]);
+      Ini.WriteString(Section, 'Enable',   Form1.SgPens.Cells[ 2,i]);
+      Ini.WriteString(Section, 'Diameter', Form1.SgPens.Cells[ 3,i]);
+      Ini.WriteString(Section, 'Z',        Form1.SgPens.Cells[ 4,i]);
+      Ini.WriteString(Section, 'Feed',     Form1.SgPens.Cells[ 5,i]);
+      Ini.WriteString(Section, 'Xofs',     Form1.SgPens.Cells[ 6,i]);
+      Ini.WriteString(Section, 'Yofs',     Form1.SgPens.Cells[ 7,i]);
+      Ini.WriteString(Section, 'Scale',    Form1.SgPens.Cells[ 8,i]);
+      Ini.WriteString(Section, 'Shape',    Form1.SgPens.Cells[ 9,i]);
+      Ini.WriteString(Section, 'Zcycle',   Form1.SgPens.Cells[10,i]);
+      Ini.WriteString(Section, 'ATC',      Form1.SgPens.Cells[11,i]);
+      Ini.WriteString(Section, 'Tip',      Form1.SgPens.Cells[12,i]);
+      Ini.WriteString(Section, 'Blades',   Form1.SgPens.Cells[13,i]);
+    end;
+
+                                                                 // job defaults
+    Ini.WriteString('Defaults', 'PartSizeX',    Form1.SgJobDefaults.Cells[1, 1]);
+    Ini.WriteString('Defaults', 'PartSizeY',    Form1.SgJobDefaults.Cells[1, 2]);
+    Ini.WriteString('Defaults', 'PartSizeZ',    Form1.SgJobDefaults.Cells[1, 3]);
+    Ini.WriteString('Defaults', 'Material',     Form1.SgJobDefaults.Cells[1, 4]);
+    Ini.WriteString('Defaults', 'ZFeedMilling', Form1.SgJobDefaults.Cells[1, 5]);
+    Ini.WriteString('Defaults', 'ZLiftPart',    Form1.SgJobDefaults.Cells[1, 6]);
+    Ini.WriteString('Defaults', 'ZUpPart',      Form1.SgJobDefaults.Cells[1, 7]);
+    Ini.WriteString('Defaults', 'ZGauge',       Form1.SgJobDefaults.Cells[1, 8]);
+    Ini.WriteString('Defaults', 'OptDrillPath', Form1.SgJobDefaults.Cells[1, 9]);
+    Ini.WriteString('Defaults', 'UseExcellon',  Form1.SgJobDefaults.Cells[1,10]);
+
+    ListBlocks;
+    if Form1.SgBlocks.Rowcount > 1 then                                // Blocks
+      for i:= 1 to Form1.SgBlocks.Rowcount - 1 do
+        if Form1.SgBlocks.Cells[0,i] <> '' then
+           Ini.WriteString('Blocks', 'Block'+IntToStr(i), Form1.SgBlocks.Rows[i].CommaText);
+
+    for i:= 0 to high(final_array) do begin                       // PathEnables
+      block_str:='';
+      for p:= 0 to high(final_array[i].milling_enables) do
+        if final_array[i].milling_enables[p] then
+          block_str:= block_str + '1,'
+        else
+          block_str:= block_str + '0,';
+      block_str:= copy(block_str, 0, length(block_str)-1);
+      Ini.WriteString('PathEnable', 'Path'+IntToStr(i+1), block_str);
+    end;
+
+    if Form1.MemoComment.Lines.Count > 0 then
+      for i:= 0 to Form1.MemoComment.Lines.Count - 1 do
+        Ini.WriteString('Comment', 'Line'+IntToStr(i), Form1.MemoComment.Lines.Strings[i]);
+
+  finally
+    Ini.Free;
   end;
-  sl.Add('#Pens');
-  for i:= 1 to Form1.SgPens.Rowcount - 1 do
-    sl.Add(Form1.SgPens.Rows[i].CommaText);
-  sl.Add('#Defaults');
-  for i:= 1 to Form1.SgJobDefaults.Rowcount - 1 do
-    sl.Add(Form1.SgJobDefaults.Rows[i].CommaText);
-  sl.Add('#Blocks');
-  ListBlocks;
-  if Form1.SgBlocks.Rowcount > 1 then
-    for i:= 1 to Form1.SgBlocks.Rowcount - 1 do
-      if Form1.SgBlocks.Cells[0,i] <> '' then
-        sl.Add(Form1.SgBlocks.Rows[i].CommaText);
-  sl.Add('#PathEnables');
-  for i:= 0 to high(final_array) do begin
-    block_str:='';
-    for p:= 0 to high(final_array[i].milling_enables) do
-      if final_array[i].milling_enables[p] then
-        block_str:= block_str + '1,'
-      else
-        block_str:= block_str + '0,';
-    block_str:= copy(block_str, 0, length(block_str)-1);
-    sl.Add(block_str);
-  end;
-  sl.Add('#Comment');
-  if Form1.MemoComment.Lines.Count > 0 then
-    for i:= 0 to Form1.MemoComment.Lines.Count - 1 do
-      sl.Add(Form1.MemoComment.Lines.Strings[i]);
-  sl.Add('#End');
-  sl.SaveToFile(JobSettingsPath);
-  sl.Free;
 end;
 
+procedure TForm1.FileNew1Execute(Sender: TObject);
+begin
+  InitJob;
+  DefaultsGridListToJob;
+  JobSettingsPath:= '';
+  draw_cnc_all;
+  Form1.Caption:= c_ProgNameStr;
+end;
 
 procedure TForm1.JobOpenExecute(Sender: TObject);
 begin
@@ -696,6 +511,14 @@ begin
     JobSettingsPath:= OpenJobDialog.Filename;
     OpenJobFile;
   end;
+end;
+
+procedure TForm1.JobSaveExecute(Sender: TObject);
+begin
+  if FileExists(JobSettingsPath) then
+    SaveJob
+  else
+    JobSaveAsExecute(Sender);
 end;
 
 procedure TForm1.JobSaveAsExecute(Sender: TObject);
@@ -712,23 +535,6 @@ begin
   end;
 end;
 
-procedure TForm1.JobSaveExecute(Sender: TObject);
-begin
-  if FileExists(JobSettingsPath) then
-    SaveJob
-  else
-    JobSaveAsExecute(Sender);
-end;
-
-procedure TForm1.FileNew1Execute(Sender: TObject);
-begin
-  InitJob;
-  DefaultsGridListToJob;
-  JobSettingsPath:= '';
-  draw_cnc_all;
-  Form1.Caption:= c_ProgNameStr;
-end;
-
 // #############################################################################
 // ########################## JOB DEFAULTS #####################################
 // #############################################################################
@@ -740,12 +546,15 @@ var
   aStr: String;
 
 begin
-  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   aStr:= SgJobDefaults.Cells[ACol, ARow];
-  if aRow = 0 then with SgJobDefaults,Canvas do begin
-    Font.Style := [fsBold];
-    TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
-  end else if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF')) then // ON, OFF
+  if aRow = 0 then
+    with SgJobDefaults,Canvas do begin
+      Font.Style := [fsBold];
+      TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
+    end;
+  if (aCol = 1) and
+     ((aStr= 'ON') or (aStr= 'OFF') or (aRow=4)) then // ON, OFF
     with SgJobDefaults,Canvas do begin
       FrameRect(Rect);
       inc(Rect.Left);
@@ -788,7 +597,7 @@ procedure TForm1.SgJobDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 // wird vor SgJobDefaultsClick aufgerufen!
 var
-  my_row, my_col: integer;
+  my_row, my_col, i: integer;
 begin
   SgJobDefaults.MouseToCell( X,Y, my_col, my_row );
   if (my_row < 1) or (my_col < 1) then
@@ -801,6 +610,11 @@ begin
         OpenFilesInGrid;
       end else if Cells[1, my_row] = 'OFF' then begin
         Cells[1, my_row]:= 'ON';
+      end else if (my_row = 4) then begin                            // Material
+        for i:= 0 to PopupMenuMaterial.Items.Count - 1 do           // set focus
+          PopupMenuMaterial.Items[i].Checked:= job.Material = i;
+                                                                   // start menu
+        PopupMenuMaterial.Popup(X+left+Form1.left, Y+ top+Form1.top);
       end else
         Options:= Options + [goEditing, goAlwaysShowEditor];
     end;
@@ -844,7 +658,7 @@ var
   aStr: String;
 
 begin
-  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   aStr:= SgAppDefaults.Cells[ACol, ARow];
   if aRow = 0 then with SgAppDefaults,Canvas do begin
     Font.Style := [fsBold];
@@ -915,7 +729,7 @@ var
   aRect: TRect;
   aStr: String;
 begin
-  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   if aRow = 0 then with SgFiles,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
@@ -996,7 +810,7 @@ begin
       with SgFiles do
         if (Row > 0) and (Col= 1) then begin
           Cells[col, row] := IntToStr(ItemIndex-1); //  := Items[ItemIndex];
-          job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+          job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
           UnHilite;
           OpenFilesInGrid;
           Repaint;
@@ -1026,7 +840,7 @@ begin
           OpenFileDialog.FilterIndex:= 0;
           if OpenFileDialog.Execute then begin
             Cells[0, Row]:= OpenFileDialog.Filename;
-            job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+            job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
             UnHilite;
             my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
             if (my_ext = '.GBR') or (my_ext = '.GBL') or (my_ext = '.GTL') then begin
@@ -1095,7 +909,7 @@ begin
           OpenFilesInGrid;
         end;
      end;
-    job.fileDelimStrings[my_Row-1]:= Rows[my_Row].DelimitedText;
+    job.fileDelimStrings[my_Row-1]:= ShortString(Rows[my_Row].DelimitedText);
   end;
 end;
 
@@ -1103,7 +917,7 @@ procedure TForm1.SgFilesKeyPress(Sender: TObject; var Key: Char);
 begin
   if (Key = #13) or (Key = #10) then
     with SgFiles do begin
-      job.fileDelimStrings[Row-1]:= Rows[Row].DelimitedText;
+      job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
       Repaint;
       OpenFilesInGrid;
     end;

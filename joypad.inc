@@ -5,37 +5,37 @@
 
 function TGamepad.GetX:integer;
 begin
-  result := round(range/32767*(Device.wXpos-CenterX));
+  result := round(range/32767*(integer(Device.wXpos)-CenterX));
   if abs(result) <=  deadzone then result := 0;
 end;
 
 function TGamepad.GetY:integer;
 begin
-  result := round(range/32767*(Device.wYpos-CenterY));
+  result := round(range/32767*(integer(Device.wYpos)-CenterY));
   if abs(result) <= deadzone then result := 0;
 end;
 
 function TGamepad.GetZ:integer;
 begin
-  result := round(range/32767*(Device.wZpos-CenterZ));
+  result := round(range/32767*(integer(Device.wZpos)-CenterZ));
   if abs(result) <= deadzone then result := 0;
 end;
 
 function TGamepad.GetR:integer;
 begin
-  result := round(range/32767*(Device.dwRpos-CenterR));
+  result := round(range/32767*(integer(Device.dwRpos)-CenterR));
   if abs(result) <= deadzone then result := 0;
 end;
 
 function TGamepad.GetU:integer;
 begin
-  result := round(range/32767*(Device.dwUpos-CenterU));
+  result := round(range/32767*(integer(Device.dwUpos)-CenterU));
   if abs(result) <= deadzone then result := 0;
 end;
 
 function TGamepad.GetV:integer;
 begin
-  result := round(range/32767*(Device.dwVpos-CenterV));
+  result := round(range/32767*(integer(Device.dwVpos)-CenterV));
   if abs(result) <= deadzone then result := 0;
 end;
 

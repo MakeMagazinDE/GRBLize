@@ -18,6 +18,7 @@ var
   my_response: String;
 
   begin
+    sl_values:= TStringList.Create;
   try
     my_response:= grbl_statusStr; // anfordern
     result:= false;
@@ -37,7 +38,6 @@ var
       exit;
     end;
     is_valid:= false;
-    sl_values:= TStringList.Create;
     with Form1 do begin
       sl_values.clear;
       sl_values.CommaText:= my_response;

@@ -172,7 +172,7 @@ var
   LEDbusy3d: TLed;
   sim_z_abovezero: Boolean;
   ena_solid, ena_finite: Boolean;
-  draw_tool_sema, render_sema: Boolean;
+  draw_tool_sema: Boolean;
   mill_array: Array of Array of Double; // XY-Array mit Höhenwerten
   mill_array_sizeX, mill_array_sizeY: Integer;
   tool_array: Array of Array of Double; // XY-Array mit Höhenwerten

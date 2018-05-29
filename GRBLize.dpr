@@ -29,7 +29,8 @@ uses
   import_files in 'import_files.pas',
   app_Defaults in 'app_Defaults.pas',
   Vcl.Themes,
-  Vcl.Styles;
+  Vcl.Styles,
+  ParamAssist in 'ParamAssist.pas' {FormParamAssist};
 
 {$R *.res}
 
@@ -39,6 +40,7 @@ begin
   Application.CreateForm(TForm1, Form1);
   Application.CreateForm(TAboutBox, AboutBox);
   Application.CreateForm(TFormGerber, FormGerber);
+  Application.CreateForm(TFormParamAssist, FormParamAssist);
   Application.Run;
   Application.Terminate;
 end.

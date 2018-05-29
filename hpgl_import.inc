@@ -37,7 +37,7 @@ begin
     result:= cmd_exit;
     exit;
   end;
-  if my_line[my_pos] in ['0'..'9', '-', '+'] then begin
+  if CharInSet(my_line[my_pos], ['0'..'9', '-', '+']) then begin
     result:= cmd_number;
     exit;
   end;
@@ -319,6 +319,8 @@ type  // use of objects because type "string" can't part of a variant record
       constructor Create(const Predecessor: TSvg);
       procedure HandleM();                                               // Move
       procedure HandleL();                                               // Line
+      procedure HandleH();                                   // horizontale Line
+      procedure HandleV();                                     // vertikale Line
       procedure HandleQ();                    // quadratische Bezierkurve Beginn
       procedure HandleC();                        // kubische Bezierkurve Beginn
       procedure HandleA();                                 // elliptischer Bogen
@@ -534,7 +536,7 @@ function TSvg.Find(const s0, s: string; var p: integer):boolean;
 begin
   p := pos(s0, s);
   if ((p = 0) or      // nicht gefunden oder Bezeichner hat noch eine "Vorsilbe"
-      (p > 1) and (s[p-1] in ['0'..'9','A'..'z'])) then exit(false);
+      (p > 1) and CharInSet(s[p-1], ['0'..'9','A'..'z'])) then exit(false);
   p:= p + length(s0);
   state := error;    // neuen Parameter gefunden, unklar ob Einlesen erfolgreich
   Find:= true;
@@ -587,23 +589,22 @@ var i, j            : integer;
     s               : string;
     NewPen          : integer;
     a, b, c, d, e, f: double;
-    M0              : TMatrix33;
 begin
   Analysis := false;                         // letzte Zeile noch nicht erreicht
   if state <> incomplete then exit;
 
 try
   if pos('style="',Line) > 0 then begin
-    state:= incomplete;
+    state  := incomplete;
+    NewPen := MaxInt;
     i:= pos('stroke:#', Line) + 8;                      // Linienfarbe ermitteln
     j:= pos('fill:#', Line) + 6;                           // Füllung? ermitteln
     if (i > 8) or (j > 6)  then
     begin
-      NewPen := MaxInt;
 
       if j > i then i := j;                          // nur fill wurde angegeben
       s := '';                                         // gültige Zeichen suchen
-      while (Line[i] in ['0'..'9','.','+','-','A'..'z']) and
+      while CharInSet(Line[i], ['0'..'9','.','+','-','A'..'z']) and
             (i<=length(Line)) do begin
         s := s + Line[i];
         inc(i);
@@ -720,6 +721,52 @@ begin
                                                             // Fehlermeldung!!!!
   if ParseLine(pw, PLine, val, s) <> p_number then exit;
   P.P.Y := val;
+
+  // relative zu absoluten Koordinaten konvertieren
+  if (cmd > 'Z') then begin
+    P.P.X := P0.P.X + P.P.X;
+    P.P.Y := P0.P.Y + P.P.Y
+  end;
+
+  AddPoint(P.P);
+
+  LastAction:= mill;
+  next_is_first_point:= false;
+  P0 := P;
+end;
+
+procedure TSvgPath.HandleH;
+var s: string;
+begin
+  // Parameter einlesen
+  if not CmdContinue then                                   // Fehlermeldung!!!!
+    if ParseLine(pw, PLine, val, s) <> p_number then exit;
+  P.P.X := val;
+
+  P.P.Y := 0;
+
+  // relative zu absoluten Koordinaten konvertieren
+  if (cmd > 'Z') then begin
+    P.P.X := P0.P.X + P.P.X;
+    P.P.Y := P0.P.Y + P.P.Y
+  end;
+
+  AddPoint(P.P);
+
+  LastAction:= mill;
+  next_is_first_point:= false;
+  P0 := P;
+end;
+
+procedure TSvgPath.HandleV;
+var s: string;
+begin
+  // Parameter einlesen
+  if not CmdContinue then                                   // Fehlermeldung!!!!
+    if ParseLine(pw, PLine, val, s) <> p_number then exit;
+  P.P.Y := val;
+
+  P.P.X := 0;
 
   // relative zu absoluten Koordinaten konvertieren
   if (cmd > 'Z') then begin
@@ -988,21 +1035,23 @@ begin
     end;
 
     if ( (LastAction = lift) and
-         ( (CmdContinue) or not (cmd in ['Z', 'M', 'm']) ) ) then begin
+         ( (CmdContinue) or not CharInSet(cmd, ['Z', 'M', 'm']) ) ) then begin
+//         ( (CmdContinue) or not (cmd in ['Z', 'M', 'm']) ) ) then begin
       CurrentBlockID:= new_block(F);
       AddPoint(PS);
     end;
 
     case upcase(cmd) of
-      'M': HandleM;                                                 // Move
-      'L': HandleL;                                                // Linie
-      'Q': HandleQ;                      // quadratische Bezierkurve Beginn
-      'C': HandleC;                          // kubische Bezierkurve Beginn
-      'A': HandleA;                                   // elliptischer Bogen
+      'M': HandleM;                                                      // Move
+      'L': HandleL;                                                     // Linie
+      'H': HandleH;                                         // horizontale Linie
+      'V': HandleV;                                           // vertikale Linie
+      'Q': HandleQ;                           // quadratische Bezierkurve Beginn
+      'C': HandleC;                               // kubische Bezierkurve Beginn
+      'A': HandleA;                                        // elliptischer Bogen
       'Z': begin
              next_is_first_point:= true;
              LastAction:= lift;
-//             AddPoint(PS);
              blockArrays[F, CurrentBlockID].closed:= true;
            end;
       else exit;
