@@ -113,7 +113,7 @@ begin
         end;
       cmd_pu:
         begin
-          my_valid:= ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
+          my_valid:=               ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
           if my_valid then begin
             LastPoint.x:= round(xx);
@@ -204,7 +204,6 @@ end;
 
 // #############################################################################
 
-
 procedure hpgl_fileload(my_name:String; fileID, penOverride: Integer);
 // Liest File in FileBuffer und liefert Länge zurück
 var
@@ -244,6 +243,184 @@ begin
     hpgl_import_line(my_sl[i], fileID, penOverride);
   end;
   my_sl.free;
+  FileParamArray[fileID].valid := true;
+  file_rotate_mirror(fileID, true); // auto close path
+  block_scale_file(fileID);
+end;
+
+// #############################################################################
+// Import Gerber-File mit Dimensionsdaten, contributed by Frank Kaiser
+// #############################################################################
+
+
+procedure dim_fileload(my_name:String; fileID, penOverride: Integer);
+var Scale  : double;                          // scale between file and internal
+    Xdec: integer;                          // decimal place for X/Y coordinates
+    Ydec: integer;
+
+  procedure dim_import_parameter(Line: String);
+  var i:     integer;
+      valid: boolean;
+      xx, yy: double;
+      dummy_str: String;
+  //MOMM: MO - Mode;
+  //      MM - [mm] (alternativ IN - inch)          Auswertung als Multiplikator
+  //FSLAX34Y34  FS - Data Block Format;
+  //            L  - führende 0en weglassen (T - nachfolgende 0en weglassen)
+  //            A  - absolute Koordinaten (I - inkrementelle Koordinaten)
+  //            X  - Format X-Koordinaten
+  //            Y  - Format Y-Koordinaten                Auswertung Zahlenformat
+  //LPD         LP - Data Block Format
+  //            D  - dark (C - clear)                                 ignorieren
+  //AMOC8       AM - Aperture Macro
+  //            OC - Name des Macros
+  //            8  - primitive (8 - Line                              ignorieren
+  //5,1,8,0,0,1.08239X$1,22.5                                         ignorieren
+  //ADD10C,0.254000       Blende 10: Kreis mit 0.254mm durchmesser    ignorieren
+  begin
+                                      // the following parameter will be ignored
+    if pos('LPD',Line)    = 1 then exit;                               // ignore
+    if pos('AMOC8',Line)  = 1 then exit;                               // ignore
+    if pos('ADD10C',Line) = 1 then exit;                               // ignore
+
+    if pos('MO',Line) = 1 then begin                                // unit mode
+       if pos('MM',Line) = 3 then begin Scale:= 1;      exit end;
+       if pos('IN',Line) = 3 then begin Scale:= 1/2.54; exit end;
+    end;
+
+    if pos('FSLA',Line) = 1                                // parameter format
+    then begin
+      i:= 5; valid:= true; xx:= 100; yy:= 100;
+      while (length(Line)>i) do
+      begin
+        if Line[i] = 'X' then begin
+           inc(i);
+           valid:= valid and (ParseLine(i, Line, xx, dummy_str) = p_number);
+           continue;
+        end;
+
+        if Line[i] = 'Y' then begin
+           inc(i);
+           valid:= valid and (ParseLine(i, Line, yy, dummy_str) = p_number);
+           continue;
+        end;
+        inc(i);
+      end;
+      if valid and (xx<>100) and (yy<>100) then exit;
+    end;
+
+    Form1.Memo1.lines.add('ERROR: Unbekannter Parameter in DIM-File: ' + Line);
+  end;
+
+  procedure dim_import_cmd(line: String; fileID, penOverride: Integer);
+  var X, Y: Double;
+      i: Integer;
+      xx, yy, dd: double;
+      valid: boolean;
+      dummy_str: String;
+  // Actions: none, lift, seek, drill, mill
+  //G04 EAGLE Gerber RS-274X export*  Kommentar                           ignore
+  //G75*                  circular interpolation                          ignore
+  //G01*                  linear interpolation                            ignore
+  //D10*                  Blende 10 nutzen                                ignore
+  //X0Y0D02*              Bewege nach <X,Y>, Lampe aus
+  //X390400Y0D01*         Bewege nach <X,Y>, Linie
+  //M00                   end of Gerber description                       ignore
+  //M02                   end of Gerber description                       ignore
+  begin
+                                       // the following commands will be ignored
+    if pos('D10',Line)    = 1 then exit;                               // ignore
+    if pos('G04',Line)    = 1 then exit;                               // ignore
+    if pos('G75',Line)    = 1 then exit;                               // ignore
+    if pos('G01',Line)    = 1 then exit;                               // ignore
+    if pos('M00',Line)    = 1 then exit;                               // ignore
+    if pos('M02',Line)    = 1 then exit;                               // ignore
+
+    if Line[1]='X' then begin
+      i:= 2;
+      valid:=            ParseLine(i, Line, xx, dummy_str) = p_number;
+      valid:= valid and (Line[i]='Y'); inc(i);
+      valid:= valid and (ParseLine(i, Line, yy, dummy_str) = p_number);
+      valid:= valid and (Line[i]='D'); inc(i);
+      valid:= valid and (ParseLine(i, Line, dd, dummy_str) = p_number);
+
+      if valid then begin
+        xx:= 40 * Scale * xx / power(10,Xdec);               // scale to 0.025mm
+        yy:= 40 * Scale * yy / power(10,Ydec);
+
+        if (dd > 1.5) then begin                                      // tool up
+          LastPoint.x:= round(xx);
+          LastPoint.y:= round(yy);
+          LastAction:= seek;
+        end else begin                                              // tool down
+          if LastAction <= seek then begin
+          // war oben, letzte Koordinaten sind erster Punkt im Block
+            CurrentBlockID:= new_block(fileID);
+            append_point(fileID, CurrentBlockID, LastPoint);
+            blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
+            check_filebounds(FileID, LastPoint);
+          end;
+          LastPoint.x:= round(xx);
+          LastPoint.y:= round(yy);
+          append_point(fileID, CurrentBlockID, LastPoint);
+          check_filebounds(FileID, LastPoint);
+          LastAction:= mill;
+        end;
+        exit;
+      end;
+    end;
+    Form1.Memo1.lines.add('ERROR: Unbekanntes Kommando in DIM-File: ' + Line);
+  end;
+
+var
+  my_ReadFile: TextFile;
+  S: String;
+  c: char;
+  ParamMode: boolean;
+
+begin
+  if not FileExists(my_name) then begin
+    FileParamArray[fileID].valid := false;
+    exit;
+  end;
+
+  if (penOverride >= 0) and (penOverride < 10) then begin
+    CurrentPen:= penOverride;
+    job.pens[penOverride].used:= true;
+    job.pens[penOverride].enable:= true;
+  end else
+    CurrentPen:= 0;
+
+  LastAction:= lift;
+  LastPoint.x:= 0;
+  LastPoint.y:= 0;
+  ParamMode:= false;
+  Scale:= 1;                                  // scale between file and internal
+  Xdec:= 4; Ydec:= 4;                               // default: 4 decimal places
+
+  reset_filebounds(fileID);
+  S:='';
+
+  FileMode := fmOpenRead;
+  AssignFile(my_ReadFile, my_name);
+  Reset(my_ReadFile);
+  while not Eof(my_ReadFile) do begin
+    Read(my_ReadFile,c);
+    if (c >= #32) and (c<>'%') then S:= S + c;
+    if ParamMode then begin
+      if c = '%' then begin
+        dim_import_parameter(S);
+        S:= '';
+      end
+    end else begin
+      if c = '*' then begin
+        dim_import_cmd(S, fileID, penOverride);
+        S:='';
+      end;
+    end;
+    if (c='%') then ParamMode:= Not ParamMode;
+  end;
+  CloseFile(my_ReadFile);
   FileParamArray[fileID].valid := true;
   file_rotate_mirror(fileID, true); // auto close path
   block_scale_file(fileID);
@@ -294,7 +471,7 @@ type  // use of objects because type "string" can't part of a variant record
       function  Analysis(const Line: string):boolean;                 virtual;
       function  Valid:boolean;                                        virtual;
       procedure Draw;                                                 virtual;
-      function GetPen:integer;
+      function  GetPen:integer;
       function  Find(const s0, s: string; var p: integer):boolean;
   end;
 
@@ -518,9 +695,11 @@ begin
 end;
 
 procedure TSvg.Draw;
-begin
-  job.pens[GetPen].used:= true;                                  // Stift setzen
-  job.pens[GetPen].enable:= true;
+begin                               // nur echte Elemente können werzeuge nutzen
+  if ((Self.ClassType <> TSvg) and (Self.ClassType <> TSvgGroup)) then begin
+    job.pens[GetPen].used:= true;                                // Stift setzen
+    job.pens[GetPen].enable:= true;
+  end;
 end;
 
 function TSvg.GetPen:integer;
@@ -606,19 +785,20 @@ try
       s := '';                                         // gültige Zeichen suchen
       while CharInSet(Line[i], ['0'..'9','.','+','-','A'..'z']) and
             (i<=length(Line)) do begin
-        s := s + Line[i];
+        s := s + upcase(Line[i]);
         inc(i);
       end;
 
       if s = '000000' then NewPen := 0 else
       if s = '804000' then NewPen := 1 else
-      if s = 'ff0000' then NewPen := 2 else
-      if s = 'ff8000' then NewPen := 3 else
-      if s = 'ffff00' then NewPen := 4 else
-      if s = '00ff00' then NewPen := 5 else
-      if s = '0080ff' then NewPen := 6 else
-      if s = 'ff00ff' then NewPen := 7 else
-      if s = '00ffff' then NewPen := 8;
+      if s = 'FF0000' then NewPen := 2 else
+      if s = 'FF8000' then NewPen := 3 else
+      if s = 'FFFF00' then NewPen := 4 else
+      if s = '00FF00' then NewPen := 5 else
+      if s = '0080FF' then NewPen := 6 else
+      if s = 'FF00FF' then NewPen := 7 else
+      if s = '00FFFF' then NewPen := 8 else
+      if s = 'A2A2DC' then NewPen := 9;
     end;
 
     if NewPen = MaxInt then exit;
@@ -1444,7 +1624,6 @@ begin
              Form1.Memo1.lines.add('ERROR (Zeile ' + inttostr(z) + '): Unerwartetes Circle-Element!');
              exit;
           end;
-
 
     if SVG <> nil then begin
       if SVG.Analysis(s) then begin

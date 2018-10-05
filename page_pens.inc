@@ -43,7 +43,7 @@ begin
       end;
     1: // Color
       begin
-        InflateRect(Rect, -1, -1);
+//        InflateRect(Rect, -1, -1);
         Brush.Color := clgray;
         FrameRect(Rect);
         Brush.Color := job.pens[aRow-1].color;
@@ -182,7 +182,7 @@ begin
       begin
         Options:= Options + [goEditing];
       end;
-    4, 5, 6, 7, 10:                                 // Z, F, Xofs, Yofs, Z/Cycle
+    4, 5, 6, 7, 10, 13:                     // Z, F, Xofs, Yofs, Z/Cycle, Blades
       begin
         Options:= Options + [goEditing];
       end;

@@ -264,7 +264,6 @@ type
     BtnMoveFix1: TSpeedButton;
     Label9: TLabel;
     Label6: TLabel;
-    CheckPartProbeZ: TCheckBox;
     PosC: TLabel;
     PosZ: TLabel;
     PosY: TLabel;
@@ -304,6 +303,19 @@ type
     Label17: TLabel;
     Label18: TLabel;
     PopupMenuMaterial: TPopupMenu;
+    Bevel5: TBevel;
+    Label20: TLabel;
+    PosX_2: TLabel;
+    PosY_2: TLabel;
+    PosZ_2: TLabel;
+    GerberImportDialog: TOpenDialog;
+    ToolButton3: TToolButton;
+    ToolButton4: TToolButton;
+    ToolButton5: TToolButton;
+    ToolButton7: TToolButton;
+    ToolButton8: TToolButton;
+    ToolButton10: TToolButton;
+    ToolButton11: TToolButton;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
@@ -457,7 +469,6 @@ type
     procedure SetZero(axes: integer);
 
     procedure CheckEndParkClick(Sender: TObject);
-    procedure CheckPartProbeZClick(Sender: TObject);
     procedure hide;
     procedure ContinueJogging;
     procedure StepJogging;
@@ -466,14 +477,13 @@ type
     procedure BtnProbeZAssistentClick(Sender: TObject);
     procedure PopupMenuMaterialClick(Sender: TObject);
 
-
   private
     { Private declarations }
     JogDistance   : integer;
     JogDirection  : T3dFloat;
     JogDelay      : integer;
     CntrDelay     : integer;
-    CntrButtomId  : integer;
+    ActiveCntrButtom : TSpeedButton;
     //    MouseDownStart: int64;
     SgPenT0       : integer;
 
@@ -795,8 +805,14 @@ procedure DisplayMachinePosition;
 begin
   with Form1 do begin
     if HomingPerformed then begin
-      MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
-      MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
+//      if RadioGroupCam.ItemIndex = 0
+      if fCamActivated
+        then MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x + job.cam_x)
+        else MPosX.Caption:= FormatFloat('000.00', grbl_mpos.x);
+//      if RadioGroupCam.ItemIndex = 0
+      if fCamActivated
+        then MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y + job.cam_y)
+        else MPosY.Caption:= FormatFloat('000.00', grbl_mpos.y);
       MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
       MPosC.Caption:= FormatFloat('000.0', grbl_mpos.c);
     end else begin
@@ -812,14 +828,27 @@ procedure DisplayWorkPosition;
 begin
   with Form1 do begin
     if WorkZeroXdone
-      then PosX.Caption:= FormatFloat('000.00', grbl_wpos.x)
-      else PosX.Caption:= '---.--';
+    then begin
+//      if RadioGroupCam.ItemIndex = 0
+      if fCamActivated
+        then PosX.Caption:= FormatFloat('000.00', grbl_wpos.x + job.cam_x)
+        else PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+    end
+    else PosX.Caption:= '---.--';
+    PosX_2.Caption:= PosX.Caption;
     if WorkZeroYdone
-      then PosY.Caption:= FormatFloat('000.00', grbl_wpos.y)
-      else PosY.Caption:= '---.--';
+    then begin
+//      if RadioGroupCam.ItemIndex = 0
+      if fCamActivated
+        then PosY.Caption:= FormatFloat('000.00', grbl_wpos.y + job.cam_y)
+        else PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+    end
+    else PosY.Caption:= '---.--';
+    PosY_2.Caption:= PosY.Caption;
     if WorkZeroZdone
       then PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z)
       else PosZ.Caption:= '---.--';
+    PosZ_2.Caption:= PosZ.Caption;
     if WorkZeroCdone
       then PosC.Caption:= FormatFloat('000.0', grbl_wpos.c)
       else PosC.Caption:= '---.--';
@@ -837,7 +866,7 @@ begin
     BtnMoveFix2.Enabled:=       my_state;
     BtnMoveHilite.Enabled:=     my_state and (HilitePoint >= 0);
     BtnMoveJobCenter.Enabled:=  my_state and WorkZeroXdone and WorkZeroYdone;
-    BtnZcontact.Enabled:=       my_state and CheckPartProbeZ.Checked;
+    BtnZcontact.Enabled:=       my_state and job.use_part_probe;
     BtnMoveXYzero.Enabled:=     my_state;
     BtnMoveZzero.Enabled:=      my_state;
     BtnZeroC.Enabled:=          my_state;
@@ -926,9 +955,12 @@ begin
   end;
   is_idle:= MachineState = idle;
   Form1.BtnCancel.Enabled:= is_running;
-  Form1.BtnMoveHilite.Enabled:= WorkZeroXdone and WorkZeroYdone;
-  Form1.BtnMoveXYZero.Enabled:= WorkZeroXdone and WorkZeroYdone;
-  Form1.BtnMoveZzero.Enabled:= WorkZeroAllDone;
+
+                      // Button have to be active all the time to set the values
+//  Form1.BtnMoveHilite.Enabled:= WorkZeroXdone and WorkZeroYdone;
+//  Form1.BtnMoveXYZero.Enabled:= WorkZeroXdone and WorkZeroYdone;
+//  Form1.BtnMoveZzero.Enabled := WorkZeroAllDone;
+//  Form1.BtnMoveZzero.Enabled := true;
 
   if isCancelled then begin
     button_enable(false);
@@ -975,8 +1007,12 @@ begin
   if isSimActive then begin
     WorkZeroXdone:= true;
     WorkZeroYdone:= true;
-    WorkZeroZdone:= false;
+    WorkZeroZdone:= true;
     WorkZeroAllDone:= true;
+//    WorkZeroXdone:= false;
+//    WorkZeroYdone:= false;
+//    WorkZeroZdone:= false;
+//    WorkZeroAllDone:= false;
   end else begin
     WorkZeroXdone:= false;
     WorkZeroYdone:= false;
@@ -1006,8 +1042,11 @@ begin
     MPosZ.Caption:= FormatFloat('000.00', grbl_mpos.z);
     MPosC.Caption:= FormatFloat('000.0', grbl_mpos.z);
     PosX.Caption:=  FormatFloat('000.00', grbl_wpos.x);
+    PosX_2.Caption:= PosX.Caption;
     PosY.Caption:=  FormatFloat('000.00', grbl_wpos.y);
+    PosY_2.Caption:= PosY.Caption;
     PosZ.Caption:=  FormatFloat('000.00', grbl_wpos.z);
+    PosZ_2.Caption:= PosZ.Caption;
     PosC.Caption:=  FormatFloat('000.0', grbl_wpos.z);
     LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X);
     LabelWorkX_2.Caption:= LabelWorkX.Caption;
@@ -1295,7 +1334,7 @@ begin
 
   LoadIniFile;
 
-  BtnZcontact.Enabled:= CheckPartProbeZ.Checked;
+  BtnZcontact.Enabled:= job.use_part_probe;
 
   SgGrblSettings.FixedCols:= 1;
   SgAppdefaults.FixedCols:= 1;
@@ -1390,11 +1429,142 @@ end;
 // #############################################################################
 
 procedure TForm1.GerberImport1Click(Sender: TObject);
+const mDrill  = 1;
+      mBottom = 2;
+      mTop    = 4;
+      mDim    = 8;
+      fDrl    = 1;
+      fTop    = 2;
+      fBtm    = 3;
+      fDim    = 4;
+var S, Base: AnsiString;
+    i:       integer;
+    mode:    integer;
+    DrlName, DimName, TopName, BtmName: AnsiString;
+    dx, dy:  double;
+
+  procedure CheckFile(Ext:string; m:integer; var Name:AnsiString);
+  begin
+    if fileexists(Base + Ext) then begin
+      mode:= mode or m;
+      Name:= Base + Ext;
+    end;
+  end;
+
 begin
-  GerberFileName:='';
-  ConvertedFileName:='';
-  GerberFileNumber:= 1;
-  FormGerber.ShowModal;
+  if not GerberImportDialog.Execute then exit;
+               // create new job, grid, SgFiles and SgPens shall be synchronized
+  FileNew1Execute(Sender);
+
+  Base:= ExtractFileName(GerberImportDialog.FileName);          // get Base name
+  S   := Uppercase(Base);         // delete file extentions and other extentions
+  i:= pos('.',S);       if i > 0 then delete(Base,i,100);
+  i:= pos('_BOTTOM',S); if i > 0 then delete(Base,i,100);
+  i:= pos('_TOP',S);    if i > 0 then delete(Base,i,100);
+  i:= pos('_BACK',S);   if i > 0 then delete(Base,i,100);
+  i:= pos('_FRONT',S);  if i > 0 then delete(Base,i,100);
+  i:= pos('_01',S);     if i > 0 then delete(Base,i,100);
+  i:= pos('_16',S);     if i > 0 then delete(Base,i,100);
+  Base:= ExtractFileDir(GerberImportDialog.FileName) + '\' + Base;   // add path
+
+  mode:= 0;                                               // analyse type of PCB
+  CheckFile(       '.drl',mDrill, DrlName);
+  CheckFile('_bottom.gbr',mBottom,BtmName);
+  CheckFile(  '_back.gbr',mBottom,BtmName);
+  CheckFile(   '_btm.gbr',mBottom,BtmName);
+  CheckFile(    '_16.gbr',mBottom,BtmName);
+  CheckFile(   '_top.gbr',mTop,   TopName);
+  CheckFile( '_front.gbr',mTop,   TopName);
+  CheckFile(    '_01.gbr',mTop,   TopName);
+  CheckFile(       '.dim',mDim,   DimName);
+
+  dx:= 0; dy:= 0;
+
+  if ((mode and mBottom <> 0) or (mode and mTop    <> 0)) and
+     ( mode and mDim    <> 0 ) then begin                    // something to do?
+                                   // load to get min dimensions for buttom side
+    dim_fileload(DimName, fDim-1, 7);
+
+    if (mode and mTop <> 0) then begin
+      GerberFileName:= TopName;                              // LOAD GERBER DATA
+      ConvertedFileName:= TopName;
+      delete(ConvertedFileName,length(ConvertedFileName)-2,3);
+      ConvertedFileName:= ConvertedFileName + 'ncb';
+      GerberFileNumber:= fTop;
+      FormGerber.ShowModal;                        // Gerber data will be loaded
+
+      // bei Konvertierung des Fräsepfades vergrößert sich die PCB, da Werkstücke
+      // nicht im negativen Bereich liegen dürfen, muss das ausgeglichen werden
+      with FileParamArray[fTop-1].Bounds do begin
+        dx:= -min.x/c_hpgl_scale; if dx < 0 then dx:= 0;
+        dy:= -min.y/c_hpgl_scale; if dy < 0 then dy:= 0;
+      end;
+
+      SgFiles.Cells[4,fTop]:= FormatFloat('0.00',dx);
+      SgFiles.Cells[5,fTop]:= FormatFloat('0.00',dy);
+
+      job.fileDelimStrings[fTop-1]:=              // store SgFiles values to job
+        ShortString(Form1.SgFiles.Rows[fTop].DelimitedText);
+//      OpenFilesInGrid;
+    end;
+
+    if (mode and mBottom <> 0) then begin
+      GerberFileName:= BtmName;                              // LOAD GERBER DATA
+      ConvertedFileName:= BtmName;
+      delete(ConvertedFileName,length(ConvertedFileName)-2,3);
+      ConvertedFileName:= ConvertedFileName + 'ncb';
+      GerberFileNumber:= fBtm;
+      FormGerber.ShowModal;                        // Gerber data will be loaded
+                                // buttom size is mirrowed into the 2nd quadrant
+                                // and have to moved back to the 1st quadrant
+      dx:= -FileParamArray[fDim-1].Bounds.min.x/c_hpgl_scale;
+      SgFiles.Cells[4,fBtm]:= FormatFloat('0.00',dx);
+
+      job.fileDelimStrings[fBtm-1]:=              // store SgFiles values to job
+        ShortString(Form1.SgFiles.Rows[fBtm].DelimitedText);
+//      OpenFilesInGrid;
+    end;
+
+    if mode and mDim <> 0 then begin                          // LOAD DIMENSIONS
+      SgFiles.Cells[0,fDim]:= DimName;                              // file name
+      SgFiles.Cells[1,fDim]:= '7';                           // pen override = 7
+      SgFiles.Cells[4,fDim]:= FormatFloat('0.00',dx);
+      SgFiles.Cells[5,fDim]:= FormatFloat('0.00',dy);
+
+      job.fileDelimStrings[fDim-1]:=              // store SgFiles values to job
+        ShortString(Form1.SgFiles.Rows[fDim].DelimitedText);
+
+      job.Pens[7].diameter:= 0.8;                                    // diameter
+      job.pens[7].z_end:=    job.partsize_z;                                // z
+      job.pens[7].shape:=    outside;                         // contour=outside
+      job.pens[7].z_inc:=    0.8;                                 // z increment
+      JobToPenGridList
+    end;
+
+    if mode and mDrill <> 0 then begin                        // LOAD DRILL DATA
+      SgFiles.Cells[0,fDrl]:= DrlName;                    // set drill file name
+      SgFiles.Cells[4,fDrl]:= FormatFloat('0.00',dx);
+      SgFiles.Cells[5,fDrl]:= FormatFloat('0.00',dy);
+      job.fileDelimStrings[fDrl-1]:=              // store SgFiles values to job
+        ShortString(Form1.SgFiles.Rows[fDrl].DelimitedText);
+
+ // load drill file to get used drills, parameters will be written to job-array!
+      drill_fileload(DrlName, fDrl, -1, true);
+      for i:=0 to c_numOfPens do                       // calculate Z for drills
+        if (job.Pens[i].used) and (job.Pens[i].shape = drillhole) then begin
+                                       // Z: extend by drill cone, sin(30°)=0.5!
+          job.pens[i].z_end:= job.partsize_z + job.Pens[i].diameter/2/2;
+          job.pens[i].z_inc:= 10;
+        end;
+    end;
+             // write back job to grid, because Form.Gerber calls OpenGridInFile
+    JobToPenGridList;
+    OpenFilesInGrid;
+
+    JobSettingsPath:= Base + '.job';                                 // save job
+    Form1.Caption:= c_ProgNameStr + '[' + JobSettingsPath + ']';
+    SaveJob;
+  end;
 end;
 
 procedure TForm1.FileExitItemClick(Sender: TObject);
@@ -1879,7 +2049,6 @@ begin
   set_AppDefaults_bool(defToolchangePause,CheckToolChange.Checked);
   job.toolchange_pause:=                  CheckToolChange.Checked;
   CheckTLCprobe.Enabled:=                 CheckToolChange.Checked;
-  CheckPartProbeZ.Enabled:=               CheckToolChange.Checked;
   CheckUseATC2.Enabled:= job.use_fixed_probe and CheckToolChange.Checked;
 end;
 
@@ -1913,12 +2082,6 @@ begin
   job.parkposition_on_end:=                    CheckEndPark.Checked
 end;
 
-procedure TForm1.CheckPartProbeZClick(Sender: TObject);
-begin
-  set_AppDefaults_bool(defUsePartProbe,CheckPartProbeZ.Checked);
-  job.use_part_probe:=                 CheckPartProbeZ.Checked;
-end;
-
 // #############################################################################
 // ############################## T I M E R ####################################
 // #############################################################################
@@ -1935,15 +2098,18 @@ begin
 
   // weniger aktuelle Sachen updaten
   if TimerBlinkToggle then begin
-    if WorkZeroXdone
-      then LabelWorkX.Caption:= FormatFloat('000.00', WorkZero.X)
-      else LabelWorkX.Caption:= '---.--';
-    if WorkZeroYdone
-      then LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y)
-      else LabelWorkY.Caption:= '---.--';
-    if WorkZeroZdone
-      then LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z)
-      else LabelWorkZ.Caption:= '---.--';
+    if not WorkZeroXdone
+      then LabelWorkX.Caption:= '---.--'
+      else LabelWorkX.Caption  := FormatFloat('000.00', WorkZero.X);
+    if not WorkZeroYdone
+      then LabelWorkY.Caption:= '---.--'
+      else LabelWorkY.Caption:= FormatFloat('000.00', WorkZero.Y);
+    if not WorkZeroZdone
+      then LabelWorkZ.Caption:= '---.--'
+      else LabelWorkZ.Caption:= FormatFloat('000.00', WorkZero.Z);
+    LabelWorkX_2.Caption:= LabelWorkX.Caption;
+    LabelWorkY_2.Caption:= LabelWorkY.Caption;
+    LabelWorkZ_2.Caption:= LabelWorkZ.Caption;
   end else begin
     LabelTableX.Caption:= FormatFloat('000.00', job.table_x);
     LabelTableY.Caption:= FormatFloat('000.00', job.table_y);
@@ -2007,7 +2173,6 @@ type
 const
   c_jp_feedscale = 50;
 var
-//  i: integer;
   old_machine_state: t_mstates;
   btn_idx, feed, feed_old, z_temp: integer;
   feed_v: TIntPoint; // Feed-Vektor
@@ -2017,7 +2182,7 @@ var
 begin
   try
     if isJobRunning or isEmergency then exit;
-//    if isSimActive then exit;
+    if isSimActive then exit;
     TimerStatus.Tag:= 1;
     old_machine_state:= MachineState;
     TimerStatus.Enabled:= false;
@@ -2039,9 +2204,9 @@ begin
         StepJogging;
       end;
 
-    if JogDelay > 0 then
+    if JogDelay > 0 then                                // wait to start jogging
       dec(JogDelay);
-    if JogDelay < -1 then
+    if JogDelay < -1 then                                // wait for guard break
       inc(JogDelay);
 
     if CntrDelay > 0 then begin
@@ -2057,8 +2222,7 @@ begin
 end;
 
 // #############################################################################
-
-procedure DisableStatus;
+ procedure DisableStatus;
 // Maschinenstatus-Timer sicher abschalten
 begin
   if Form1.TimerStatus.Tag > 0 then
@@ -2342,7 +2506,7 @@ begin
   grbl_sendlist.Clear;
   Form1.ProgressBar1.position:= 0;
 
-  SendActive:= false;
+                                                    SendActive:= false;
 end;
 
 // #############################################################################

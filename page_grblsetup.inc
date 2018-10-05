@@ -138,7 +138,7 @@ begin
   if (deviceselectbox.ModalResult=MrOK) then begin
     i := deviceselectbox.ListView1.itemindex;;
     if i >= ftdi_device_count then begin
-      com_selected_port:= i - ftdi_device_count + 1;
+      com_selected_port:= i - ftdi_device_count;
       com_name:= deviceselectbox.ListView1.Items[com_selected_port].Caption;
       OpenCOMport;
     end else if (ftdi_device_count > 0) then begin

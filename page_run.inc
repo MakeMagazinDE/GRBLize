@@ -598,12 +598,9 @@ begin
     SendSingleCommandStr('G0 G53 Z-1'); // move Z up
     spindle_on_off(false);
 
-    if CheckEndPark.Checked then
-      MoveToPos('park', job.park_x, job.park_y, job.park_z, false, false)
-//      BtnMoveParkClick(nil)
-    else begin
-      SendSingleCommandStr('G0 X0 Y0'); // Work Zero
-    end;
+    if CheckEndPark.Checked
+      then MoveToPos('park', job.park_x, job.park_y, job.park_z, false, fCamActivated)
+      else SendSingleCommandStr('G0 X0 Y0'); // Work Zero
   finally
     SgATC.enabled:= true;
     ExitJobMsg(true);

@@ -657,7 +657,7 @@ begin
           Canvas.Pen.Color:= clWhite;
           Canvas.Pen.Width := 1;
         end;
-        Canvas.lineto(p1.x, p1.y);
+        Canvas.lineto(p1.x, p1.y);                               // draw conture
       end;
       if my_final_entry.closed then begin
         Canvas.lineto(po1.x, po1.y);        // zurück zum ersten Punkt

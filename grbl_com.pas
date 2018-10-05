@@ -150,8 +150,8 @@ var
   grbl_is_connected: boolean;
 
   GrblComm: TextFile;
-//  DebugName: string = 'd:\temp\serial.txt';
-  DebugName: string = '';
+  DebugName: string = 'd:\temp\serial.txt';
+//  DebugName: string = '';
 
 implementation
 

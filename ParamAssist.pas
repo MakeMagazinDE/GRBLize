@@ -110,9 +110,8 @@ begin
     job.material:=           ComboBoxMaterial.ItemIndex;
     job.pens[Pen].diameter:= StrToFloatDef(EditDiameter.Text, 0);
     job.pens[Pen].Blades:=   ComboBoxBlades.ItemIndex+1;
-
-    job.rotation:=        Rotation;
-    job.pens[Pen].speed:= Feed;
+    job.rotation:=           Rotation;
+    job.pens[Pen].speed:=    Feed;
   end;
 end;
 

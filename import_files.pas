@@ -221,8 +221,9 @@ var
   function point_in_bounds(my_point: TIntPoint; my_bounds: Tbounds): Boolean;
   function bounds_in_bounds(my_bounds1, my_bounds2: Tbounds): Boolean;
 
-  procedure hpgl_fileload(my_name:String; fileID, penOverride: Integer);
-  procedure svg_fileload(my_name:String; fileID, penOverride: Integer);
+  procedure  hpgl_fileload(my_name:String; fileID, penOverride: Integer);
+  procedure   dim_fileload(my_name:String; fileID, penOverride: Integer);
+  procedure   svg_fileload(my_name:String; fileID, penOverride: Integer);
   procedure drill_fileload(my_name:String; fileID, penOverride: Integer; useDrillDia: Boolean);
   procedure gcode_fileload(my_name:String; fileID, penOverride: Integer);
 
@@ -230,8 +231,8 @@ var
   procedure item_change(arr_idx: Integer);
 
   function RoundToDigits(zahl: double; n: integer): double;
-  function  FloatToStrDot(my_val: Double):String;
-  function  StrDotToFloat(my_str: String): Double;
+  function FloatToStrDot(my_val: Double):String;
+  function StrDotToFloat(my_str: String): Double;
 
 
 // alle Pfad-Enables des übergebenen Blocks auf enable_status setzen
@@ -738,7 +739,7 @@ var
   i: Integer;
 begin
   i:= length(final_array);
-  if my_block.enable then begin
+//  if my_block.enable then begin
     setlength(final_array, i+1);
     // diese Werte können nachträglich geändert werden:
     final_array[i].shape:= job.pens[my_block.pen].shape;
@@ -758,7 +759,7 @@ begin
     setlength(final_array[i].outlines, 1);
     setlength(final_array[i].outlines[0], 1);
     final_array[i].outlines[0]:= my_block.outline;
-  end;
+//  end;
   add_block_to_final:= i;
 end;
 

@@ -1,12 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
-	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.603,D:\Daten\CNC\Software\GRBLize.touch\GRBLize
-CDC-Cntr.groupproj=D:\Daten\CNC\Software\GRBLize.touch\ProjectGroup1.groupproj</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.574,D:\Daten\CNC\Software\GRBLize.touch\ProjectGroup1.groupproj=D:\Daten\CNC\Software\GRBLize.touch\CNC-Cntr.groupproj</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.602,D:\Daten\CNC\Software\GRBLize.touch\ProjectGroup1.groupproj=D:\Daten\CNC\Software\GRBLize.touch\GRBLize
-CDC-Cntr.groupproj</Transaction>
-  </Transactions>
+	<Transactions/>
 	<Default.Personality>
 		<Projects ActiveProject="D:\Daten\CNC\Software\GRBLize.touch\GRBLize.dproj"/>
 	</Default.Personality>

@@ -30,7 +30,8 @@ uses
   app_Defaults in 'app_Defaults.pas',
   Vcl.Themes,
   Vcl.Styles,
-  ParamAssist in 'ParamAssist.pas' {FormParamAssist};
+  ParamAssist in 'ParamAssist.pas' {FormParamAssist},
+  TouchButton in 'TouchButton.pas';
 
 {$R *.res}
 

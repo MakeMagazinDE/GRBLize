@@ -14,10 +14,10 @@ object FormParamAssist: TFormParamAssist
   PixelsPerInch = 96
   TextHeight = 13
   object LabelDiameter: TLabel
-    Left = 24
+    Left = 18
     Top = 57
-    Width = 111
-    Height = 20
+    Width = 122
+    Height = 24
     Caption = 'Diameter [mm]'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -27,10 +27,10 @@ object FormParamAssist: TFormParamAssist
     ParentFont = False
   end
   object LabelBlades: TLabel
-    Left = 24
+    Left = 18
     Top = 89
-    Width = 52
-    Height = 20
+    Width = 57
+    Height = 24
     Caption = 'Blades'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -40,10 +40,10 @@ object FormParamAssist: TFormParamAssist
     ParentFont = False
   end
   object LabelRotation: TLabel
-    Left = 24
+    Left = 18
     Top = 129
-    Width = 62
-    Height = 20
+    Width = 68
+    Height = 24
     Caption = 'Rotation'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -53,10 +53,10 @@ object FormParamAssist: TFormParamAssist
     ParentFont = False
   end
   object LabelFeed: TLabel
-    Left = 24
+    Left = 18
     Top = 161
-    Width = 37
-    Height = 20
+    Width = 45
+    Height = 24
     Caption = 'Feed'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -66,10 +66,10 @@ object FormParamAssist: TFormParamAssist
     ParentFont = False
   end
   object LabelDeep: TLabel
-    Left = 25
+    Left = 18
     Top = 193
-    Width = 56
-    Height = 20
+    Width = 64
+    Height = 24
     Caption = 'Z/Cycle'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -81,8 +81,8 @@ object FormParamAssist: TFormParamAssist
   object ViewRotation: TLabel
     Left = 140
     Top = 129
-    Width = 77
-    Height = 20
+    Width = 86
+    Height = 24
     Caption = '10000/min'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -94,8 +94,8 @@ object FormParamAssist: TFormParamAssist
   object ViewFeed: TLabel
     Left = 140
     Top = 161
-    Width = 91
-    Height = 20
+    Width = 103
+    Height = 24
     Caption = '400 mm/min'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -107,8 +107,8 @@ object FormParamAssist: TFormParamAssist
   object ViewDeep: TLabel
     Left = 140
     Top = 193
-    Width = 41
-    Height = 20
+    Width = 47
+    Height = 24
     Caption = '5 mm'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -118,10 +118,10 @@ object FormParamAssist: TFormParamAssist
     ParentFont = False
   end
   object LabelMaterial: TLabel
-    Left = 24
+    Left = 18
     Top = 23
-    Width = 60
-    Height = 20
+    Width = 65
+    Height = 24
     Caption = 'Material'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -134,7 +134,7 @@ object FormParamAssist: TFormParamAssist
     Left = 140
     Top = 54
     Width = 213
-    Height = 28
+    Height = 32
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -19
@@ -149,7 +149,7 @@ object FormParamAssist: TFormParamAssist
     Left = 140
     Top = 86
     Width = 213
-    Height = 28
+    Height = 32
     Style = csDropDownList
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -169,7 +169,7 @@ object FormParamAssist: TFormParamAssist
     Left = 140
     Top = 20
     Width = 213
-    Height = 28
+    Height = 32
     Style = csDropDownList
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText

@@ -16,6 +16,7 @@ const
 type
   TTouchButton = class(TBitBtn)
   private
+    { Private-Deklarationen }
   protected
     procedure WMPointerDown(var Msg: TMessage); message WM_POINTERDOWN;
     procedure WMPointerUp(var Msg: TMessage); message WM_POINTERUP;
@@ -51,3 +52,4 @@ begin
 end;
 
 end.
+

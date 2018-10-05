@@ -35,29 +35,31 @@ begin
 end;
 
 procedure TForm1.SetDefaultToPos(s: String; var x,y,z: Double; idx: integer; CAM: boolean);
-var my_btn: Integer;
+var my_btn    : Integer;
+    xt, yt, zt: Double;
 begin
-  if isSimActive then
-    exit;
-  my_btn:= MessageDlg('This will set ' + S + ' postion'
-    + #13 + ' to current machine position'
-    + #13 + 'in GRBLize Application defaults. Proceed?', mtConfirmation, mbOKCancel, 0);
-  if my_btn = mrCancel then
-    exit;
-  x:= grbl_mpos.x; y:= grbl_mpos.y; z:= grbl_mpos.z;
+  if isSimActive then exit;
+
+  xt:= grbl_mpos.x; yt:= grbl_mpos.y; zt:= grbl_mpos.z;
   if CAM then begin
-    x:= x - job.cam_x;
-    y:= y - job.cam_y;
+    xt:= xt + job.cam_x;
+    yt:= yt + job.cam_y;
   end;
 
   // probe if position is on the table
-  if (x < 0) or (x > job.table_x) or
-     (y < 0) or (y > job.table_y) or
-     (z > 0) or (z > job.table_z) then begin
+  if (xt < 0) or (xt > job.table_x) or
+     (yt < 0) or (yt > job.table_y) or
+     (zt > 0) or (zt > job.table_z) then begin
     Form1.Memo1.lines.add('Error: Position outside the table!');
     MessageDlg('Position outside the table.' + #13 + 'NOT SET!', mtError, [mbOK], 0);
+    exit;
   end;
 
+  my_btn:= MessageDlg('Set ' + s + ' postion in application defaults.'
+    + #13 + 'Proceed?', mtConfirmation, mbOKCancel, 0);
+  if my_btn = mrCancel then exit;
+
+  x:=xt; y:=yt; z:=zt;
   with Form1.SgAppDefaults do begin
     Cells[1,idx]  := FormatFloat('0.00', x);
     Cells[1,idx+1]:= FormatFloat('0.00', y);
@@ -209,6 +211,7 @@ begin
     Form1.Memo1.lines.add('Offset cam to point');
     hilite_to(x,y);
   end;
+
   x:= x - job.cam_x;
   y:= y - job.cam_y;
 
@@ -266,6 +269,7 @@ begin
     S:= S + ' Z' + FloatToStrDot(Dist);
 
   if length(S) > 7 then                     // nur wenn sich die Position ändert
+//    grbl_SendWithShortTimeout(S + ' F'+ IntToStr(Feed));
     SendSingleCommandStr(S + ' F'+ IntToStr(Feed));
 
   NeedsRedraw:= true;
@@ -313,6 +317,7 @@ begin
     S:= S + ' Z' + FloatToStrDot(Jog.Z);
 
   if length(S) > 6 then                     // nur wenn sich die Position ändert
+//    grbl_SendWithShortTimeout(S);
     SendSingleCommandStr(S);
 
   NeedsRedraw:= true;
@@ -320,6 +325,8 @@ end;
 
 procedure TForm1.ResetJogging;
 begin
+  if JogDelay = c_JogDelay then            // SingleStep-Jogging not started yet
+    StepJogging;
   JogDelay:= -3;      // disable jogging, wait 2 tick before accept new requests
   JogDirection.X := 0;                                        // reset direction
   JogDirection.Y := 0;
@@ -332,7 +339,7 @@ end;
 procedure TForm1.BitBtnJogMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-//  if isSimActive then exit;
+  if isSimActive then exit;
   if JogDelay <> -1 then exit;                      // new movement only in idle
 
   JogDirection.X := 0; JogDirection.Y := 0; JogDirection.Z := 0;
@@ -372,67 +379,49 @@ procedure TForm1.BtnCntrMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   CntrDelay:= c_CntrDelay;
-  CntrButtomId:= (Sender as TSpeedButton).tag;
+  ActiveCntrButtom:= (Sender as TSpeedButton);
 end;
 
 procedure TForm1.BtnCntrLongEvent;
 begin
-  if fCamActivated then begin
-    case CntrButtomId of
-      0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, defParkX, true);
-      1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, defFix1X, true);
-      2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, defFix2X, true);
-      3: if HilitePoint >= 0 then BtnCamAtPointClick(nil);
-      6: BtnCamAtZeroClick(nil);
-      7: BtnZeroZClick(nil);
-    end;
-  end else begin
-    case CntrButtomId of
-      0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, defParkX, false);
-      1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, defFix1X, false);
-      2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, defFix2X, false);
-      6: begin BtnZeroXClick(nil); BtnZeroYClick(nil) end;
-      7: BtnZeroZClick(nil);
-    end;
+  CntrDelay:= -1;                                       // handling by LongEvent
+  case ActiveCntrButtom.tag of
+    0: SetDefaultToPos('PARK',      job.park_x, job.park_y, job.park_z, defParkX, fCamActivated);
+    1: SetDefaultToPos('FIXTURE 1', job.fix1_x, job.fix1_y, job.fix1_z, defFix1X, fCamActivated);
+    2: SetDefaultToPos('FIXTURE 2', job.fix2_x, job.fix2_y, job.fix2_z, defFix2X, fCamActivated);
+    3: if fCamActivated and (HilitePoint >= 0) then BtnCamAtPointClick(nil);
+    6: if fCamActivated then BtnCamAtZeroClick(nil)
+       else begin
+         BtnZeroXClick(nil); BtnZeroYClick(nil)
+       end;
+    7: BtnZeroZClick(nil);
   end;
-  CntrDelay:= -1;                                                    // all done
+  ActiveCntrButtom.Down:= false;
+  ActiveCntrButtom.Repaint;
 end;
 
 procedure TForm1.BtnCntrMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if CntrDelay = -1 then                             // was handled by LongEvent
-    exit;
+  if CntrDelay = -1 then exit;                       // was handled by LongEvent
+  CntrDelay:= -1;                     // will be handled by short click handling
 
-  if (Button = mbRight) then BtnCntrLongEvent
-  else begin
-    if (Button = mbLeft) then begin
-      if fCamActivated then begin
-        case CntrButtomId of
-          0: MoveToPos('park', job.park_x, job.park_y, job.park_z, false, true);
-          1: MoveToPos('fix1', job.fix1_x, job.fix1_y, job.fix1_z, true,  true);
-          2: MoveToPos('fix2', job.fix2_x, job.fix2_y, job.fix2_z, true,  true);
-          3: BtnMoveCamPointClick(Sender);
-          4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
-          5: BtnZcontactClick(Sender);
-          6: BtnMoveCamZeroClick(Sender);
-        end;
-      end else begin
-        case CntrButtomId of
-          0: MoveToPos('park position', job.park_x, job.park_y, job.park_z, false, false);
-          1: MoveToPos('fix1 position', job.fix1_x, job.fix1_y, job.fix1_z, true,  false);
-          2: MoveToPos('fix2 position', job.fix2_x, job.fix2_y, job.fix2_z, true,  false);
-          3: BtnMoveToolPointClick(Sender);
-          4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
-          5: BtnZcontactClick(Sender);
-          6: BtnMoveXYzeroClick(Sender);
-          7: BtnMoveZzeroClick(Sender);
-          //BtnMoveToolChangeClick(Sender);
-        end;
+  if (Button = mbRight) then BtnCntrLongEvent else
+    if (Button = mbLeft) then
+      case ActiveCntrButtom.tag of
+        0: MoveToPos('park', job.park_x, job.park_y, job.park_z, false, fCamActivated);
+        1: MoveToPos('fix1', job.fix1_x, job.fix1_y, job.fix1_z, true,  fCamActivated);
+        2: MoveToPos('fix2', job.fix2_x, job.fix2_y, job.fix2_z, true,  fCamActivated);
+        3: if fCamActivated
+             then BtnMoveCamPointClick(Sender)
+             else BtnMoveToolPointClick(Sender);
+        4: MoveToPos('job center', WorkZero.X+final_bounds_mm.mid.x, WorkZero.Y+final_bounds_mm.mid.y, 0, false, false);
+        5: BtnZcontactClick(Sender);
+        6: if fCamActivated
+             then BtnMoveCamZeroClick(Sender)
+             else BtnMoveXYzeroClick(Sender);
+        7: BtnMoveZzeroClick(Sender);
       end;
-      CntrDelay:= -1;                                                // all done
-    end;
-  end;
 end;
 
 procedure TForm1.OverlayColorClick(Sender: TObject);
@@ -530,7 +519,9 @@ begin
     CancelG43offset;
     MposOnPartGauge:= probe_z;
     if MposOnPartGauge = 0 then begin
-      ResetToolflags;
+//      ResetToolflags;                    // with fail of probe only Z is invalid
+      WorkZeroZdone:= false;
+      WorkZeroAllDone:= false;
       Memo1.lines.add('WARNING: Z height invalid.');
       PlaySound('SYSTEMHAND', 0, SND_ASYNC);
     end else begin
@@ -544,7 +535,7 @@ begin
       EnableStatus;
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
 {
-      if CheckPartProbeZ.Checked then
+      if job.use_part_probe then
         DoTLCandConfirm(true, 1);  // ist erstes Werkzeug!
 }
     end;
@@ -580,7 +571,7 @@ begin
   SetZero(4);
 // vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
 {
-  if CheckPartProbeZ.Checked then
+  if job.use_part_probe then
     DoTLCandConfirm(true, 1);
 }
   if isSimActive then

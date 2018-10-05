@@ -50,8 +50,8 @@ object Form2: TForm2
     ExplicitHeight = 625
   end
   object Panel1: TPanel
-    Left = 8
-    Top = 8
+    Left = 725
+    Top = 0
     Width = 132
     Height = 177
     Align = alCustom

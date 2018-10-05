@@ -29,7 +29,7 @@ end;
 
 procedure SetPCBmillTool(tool_idx: Integer);
 begin
-  job.pens[tool_idx].diameter:= 3.175;
+  job.pens[tool_idx].diameter:= 0.2;
   job.pens[tool_idx].shape:= contour;
   job.pens[tool_idx].tipdia:= 0.2;
   job.pens[tool_idx].z_end:= 0.2;
@@ -114,6 +114,10 @@ begin
       end else if (my_ext = '.NC') or (my_ext = '.NGC') or (my_ext = '.TAP') or (my_ext = '.CNC') then begin
         Cells[8, i]:= 'GCode'; // Remark
         gcode_fileload(my_path, i-1, -1);
+      end else if (my_ext = '.DIM') then begin             // dimensions for PCB
+        Cells[8, i]:= 'Dimensions'; // Replace Pen
+        Cells[1, i]:= '7';                                        // Replace Pen
+        dim_fileload(my_path, i-1, StrToIntDef(Cells[1, i], 7));
       end else if (my_ext = '.NCF') then begin
         ProveNewGBR(my_path,i);
         Cells[8, i]:= 'PCB top'; // Remark
@@ -122,11 +126,10 @@ begin
         SetPCBmillTool(8);
       end else if (my_ext = '.NCB') then begin
         ProveNewGBR(my_path,i);
-        Cells[8, i]:= 'PCB botm'; // Remark
+        Cells[8, i]:= 'PCB bottom'; // Remark
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);
         SetPCBmillTool(9);
-        job.pens[9].force_closed:= true;
       end else if (my_ext = '.SVG') then begin
         Cells[8, i]:= 'SVG'; // Remark
         svg_fileload(my_path, i-1, -1);
@@ -166,27 +169,13 @@ var i, my_date: integer;
       i, j, k, LengthFinal: integer;
       Section, Name:        string;
       sl_p:                 TstringList;
+      expand:               boolean;
   begin
     Ini := TIniFile.Create(JobSettingsPath);                        // open file
 
 // offen: - Fehlerbehandlung bei Files, wenn etwas nicht gesetzt ist
     try
-{
-  // load defaults first, because size of table influence the settings of blocks
-    s:= sl.indexof('#Defaults');
-    if s >= 0 then begin
-      inc(s);
-      my_row:= 1;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        Form1.SgJobDefaults.Rowcount:= my_row+1;
-        Form1.SgJobDefaults.Rows[my_row].DelimitedText:= sl.Strings[i];
-        inc(my_row);
-      end;
-      Form1.SgJobDefaults.Repaint;
-    end;
-}
+
   // load defaults first, because size of table influence the settings of blocks
       with Form1.SgJobDefaults do begin
         Cells[1, 1]:= Ini.ReadString('Defaults', 'PartSizeX',    Cells[1, 1]);
@@ -201,25 +190,20 @@ var i, my_date: integer;
         Cells[1,10]:= Ini.ReadString('Defaults', 'UseExcellon',  Cells[1,10]);
         Repaint;
       end;
-{
-    s:= sl.indexof('#Files');
-    if s >= 0 then begin
-      inc(s);
-      my_row:= 1;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        Form1.SgFiles.Rows[my_row].DelimitedText:= sl.Strings[i];
-        inc(my_row);
-      end;
-      Form1.SgFiles.Repaint;
-      OpenFilesInGrid;
-    end;
-}
+
       with Form1.SgFiles do begin
-        for i:= 1 to c_numOfFiles do begin                          // files table
+        for i:= 1 to c_numOfFiles do begin                        // files table
           Section:= 'File' + IntToStr(i);
+
           Cells[0,i]:= Ini.ReadString(Section, 'Name',    Cells[0,i]);
+
+          expand:= false;                     // expand relativ path to job file
+          if length(Cells[0,i]) > 0 then expand:= true;
+          if length(Cells[0,i]) > 1 then
+            if Cells[0,i][2]  = ':' then expand:= false;
+          if expand then
+            Cells[0,i]:= ExpandFileName(ExtractFileDir(JobSettingsPath) + '\' + Cells[0,i]);
+
           Cells[1,i]:= Ini.ReadString(Section, 'Replace', Cells[1,i]);
           Cells[2,i]:= Ini.ReadString(Section, 'Rotate',  Cells[2,i]);
           Cells[3,i]:= Ini.ReadString(Section, 'Mirror',  Cells[3,i]);
@@ -234,22 +218,6 @@ var i, my_date: integer;
         OpenFilesInGrid;
       end;
 
-{
-    s:= sl.indexof('#Pens');
-    if s >= 0 then begin
-      inc(s);
-      my_row:= 1;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        Form1.SgPens.Rows[my_row].DelimitedText:= sl.Strings[i];
-        inc(my_row);
-      end;
-      Form1.SgPens.Repaint;
-      PenGridListToJob;
-      apply_pen_change;
-    end;
-}
       with Form1.SgPens do begin
         for i:=1 to c_numOfPens do begin                             // pens table
           Section:= 'Pen' + IntToStr(i-1);
@@ -265,38 +233,13 @@ var i, my_date: integer;
           Cells[10,i]:= Ini.ReadString(Section, 'Zcycle',   Cells[10,i]);
           Cells[11,i]:= Ini.ReadString(Section, 'ATC',      Cells[11,i]);
           Cells[12,i]:= Ini.ReadString(Section, 'Tip',      Cells[12,i]);
-          Cells[13,i]:= Ini.ReadString(Section, 'Blade',    Cells[13,i]);
+          Cells[13,i]:= Ini.ReadString(Section, 'Blades',   Cells[13,i]);
         end;
         Repaint;
         PenGridListToJob;
         apply_pen_change;
       end;
 
-// wird hier nicht nur "Enable" gebraucht? Alles andere sollte doch nicht änderbar sein!!!
-
-{
-    s:= sl.indexof('#Blocks');
-    if s >= 0 then begin
-      inc(s);
-      my_row:= 1;
-      my_len:= length(final_array);
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        if my_row <= my_len then begin
-          Form1.SgBlocks.Rowcount:= my_row+1;
-          Form1.SgBlocks.Rows[my_row].DelimitedText:= sl.Strings[i];
-          for j:= 0 to high(ShapeArray) do
-            if Form1.SgBlocks.Cells[4,my_row] = ShapeArray[ord(j)] then
-              final_array[my_row-1].shape:= Tshape(j);
-          final_array[my_row-1].enable:= Form1.SgBlocks.Cells[2,my_row] = 'ON';
-          enable_all_millings(final_array[my_row-1], final_array[my_row-1].enable);
-          inc(my_row);
-        end;
-      end;
-      Form1.SgBlocks.Repaint;
-    end;
-}
       LengthFinal:= length(final_array);                               // Blocks
       i:= 1; Name:= 'Block1';
       while Ini.ValueExists('Blocks',Name) and (i<=LengthFinal) do begin
@@ -310,29 +253,6 @@ var i, my_date: integer;
         inc(i); Name:= 'Block' + IntToStr(i);
       end;
       Form1.SgBlocks.Repaint;
-
-{
-    s:= sl.indexof('#PathEnables');
-    if s >= 0 then begin
-      sl_p:= Tstringlist.Create;
-      inc(s);
-      j:= 0;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        sl_p.Clear;
-        sl_p.CommaText:= sl.strings[i];
-        if j <= high(final_array) then
-          if (sl_p.Count-1) <= high(final_array[j].milling_enables) then begin
-            for k := 0 to sl_p.Count-1 do
-              if (j <= high(final_array)) and (k <= high(final_array[j].milling_enables)) then
-                final_array[j].milling_enables[k]:= sl_p[k] = '1';
-            inc(j);
-          end;
-      end;
-      sl_p.Free;
-    end;
-}
 
       i:= 1; Name:= 'Path1';                                      // PathEnables
       sl_p:= Tstringlist.Create;
@@ -350,18 +270,7 @@ var i, my_date: integer;
         inc(i); Name:= 'Path' + IntToStr(i);
       end;
       sl_p.Free;
-{
-    s:= sl.indexof('#Comment');
-    if s >= 0 then begin
-      inc(s);
-      Form1.MemoComment.Clear;
-      for i := s to sl.Count-1 do begin
-        if AnsiContainsStr(sl.strings[i],'#') then
-          break;
-        Form1.MemoComment.Lines.Add(sl.Strings[i]);
-      end;
-    end;
-}
+
       Form1.MemoComment.Clear;
       i:= 1; Name:= 'Line1';
       while Ini.ValueExists('Comment',Name) do begin
@@ -423,12 +332,13 @@ begin
   try
     for i:= 1 to Form1.SgFiles.Rowcount-1 do begin                // files table
       Section:= 'File' + IntToStr(i);
-      my_filename:= Form1.SgFiles.Cells[0,i];
+                                   // save the relativ file name to the job file
+      my_filename:= ExtractRelativePath(JobSettingsPath,Form1.SgFiles.Cells[0,i]);
       if (length(my_filename) <= 3) then continue;                 // line empty
       if FileExists(my_filename)                             // save change date
         then my_date:= FileAge(Form1.SgFiles.Cells[0,i])
         else my_date:= 0;
-      Ini.WriteString(Section, 'Name',    Form1.SgFiles.Cells[0,i]);
+      Ini.WriteString(Section, 'Name',    my_filename);
       Ini.WriteString(Section, 'Date',    IntToStr(my_date));
       Ini.WriteString(Section, 'Replace', Form1.SgFiles.Cells[1,i]);
       Ini.WriteString(Section, 'Rotate',  Form1.SgFiles.Cells[2,i]);

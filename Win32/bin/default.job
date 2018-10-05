@@ -1,3 +1,14 @@
+[File1]
+Name=D:\Daten\CNC\Software\GRBLize.touch\Win32\bin\TestDaten\Linie100mm.svg
+Date=1249536625
+Replace=-1
+Rotate=0°
+Mirror=OFF
+Xofs=0
+Yofs=0
+Scale=710
+User1= 
+Remark=SVG
 [Pen0]
 Color=0
 Enable=OFF
@@ -14,17 +25,17 @@ Tip=0
 Blades=2
 [Pen1]
 Color=16512
-Enable=OFF
+Enable=ON
 Diameter=2,00
 Z=2,0
-Feed=400
+Feed=2000
 Xofs=00,0
 Yofs=00,0
 Scale=100,0
 Shape=0
-Zcycle=1,0
-ATC=0
-Tip=0
+Zcycle=3,0
+ATC=1
+Tip=4
 Blades=2
 [Pen2]
 Color=255
@@ -433,8 +444,8 @@ ATC=0
 Tip=6
 Blades=2
 [Defaults]
-PartSizeX=250
-PartSizeY=150
+PartSizeX=800
+PartSizeY=600
 PartSizeZ=5
 Material=Weichholz
 ZFeedMilling=100
@@ -444,4 +455,6 @@ ZGauge=10
 OptDrillPath=ON
 UseExcellon=ON
 [Blocks]
-Block1=1,6,ON,"2,5",Contour,"[10] "
+Block1=1,1,ON,"2,0",Contour,"-2- "
+[PathEnable]
+Path1=1

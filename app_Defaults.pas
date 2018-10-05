@@ -166,6 +166,7 @@ begin
     job.pens[j].tooltip:= StrToIntDef(Cells[12,i],0);
     job.pens[j].atc:= StrToIntDef(Cells[11,i],0);
     job.pens[j].diameter:= StrToFloatDef(Cells[3,i],1);
+    job.pens[j].blades:= StrToIntDef(Cells[13,i],0);
     CalcTipDia;
   end;
   NeedsRedraw:= true;
@@ -186,7 +187,7 @@ begin
       Cells[2,i+1]:= 'OFF';
     // Color und Enable in DrawCell erledigt!
     Cells[3,i+1]:=  FormatFloat('0.00',job.pens[i].diameter);
-    Cells[4,i+1]:=  FormatFloat('0.0',job.pens[i].z_end);
+    Cells[4,i+1]:=  FormatFloat('0.00',job.pens[i].z_end);
     Cells[5,i+1]:=  IntToStr(job.pens[i].speed);
     Cells[6,i+1]:=  FormatFloat('00.0',job.pens[i].offset.x / c_hpgl_scale);
     Cells[7,i+1]:=  FormatFloat('00.0',job.pens[i].offset.y / c_hpgl_scale);
@@ -268,8 +269,8 @@ begin
     pens[5].color:=cllime;
     pens[6].color:=$00FF8000;
     pens[7].color:=clfuchsia;
-    pens[8].color:= $A2DCA2;
-    pens[9].color:= $DCA2A2;
+    pens[8].color:= $00FFFF00;   // old $A2DCA2
+    pens[9].color:= $00DCA2A2;
     pens[10].color:=clsilver;
     pens[11].color:= 11254230;
     pens[12].color:=11579647;
@@ -299,7 +300,7 @@ begin
     Rows[ 1].DelimitedText:='"Part Size X",250';
     Rows[ 2].DelimitedText:='"Part Size Y",150';
     Rows[ 3].DelimitedText:='"Part Size Z",5';
-    Rows[ 4].DelimitedText:='"Material",'+string(Materials[5].Name);        // Weichholz
+    Rows[ 4].DelimitedText:='"Material",'+string(Materials[5].Name);// Weichholz
     Rows[ 5].DelimitedText:='"Z Feed for Milling",100';
     Rows[ 6].DelimitedText:='"Z Lift above Part",10';
     Rows[ 7].DelimitedText:='"Z Up above Part",5';
@@ -402,7 +403,6 @@ begin
     job.probe_z:=                   get_AppDefaults_float(defProbeZ);
 
     job.use_part_probe:=            Cells[1,defUsePartProbe] = 'ON';
-    Form1.CheckPartProbeZ.Checked:= job.use_part_probe;
 
     job.probe_z_gauge:=             get_AppDefaults_float(defProbeZgauge);
 
@@ -434,7 +434,7 @@ end;
 
 Procedure LoadIniFile;
 var IniName: String;
-    Ini:     TIniFile;
+    Ini:     TMemIniFile;
 
   procedure ReadDef(Field:integer; Group, Key: string);
   begin
@@ -446,7 +446,7 @@ begin
   InitAppdefaults;                                         // set default values
   IniName:= ExtractFilePath(Application.exename) + 'GRBLize.ini';
   if FileExists(IniName) then begin
-    Ini := TIniFile.Create(ExtractFilePath(Application.exename) + 'GRBLize.ini');
+    Ini := TMemIniFile.Create(ExtractFilePath(Application.exename) + 'GRBLize.ini');
     try
       ReadDef(defToolchangePause,    'ToolChange',  'EnableInJob');
       ReadDef(defToolchangeX,        'ToolChange',  'PosXabsolute');
@@ -503,9 +503,10 @@ begin
 end;
 
 procedure SaveIniFile;
-var Ini: TIniFile;
+var Ini: TMemIniFile;
 begin
-  Ini := TIniFile.Create(ExtractFilePath(Application.exename) + 'GRBLize.ini');
+  Ini := TMemIniFile.Create(ExtractFilePath(Application.exename) + 'GRBLize.ini');
+  Ini.AutoSave:= true;
   try
     with Form1.SgAppDefaults do begin
       Ini.WriteString('ToolChange',  'EnableInJob',          Cells[1, defToolchangePause]);

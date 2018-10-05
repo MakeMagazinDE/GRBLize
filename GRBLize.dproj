@@ -144,6 +144,7 @@
             <Form>FormParamAssist</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="TouchButton.pas"/>
         <None Include="drill_import.inc">
             <ContainerId>File</ContainerId>
         </None>
