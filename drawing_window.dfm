@@ -55,6 +55,7 @@ object Form2: TForm2
     Width = 132
     Height = 177
     Align = alCustom
+    Anchors = [akTop, akRight]
     TabOrder = 0
     object Label1: TLabel
       Left = 24

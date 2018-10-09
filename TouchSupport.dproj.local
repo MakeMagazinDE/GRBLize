@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.419,D:\Daten\CNC\Software\TouchSupport\TouchSupport.dproj=D:\syncplicity\blnkasf0\Documents\Embarcadero\Studio\Projekte\Package1.dproj</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.116,=D:\Daten\CNC\Software\TouchSupport\TouchButton.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.371,=vcl.dcp</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.762,=rtl.dcp</Transaction>
-  </Transactions>
-</BorlandProject>
