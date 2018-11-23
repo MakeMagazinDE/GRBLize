@@ -213,9 +213,9 @@ var
   my_shape: Tshape;
   my_row, my_col, my_top: integer;
 begin
+  if final_array = nil then exit;
   SgBlocks.MouseToCell( X,Y, my_col, my_row );
-  if (my_row < 1) or (my_col < 1) then
-    exit;
+  if (my_row < 1) or (my_col < 1) then exit;
   SgBlocks.Col := my_col;
   SgBlocks.Row := my_row;
   with SgBlocks do begin

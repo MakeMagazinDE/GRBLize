@@ -313,8 +313,7 @@ var Scale  : double;                          // scale between file and internal
   end;
 
   procedure dim_import_cmd(line: String; fileID, penOverride: Integer);
-  var X, Y: Double;
-      i: Integer;
+  var i: Integer;
       xx, yy, dd: double;
       valid: boolean;
       dummy_str: String;
@@ -923,13 +922,10 @@ begin
     if ParseLine(pw, PLine, val, s) <> p_number then exit;
   P.P.X := val;
 
-  P.P.Y := 0;
+  P.P.Y := P0.P.Y;                                          // Y does not change
 
   // relative zu absoluten Koordinaten konvertieren
-  if (cmd > 'Z') then begin
-    P.P.X := P0.P.X + P.P.X;
-    P.P.Y := P0.P.Y + P.P.Y
-  end;
+  if (cmd > 'Z') then P.P.X := P0.P.X + P.P.X;
 
   AddPoint(P.P);
 
@@ -946,13 +942,10 @@ begin
     if ParseLine(pw, PLine, val, s) <> p_number then exit;
   P.P.Y := val;
 
-  P.P.X := 0;
+  P.P.X := P0.P.X;                                          // Y does not change
 
   // relative zu absoluten Koordinaten konvertieren
-  if (cmd > 'Z') then begin
-    P.P.X := P0.P.X + P.P.X;
-    P.P.Y := P0.P.Y + P.P.Y
-  end;
+  if (cmd > 'Z') then P.P.Y := P0.P.Y + P.P.Y;
 
   AddPoint(P.P);
 
@@ -1648,8 +1641,6 @@ begin
   LastPoint.x:= 0;
   LastPoint.y:= 0;
   FileParamArray[fileID].valid := true;
-//
-//  blockArrays[fileID, CurrentBlockID].closed:= false;
   file_rotate_mirror(fileID, true);                               // Auto-close!
   block_scale_file(fileID);
 end;

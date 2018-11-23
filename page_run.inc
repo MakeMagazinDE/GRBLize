@@ -352,7 +352,8 @@ function isToolDifferent(pen1, pen2: Integer): Boolean;
 begin
   result:= pen1 <> pen2;
   if (CompareValue(job.pens[pen1].diameter, job.pens[pen2].diameter, 0.05) = 0)
-    and (job.pens[pen1].tooltip = job.pens[pen2].tooltip) then
+    and (job.pens[pen1].tooltip = job.pens[pen2].tooltip)
+    and (job.pens[pen1].blades  = job.pens[pen2].blades)  then
       result:= false;
 end;
 

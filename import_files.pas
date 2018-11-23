@@ -122,11 +122,15 @@ type
     penoverride: Integer;
     rotate: Trotate;
     mirror: Boolean;
-    scale: Double;
     isdrillfile:Boolean;
     bounds: Tbounds;
     offset: TintPoint;
-    user1: Double;
+    scale:  TFloatPoint;
+    scale_y: Double;
+    gbr_inflate: Double;                                   // used for PCBs only
+    gbr_name:    string;                                   // used for PCBs only
+    gbr_mirror:  boolean;                                  // used for PCBs only
+
   end;
 
   Tblock_record = record
@@ -473,12 +477,70 @@ procedure file_rotate_mirror(fileID: Integer; auto_close_polygons: boolean);
 // rotieren und spiegeln
 // Verwendet beim Import gesetzte File-Bounds
 // muss gleich nach Import geschehen
+var FParam:                  Tfile_param;
+    b, p, BlockLen, PathLen{, nx, ny}:                    integer;
+    FirstPt, LastPt, Pt{, Offset}:                      TintPoint;
+{    Scale: TFloatPoint;}
+    a, c: double;
+begin
+  FParam:= FileParamArray[fileID];
+  if not FParam.valid then exit;                                 // entry unused
+
+  BlockLen:= length(blockArrays[fileID]);
+  if BlockLen = 0 then exit;                           // keine Blöcke enthalten
+
+  for b:= 0 to BlockLen - 1 do begin
+                                                         // handle closed pathes
+    PathLen:= length(blockArrays[fileID, b].outline_raw);
+    if PathLen = 0 then continue;                       // keine Pfade enthalten
+
+  // letzten Eintrag entfernen, falls gleich erstem Punkt, dafür "closed" setzen
+    FirstPt:= blockArrays[fileID,b].outline_raw[0];
+    LastPt:=  blockArrays[fileID,b].outline_raw[PathLen-1];
+    if (FirstPt.X = LastPt.X) and (FirstPt.Y = LastPt.Y) and
+       (PathLen > 1) and auto_close_polygons then begin
+      dec(PathLen);
+      blockArrays[fileID,b].closed:= true;
+      setlength(blockArrays[fileID,b].outline_raw, PathLen);
+      setlength(blockArrays[fileID,b].outline, PathLen);
+    end;
+
+    for p:= 0 to PathLen - 1 do begin               // rework all points of path
+      Pt:= blockArrays[fileID, b].outline_raw[p];
+
+      if FParam.rotate <> deg0 then begin                    // rotation of file
+        c:=sqrt(Pt.X*Pt.X + Pt.Y*Pt.Y);                           // hypothenuse
+        a:=arccos(Pt.X/c);                                              // angle
+        case FParam.rotate of
+          deg90:  a:=a+pi/2;
+          deg180: a:=a+pi;
+          deg270: a:=a+3*pi/2;
+        end;
+        Pt.X:=round(c*cos(a));
+        Pt.Y:=round(c*sin(a));
+      end;
+
+      if FParam.mirror then Pt.X:= -Pt.X;                   // mirroring of file
+                                                  // skaling and offsets of file
+      Pt.X:= FParam.offset.X + (round(Pt.X * 10 * FParam.scale.X) div 1000);
+      Pt.Y:= FParam.offset.y + (round(Pt.Y * 10 * FParam.scale.Y) div 1000);
+
+      blockArrays[fileID, b].outline_raw[p]:= Pt;
+    end;
+  end;
+end;
+
+{procedure file_rotate_mirror(fileID: Integer; auto_close_polygons: boolean);
+// Jeden Block prüfen, ob geschlossener Pfad; danach outline_raw-Pfade
+// rotieren und spiegeln
+// Verwendet beim Import gesetzte File-Bounds
+// muss gleich nach Import geschehen
 var b,p, my_pathlen, my_blocklen: Integer;
-  nx, ny: Integer;
-  my_file_entry: Tfile_param;
+  nx, ny:                         Integer;
+  my_file_entry:                  Tfile_param;
   my_pt, my_first_pt, my_last_pt: TIntPoint;
-  my_offset: TintPoint;
-  my_scale: Double;
+  my_offset:                      TintPoint;
+  my_scale_x, my_scale_y:         Double;
 
 begin
   my_file_entry:= FileParamArray[fileID];
@@ -503,8 +565,10 @@ begin
       setlength(blockArrays[fileID,b].outline, my_pathlen);
     end;// else
 //      blockArrays[fileID,b].closed:= false;
+
     my_offset:= FileParamArray[fileID].offset;
-    my_scale:= FileParamArray[fileID].scale;
+    my_scale_x:= FileParamArray[fileID].scale_x;
+    my_scale_y:= FileParamArray[fileID].scale_y;
     if FileParamArray[fileID].mirror then
       my_offset.X:= -my_offset.X;
     case my_file_entry.rotate of
@@ -527,8 +591,8 @@ begin
       my_pt:= blockArrays[fileID, b].outline_raw[p];
 
       // Skalierung und Offsets des Files
-      my_pt.X:= my_offset.X + (round(my_pt.X * 10 * my_scale) div 1000);
-      my_pt.Y:= my_offset.y + (round(my_pt.Y * 10 * my_scale) div 1000);
+      my_pt.X:= my_offset.X + (round(my_pt.X * 10 * my_scale_x) div 1000);
+      my_pt.Y:= my_offset.y + (round(my_pt.Y * 10 * my_scale_y) div 1000);
 
       nx:= my_file_entry.bounds.min.x + my_file_entry.bounds.max.x - my_pt.X;
       ny:= my_file_entry.bounds.min.y + my_file_entry.bounds.max.y - my_pt.Y;
@@ -577,7 +641,7 @@ begin
     end;      // path
   end;        // blocks
 end;
-
+}
 procedure block_scale(fileID, blockID: Integer);
 // Block mit Pen-Skalierung versehen
 var i, my_pen, my_len: Integer;

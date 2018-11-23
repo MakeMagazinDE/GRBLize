@@ -36,15 +36,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.1637467"
-     inkscape:cx="-1.8462106"
-     inkscape:cy="182.48168"
+     inkscape:cx="415.47025"
+     inkscape:cy="289.07555"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1853"
      inkscape:window-height="998"
-     inkscape:window-x="25"
-     inkscape:window-y="28"
+     inkscape:window-x="2403"
+     inkscape:window-y="113"
      inkscape:window-maximized="0" />
   <metadata
      id="metadata7">
@@ -182,5 +182,28 @@
        d="M 115.79718,857.81261 A 70.688974,35.255926 40.345904 0 1 39.096861,838.91878 70.688974,35.255926 40.345904 0 1 8.04595,766.28435 a 70.688974,35.255926 40.345904 0 1 76.700309,18.89384 70.688974,35.255926 40.345904 0 1 31.050921,72.63442 z"
        id="path4136"
        inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffff00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 270,750 h 70"
+       id="path4155"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffff00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 340,750 v -70"
+       id="path4155-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffff00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 340,680 H 270"
+       id="path4155-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffff00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 270,680 V 750"
+       id="path4155-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>

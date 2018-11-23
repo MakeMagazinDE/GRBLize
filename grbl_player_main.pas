@@ -11,7 +11,8 @@ uses
   VFrames, ExtDlgs, XPMan, CheckLst, drawing_window, glscene_view, GLColor,
   ValEdit, System.ImageList, System.Actions, FTDItypes, deviceselect, grbl_com,
   Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes, app_defaults, DateUtils,
-  TouchButton, Forms, GLScene, GLFullScreenViewer, System.IniFiles, SysUtils;
+  TouchButton, Forms, GLScene, GLFullScreenViewer, System.IniFiles, SysUtils,
+  Vcl.Touch.Keyboard;
 
 const
   c_ProgNameStr: String = 'GRBLize ';
@@ -91,10 +92,8 @@ type
     SgGrblSettings: TStringGrid;
     Bevel3: TBevel;
     Label11: TLabel;
-    BtnSendGrblSettings: TBitBtn;
     ColorDialog1: TColorDialog;
     BtnRunJob: TSpeedButton;
-    BtnRefreshGrblSettings: TBitBtn;
     CheckEndPark: TCheckBox;
     MposX: TLabel;
     MposY: TLabel;
@@ -316,42 +315,38 @@ type
     ToolButton8: TToolButton;
     ToolButton10: TToolButton;
     ToolButton11: TToolButton;
+    TouchKeyboard: TTouchKeyboard;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
-    procedure SgPensMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure PageControl1Change(Sender: TObject);
     procedure SgBlocksClick(Sender: TObject);
     procedure SgBlocksMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
-    procedure SgFilesMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-    procedure SgJobDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
-//    procedure ShowSpindleCam1Click(Sender: TObject);
     procedure Show3DPreview1Click(Sender: TObject);
     procedure ShowDrawing1Click(Sender: TObject);
     procedure SgJobDefaultsExit(Sender: TObject);
     procedure SgJobDefaultsKeyPress(Sender: TObject; var Key: Char);
-    procedure SgJobDefaultsClick(Sender: TObject);
     procedure SgPensKeyPress(Sender: TObject; var Key: Char);
     procedure SgFilesKeyPress(Sender: TObject; var Key: Char);
     procedure ComboBox1Exit(Sender: TObject);
     procedure SgBlocksDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
+    procedure SgEditorOn(Sg: TStringGrid; ACol,ARow:integer; NumMode,SideWise:boolean);
+    procedure SgEditorOff(Sg: TStringGrid);
     procedure BtnMoveToolChangeClick(Sender: TObject);
-//    procedure BtnMoveParkClick(Sender: TObject);
     procedure BtnMoveXYzeroClick(Sender: TObject);
     procedure SgGrblSettingsDrawCell(Sender: TObject; ACol,
       ARow: Integer; Rect: TRect; State: TGridDrawState);
-    procedure BtnRefreshGrblSettingsClick(Sender: TObject);
+    procedure SgGrblSettingsExit(Sender: TObject);
+    procedure SgGrblSettingsKeyPress(Sender: TObject; var Key: Char);
+    procedure SgGrblSettingsSelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
     procedure SgJobDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
     procedure BtnHomeCycleClick(Sender: TObject);
     procedure BtnZeroZClick(Sender: TObject);
     procedure BtnZeroYClick(Sender: TObject);
     procedure BtnZeroXClick(Sender: TObject);
-    procedure BtnSendGrblSettingsClick(Sender: TObject);
     procedure HelpAbout1Execute(Sender: TObject);
     procedure SgFilesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -382,21 +377,13 @@ type
     procedure TimerBlinkTimer(Sender: TObject);
     procedure PanelAlarmClick(Sender: TObject);
     procedure SgAppDefaultsKeyPress(Sender: TObject; var Key: Char);
-    procedure SgAppDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
     procedure SgAppDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
-    procedure SgAppDefaultsClick(Sender: TObject);
     procedure SgAppDefaultsExit(Sender: TObject);
     procedure BtnZcontactClick(Sender: TObject);
     procedure CheckTLCprobeClick(Sender: TObject);
     procedure BtnRescanClick(Sender: TObject);
-//    procedure BtnMoveFix2Click(Sender: TObject);
-//    procedure BtnMoveFix1Click(Sender: TObject);
-//    procedure BtnSetFix1Click(Sender: TObject);
-//    procedure BtnSetFix2Click(Sender: TObject);
     procedure BtnZeroAllClick(Sender: TObject);
-//    procedure BtnSetParkClick(Sender: TObject);
     procedure GerberImport1Click(Sender: TObject);
     procedure sgATCDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect;
       State: TGridDrawState);
@@ -418,7 +405,6 @@ type
       Shift: TShiftState; X, Y: Integer);
     procedure pu_ProbetoolLengthCompClick(Sender: TObject);
     procedure BtnRunToolClick(Sender: TObject);
-//    procedure BtnMoveMillCenterClick(Sender: TObject);
     procedure BtnMoveZzeroClick(Sender: TObject);
     procedure mt_Click(Sender: TObject);
     procedure ms_Click(Sender: TObject);
@@ -446,7 +432,6 @@ type
     procedure UpDown3ChangingEx(Sender: TObject; var AllowChange: Boolean;
       NewValue: Integer; Direction: TUpDownDirection);
     procedure SgFilesExit(Sender: TObject);
-    procedure SgFilesClick(Sender: TObject);
     procedure BtnReloadAllClick(Sender: TObject);
     procedure BtnZeroCClick(Sender: TObject);
 
@@ -476,6 +461,20 @@ type
     procedure SetToolInSpindle(Tool: integer);
     procedure BtnProbeZAssistentClick(Sender: TObject);
     procedure PopupMenuMaterialClick(Sender: TObject);
+    procedure MemoCommentClick(Sender: TObject);
+    procedure MemoCommentExit(Sender: TObject);
+    procedure SgPensExit(Sender: TObject);
+    procedure SgJobDefaultsSelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
+    procedure SgAppDefaultsSelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
+    procedure SgFilesSelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
+    procedure SgPensSelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
+    procedure SgPensDblClick(Sender: TObject);
+    procedure SgPensContextPopup(Sender: TObject; MousePos: TPoint;
+      var Handled: Boolean);
 
   private
     { Private declarations }
@@ -484,8 +483,6 @@ type
     JogDelay      : integer;
     CntrDelay     : integer;
     ActiveCntrButtom : TSpeedButton;
-    //    MouseDownStart: int64;
-    SgPenT0       : integer;
 
   public
     { Public declarations }
@@ -987,13 +984,13 @@ begin
       BtnHomeCycle.Font.Color:= cllime
     else
       BtnHomeCycle.Font.Color:= clgreen;
-    if grbl_is_connected then begin
-      BtnSendGrblSettings.Enabled:= true;
-      BtnRefreshGrblSettings.Enabled:= true;
-    end else begin
-      BtnSendGrblSettings.Enabled:= false;
-      BtnRefreshGrblSettings.Enabled:= false;
-    end;
+//    if grbl_is_connected then begin
+//      BtnSendGrblSettings.Enabled:= true;
+//      BtnRefreshGrblSettings.Enabled:= true;
+//    end else begin
+//      BtnSendGrblSettings.Enabled:= false;
+//      BtnRefreshGrblSettings.Enabled:= false;
+//    end;
   end;
 end;
 
@@ -1161,6 +1158,9 @@ begin
   ResetToolflags;
   Form1.Memo1.lines.add('');
   ResetSimulation;
+
+  Form1.SgFiles.EditorMode:= false;
+
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
@@ -1170,7 +1170,7 @@ var
   i:        integer;
   mi:       TMenuItem;
 begin
-  StopWatch:= TStopWatch.Create() ;
+  StopWatch:= TStopWatch.Create();
   Width:= Constraints.MaxWidth;
   grbl_sendlist:= TStringList.create;
   grbl_is_connected:= false;
@@ -1329,15 +1329,16 @@ begin
 
   Combobox1.Parent := SgFiles;
   ComboBox1.Visible := False;
-  SgFiles.Row:=1;
-  SgFiles.Col:=4;
+
+  SgEditorOff(SgFiles);
+  SgEditorOff(SgJobDefaults);
+  SgEditorOff(SgPens);
+  SgEditorOff(SgGrblSettings);
+  SgEditorOff(SgAppDefaults);
 
   LoadIniFile;
 
   BtnZcontact.Enabled:= job.use_part_probe;
-
-  SgGrblSettings.FixedCols:= 1;
-  SgAppdefaults.FixedCols:= 1;
 
   BringToFront;
   Memo1.lines.add(''+ SetUpFTDI);
@@ -1423,7 +1424,79 @@ begin
     Form4.Close;
   if IsFormOpen('Form2') then
     Form2.Close;
+end;
 
+// #############################################################################
+// #### TouchKeyBoard                                                        ###
+// #############################################################################
+
+procedure TForm1.SgEditorOn(Sg: TStringGrid; ACol,ARow:integer; NumMode,SideWise:boolean);
+var X0, Y0, X1, Y1: integer;
+    P2:                    TPoint;
+begin
+  Sg.Options:= Sg.Options + [goEditing, goAlwaysShowEditor];  // activate editor
+
+  with Sg do begin
+    P2:= ClientToParent(CellRect(ACol,ARow).TopLeft,Form1);        // start menu
+    X0:= P2.X; Y0:= P2.Y;
+    X1:= X0 + ColWidths[ACol]+1;
+    Y1:= Y0 + RowHeights[ARow]+1;
+  end;
+                                                      // activate Touchkeyboard?
+  if not get_AppDefaults_bool(defTouchKeyboard) then exit;
+
+  if NumMode then begin                             // NumPad or normal keyboard
+    TouchKeyboard.Layout:='NumPad';
+    TouchKeyboard.Width:=400;
+    if sidewise then begin
+      if X0 > TouchKeyboard.Width then TouchKeyboard.Left:= X0 - TouchKeyboard.Width
+                                  else TouchKeyboard.Left:= X1;
+      if Y0 < 100 then TouchKeyboard.Top:=0 else                  // oberer Rand
+        if Form1.Height > Y0 - 100 + 30 + TouchKeyboard.Height
+          then TouchKeyboard.Top:=Y0-100                               // middle
+          else TouchKeyboard.Top:=Form1.Height-30-TouchKeyboard.Height;// buttom
+    end else begin
+      if X0 > 100 then TouchKeyboard.Left:=x0-100             // best for NumPad
+                  else TouchKeyboard.Left:=0;
+      if Form1.Width - TouchKeyboard.Width < TouchKeyboard.Left then
+        TouchKeyboard.Left:=Form1.Width - TouchKeyboard.Width;
+                             // 18: height of windows title,
+                            //last line not usable because TopRow ís not set yet
+      if Form1.Height - 16 - Sg.RowHeights[1]+1 - Y1 > TouchKeyboard.Height
+        then TouchKeyboard.Top:=y1
+        else TouchKeyboard.Top:=y0-TouchKeyboard.Height;
+    end;
+  end else begin
+    TouchKeyboard.Layout:='Standard';
+    TouchKeyboard.Width:=800;
+    if X0 > 400 then TouchKeyboard.Left:=X0-400      // best for normal keyboard
+                else TouchKeyboard.Left:=0;
+    if Form1.Width - TouchKeyboard.Width < TouchKeyboard.Left then
+      TouchKeyboard.Left:=Form1.Width - TouchKeyboard.Width;
+                             // 18: height of windows title,
+                            //last line not usable because TopRow ís not set yet
+    if Form1.Height - 16 - Sg.RowHeights[1]+1 - Y1 > TouchKeyboard.Height
+      then TouchKeyboard.Top:=y1
+      else TouchKeyboard.Top:=y0-TouchKeyboard.Height;
+  end;
+                                                               // right outside?
+  if Form1.Width - TouchKeyboard.Width < TouchKeyboard.Left then
+    TouchKeyboard.Left:=Form1.Width - TouchKeyboard.Width;
+
+  TouchKeyboard.Show;
+end;
+
+procedure TForm1.SgEditorOff(Sg: TStringGrid);
+var GR:TGridRect;
+begin
+  Sg.Options:= Sg.Options - [goEditing,goAlwaysShowEditor];   // disable editing
+  Sg.EditorMode:= false;                         // switch of the current editor
+  with GR do begin                             // set focus outside visible area
+    GR.Left:=Sg.ColCount-1; GR.Right:= Sg.ColCount-1;
+    GR.Top:= Sg.Row;        GR.Bottom:=Sg.Row;
+  end;
+  Sg.Selection:= GR;
+  TouchKeyboard.Hide;                                     // deactivate touchpad
 end;
 
 // #############################################################################
@@ -1437,13 +1510,13 @@ const mDrill  = 1;
       fTop    = 2;
       fBtm    = 3;
       fDim    = 4;
-var S, Base: AnsiString;
+var S, Base: string;
     i:       integer;
     mode:    integer;
-    DrlName, DimName, TopName, BtmName: AnsiString;
+    DrlName, DimName, TopName, BtmName: string;
     dx, dy:  double;
 
-  procedure CheckFile(Ext:string; m:integer; var Name:AnsiString);
+  procedure CheckFile(Ext:string; m:integer; var Name:string);
   begin
     if fileexists(Base + Ext) then begin
       mode:= mode or m;
@@ -1460,11 +1533,12 @@ begin
   S   := Uppercase(Base);         // delete file extentions and other extentions
   i:= pos('.',S);       if i > 0 then delete(Base,i,100);
   i:= pos('_BOTTOM',S); if i > 0 then delete(Base,i,100);
-  i:= pos('_TOP',S);    if i > 0 then delete(Base,i,100);
   i:= pos('_BACK',S);   if i > 0 then delete(Base,i,100);
+  i:= pos('_BTM',S);    if i > 0 then delete(Base,i,100);
+  i:= pos('_16',S);     if i > 0 then delete(Base,i,100);
+  i:= pos('_TOP',S);    if i > 0 then delete(Base,i,100);
   i:= pos('_FRONT',S);  if i > 0 then delete(Base,i,100);
   i:= pos('_01',S);     if i > 0 then delete(Base,i,100);
-  i:= pos('_16',S);     if i > 0 then delete(Base,i,100);
   Base:= ExtractFileDir(GerberImportDialog.FileName) + '\' + Base;   // add path
 
   mode:= 0;                                               // analyse type of PCB
@@ -1486,12 +1560,11 @@ begin
     dim_fileload(DimName, fDim-1, 7);
 
     if (mode and mTop <> 0) then begin
-      GerberFileName:= TopName;                              // LOAD GERBER DATA
-      ConvertedFileName:= TopName;
-      delete(ConvertedFileName,length(ConvertedFileName)-2,3);
-      ConvertedFileName:= ConvertedFileName + 'ncb';
+
+      GerberFileName:= TopName;                   // start Gerber convert dialog
+      ConvertedFileName:= ChangeFileExt(TopName,'.ncf');
       GerberFileNumber:= fTop;
-      FormGerber.ShowModal;                        // Gerber data will be loaded
+      FormGerber.ShowModal;
 
       // bei Konvertierung des Fräsepfades vergrößert sich die PCB, da Werkstücke
       // nicht im negativen Bereich liegen dürfen, muss das ausgeglichen werden
@@ -1509,12 +1582,11 @@ begin
     end;
 
     if (mode and mBottom <> 0) then begin
-      GerberFileName:= BtmName;                              // LOAD GERBER DATA
-      ConvertedFileName:= BtmName;
-      delete(ConvertedFileName,length(ConvertedFileName)-2,3);
-      ConvertedFileName:= ConvertedFileName + 'ncb';
+
+      GerberFileName:= BtmName;                   // start Gerber convert dialog
+      ConvertedFileName:= ChangeFileExt(BtmName,'.ncb');
       GerberFileNumber:= fBtm;
-      FormGerber.ShowModal;                        // Gerber data will be loaded
+      FormGerber.ShowModal;
                                 // buttom size is mirrowed into the 2nd quadrant
                                 // and have to moved back to the 1st quadrant
       dx:= -FileParamArray[fDim-1].Bounds.min.x/c_hpgl_scale;
@@ -1582,8 +1654,8 @@ end;
 
 procedure TForm1.PageControl1Change(Sender: TObject);
 begin
-  SgPens.Col:= 3;
-  SgPens.Row:= 1;
+//  SgPens.Col:= 3;
+//  SgPens.Row:= 1;
   Repaint;
 end;
 

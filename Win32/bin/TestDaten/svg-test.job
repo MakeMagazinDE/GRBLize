@@ -1,14 +1,16 @@
 [File1]
 Name=svg-test.svg
-Date=0
 Replace=-1
 Rotate=0°
 Mirror=OFF
 Xofs=0
 Yofs=0
-Scale=100
-User1= 
+ScaleX=100
+ScaleY=100
 Remark=SVG
+GbrName=
+GbrMirror=0
+GbrInflate=0
 [Pen0]
 Color=0
 Enable=OFF
@@ -495,7 +497,6 @@ Path17=1
 Path18=1
 Path19=1
 [Comment]
-Line0=
-Line1=If Job Settings are empty,
-Line2=please open file "default.job"
-Line3=supplied with GRBLize.
+Line0=If Job Settings are empty,
+Line1=please open file "default.job"
+Line2=supplied with GRBLize.

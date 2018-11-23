@@ -8,7 +8,7 @@ begin
   Form1.Memo1.lines.add(com_name + ' connected - please wait...');
   if com_isopen then begin
     COMSetup(trim(deviceselectbox.EditBaudrate.Text));
-    Form1.DeviceView.Text:= 'Serial port ' + com_name;
+    Form1.DeviceView.Text:= com_name;
     Form1.DeviceView.Font.Color:= clWindowText;
     Form1.DeviceView.Font.Style:= [];
     sleep(2000);  // Arduino Startup Time
@@ -38,6 +38,114 @@ begin
     end;
 end;
 
+// #############################################################################
+// GRBL-Settings auf Defaults-Seite
+// #############################################################################
+
+function setting_val_extr(my_Str: String):String;
+// Holt Wert aus "$x=1234.56 (blabla)"-Antwort
+var
+  my_pos1, my_pos2: Integer;
+begin
+  my_pos1:= Pos('=', my_str);
+  my_pos2:= Pos(' ', my_str);
+  if my_pos2 <= 0 then
+    my_pos2:= length(my_Str)
+  else
+    dec(my_pos2);
+  result:= copy(my_str, my_pos1+1, my_pos2-my_pos1);
+end;
+
+procedure RefreshGrblSettings(Sg: TStringGrid);
+var
+  my_str, my_str0: String;
+begin
+  if isGrblActive then
+    with Sg do begin
+      DisableStatus;
+      Rowcount:= 2;
+      LEDbusy.Checked:= true;
+      grbl_wait_for_timeout(100);
+
+      Rows[0].text:= my_str;
+
+      grbl_sendStr('$$' + #13, false);
+      while not isWaitExit do begin
+        LEDbusy.Checked:= true;
+        my_str:= grbl_receiveStr(250);
+        if my_str='ok' then
+          break;
+        if pos('[',my_str) > 0 then
+          continue;
+        if MachineOptions.NewGrblVersion then begin
+
+          my_str0:= copy(my_str, 0, pos('=', my_str));
+          if MachineOptions.Caxis then
+            Cells[0,RowCount-1]:= my_str0 + string(SettingCodes_11_4[RowCount-2])
+          else
+            Cells[0,RowCount-1]:= my_str0 + string(SettingCodes_11_3[RowCount-2]);
+        end else
+          Cells[0,RowCount-1]:= my_str;
+        Cells[1,RowCount-1]:= setting_val_extr(my_str);
+        if pos('$130', my_str) > 0 then begin
+          job.table_x:= StrDotToFloat(setting_val_extr(my_str));
+          Form1.SgAppDefaults.Rows[defTableX].DelimitedText:=
+            '"Max. Travel X (from GRBL)",'+FormatFloat('0.0',job.table_x);
+        end;
+        if pos('$131', my_str) > 0 then begin
+          job.table_y:= StrDotToFloat(setting_val_extr(my_str));
+          Form1.SgAppDefaults.Rows[defTableY].DelimitedText:=
+            '"Max. Travel Y (from GRBL)",'+FormatFloat('0.0',job.table_y);
+        end;
+        if pos('$132', my_str) > 0 then begin
+          job.table_z:= StrDotToFloat(setting_val_extr(my_str));
+          Form1.SgAppDefaults.Rows[defTableZ].DelimitedText:=
+            '"Max. Travel Z (from GRBL)",'+FormatFloat('0.0',job.table_z);
+        end;
+
+        Rowcount:= RowCount+1;
+      end;
+
+      if Cells[0,Rowcount-1] = '' then
+        Rowcount:= RowCount-1;
+      Cells[0,0]:= 'Parameter';
+      Cells[1,0]:= 'Value';
+      bm_scroll.x:= 0;
+      bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
+      LEDbusy.Checked:= false;
+      EnableStatus;  // automatische Upates freischalten
+    end;
+  ResetToolflags;
+end;
+
+procedure SendGrblSettings(Sg: TStringGrid);
+var i:                Integer;
+    my_str0, my_str1: String;
+begin
+  if isGrblActive then begin
+    DisableStatus;
+    grbl_wait_for_timeout(100);
+    with Sg do
+      if (RowCount > 2) then for i:= 1 to Rowcount-1 do
+      begin
+        if isWaitExit then exit;
+        if (Sg.Cells[0,i] = '') then continue;
+        LEDbusy.Checked:= true;
+        my_str0:= Sg.Cells[0,i];
+        my_str0:= copy(my_str0, 0, pos('=', my_str0));
+        my_str1:= Sg.Cells[1,i];
+        grbl_sendStr(my_str0+my_str1+#13, true);
+      end else begin
+        showmessage('GRBL settings are empty.');
+        exit;
+      end;
+    LEDbusy.Checked:= false;
+    RefreshGrblSettings(Sg);
+    EnableStatus;  // automatische Upates freischalten
+  end;
+  ResetToolflags;
+end;
+
 procedure PortOpenedCheck;
 begin
   if ftdi_isopen or com_isopen then
@@ -47,56 +155,10 @@ begin
     Form1.CheckBoxSim.Checked:= false;
     Form1.BtnConnect.Enabled:= false;
     Form1.BtnRescan.Enabled:= false;
-    Form1.BtnRefreshGrblSettingsClick(nil);
+    RefreshGrblSettings(Form1.SgGrblSettings);
   end;
   ResetToolflags;
 end;
-
-{procedure TForm1.BtnRescanClick(Sender: TObject);
-// Auswahl des Frosches unter FTDI-Devices
-var i : Integer; LV : TListItem;
-begin
-// Alle verfügbaren COM-Ports prüfen, Ergebnisse in Array speichern
-  InitMachineOptions;
-  com_isopen:= false;
-  ftdi_isopen:= false;
-  grbl_is_connected:= false;
-  HomingPerformed:= false;
-  com_name:='';
-  SetUpFTDI;
-  if ftdi_device_count > 0 then begin
-    deviceselectbox.ListView1.Items.clear;
-    for i := 0 to ftdi_device_count - 1 do begin
-      LV := deviceselectbox.ListView1.Items.Add;
-      LV.Caption := 'Device '+IntToStr(i);
-      LV.SubItems.Add(ftdi_sernum_arr[i]);
-      LV.SubItems.Add(ftdi_desc_arr[i]);
-    end;
-    deviceselectbox.ListView1.Items[0].Selected := true;
-  end;
-  deviceselectbox.ComboBoxCOMport.Items.clear;
-  deviceselectbox.ComboBoxCOMport.Items.add('none (FTDI direct)');
-  for i := 0 to 31 do begin
-    if CheckCom(i) = 0 then begin
-      deviceselectbox.ComboBoxCOMport.Items.add('COM' + IntToSTr(i));
-    end;
-  end;
-  deviceselectbox.ComboBoxCOMport.ItemIndex:= 0; // Auswahl erzwingen
-  deviceselectbox.ShowModal;
-  if (deviceselectbox.ModalResult=MrOK) then begin
-    if (deviceselectbox.ComboBoxCOMport.ItemIndex > 0) then begin
-      com_selected_port:= deviceselectbox.ComboBoxCOMport.ItemIndex - 1;
-      com_name:= deviceselectbox.ComboBoxCOMport.Text;
-      OpenCOMport;
-    end else if (ftdi_device_count > 0) then begin
-      ftdi_selected_device:= deviceselectbox.ListView1.itemindex;
-      ftdi_serial:= ftdi_sernum_arr[ftdi_selected_device];
-      OpenFTDIport;
-    end;
-  end;
-  PortOpenedCheck;
-end;
-}
 
 procedure TForm1.BtnRescanClick(Sender: TObject);
 // Auswahl des Frosches unter FTDI-Devices
@@ -184,135 +246,38 @@ begin
   ResetToolFlags;
 end;
 
-// #############################################################################
-// ########################## GRBL DEFAULT BUTTONS #############################
-// #############################################################################
-
-
 procedure TForm1.SgGrblSettingsDrawCell(Sender: TObject; ACol,
   ARow: Integer; Rect: TRect; State: TGridDrawState);
 begin
-//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   if aRow = 0 then with (Sender as TStringGrid),Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
   end;
 end;
 
-function setting_val_extr(my_Str: String):String;
-// Holt Wert aus "$x=1234.56 (blabla)"-Antwort
-var
-  my_pos1, my_pos2: Integer;
+procedure TForm1.SgGrblSettingsExit(Sender: TObject);
 begin
-  my_pos1:= Pos('=', my_str);
-  my_pos2:= Pos(' ', my_str);
-  if my_pos2 <= 0 then
-    my_pos2:= length(my_Str)
-  else
-    dec(my_pos2);
-  result:= copy(my_str, my_pos1+1, my_pos2-my_pos1);
+  SgEditorOff(SgGrblSettings);
+  SendGrblSettings(SgGrblSettings);
 end;
 
-procedure TForm1.BtnRefreshGrblSettingsClick(Sender: TObject);
-var
-  my_str, my_str0: String;
+procedure TForm1.SgGrblSettingsKeyPress(Sender: TObject; var Key: Char);
 begin
-  if isGrblActive then
-    with Form1.SgGrblSettings do begin
-      DisableStatus;
-      Rowcount:= 2;
-      LEDbusy.Checked:= true;
-      grbl_wait_for_timeout(100);
-
-      Rows[0].text:= my_str;
-
-      grbl_sendStr('$$' + #13, false);
-      while not isWaitExit do begin
-        LEDbusy.Checked:= true;
-        my_str:= grbl_receiveStr(250);
-        if my_str='ok' then
-          break;
-        if pos('[',my_str) > 0 then
-          continue;
-        if MachineOptions.NewGrblVersion then begin
-
-          my_str0:= copy(my_str, 0, pos('=', my_str));
-          if MachineOptions.Caxis then
-            Cells[0,RowCount-1]:= my_str0 + string(SettingCodes_11_4[RowCount-2])
-          else
-            Cells[0,RowCount-1]:= my_str0 + string(SettingCodes_11_3[RowCount-2]);
-        end else
-          Cells[0,RowCount-1]:= my_str;
-        Cells[1,RowCount-1]:= setting_val_extr(my_str);
-        if pos('$130', my_str) > 0 then begin
-          job.table_x:= StrDotToFloat(setting_val_extr(my_str));
-          Form1.SgAppDefaults.Rows[defTableX].DelimitedText:=
-            '"Max. Travel X (from GRBL)",'+FormatFloat('0.0',job.table_x);
-        end;
-        if pos('$131', my_str) > 0 then begin
-          job.table_y:= StrDotToFloat(setting_val_extr(my_str));
-          Form1.SgAppDefaults.Rows[defTableY].DelimitedText:=
-            '"Max. Travel Y (from GRBL)",'+FormatFloat('0.0',job.table_y);
-        end;
-        if pos('$132', my_str) > 0 then begin
-          job.table_z:= StrDotToFloat(setting_val_extr(my_str));
-          Form1.SgAppDefaults.Rows[defTableZ].DelimitedText:=
-            '"Max. Travel Z (from GRBL)",'+FormatFloat('0.0',job.table_z);
-        end;
-
-        Rowcount:= RowCount+1;
-      end;
-
-      if Cells[0,Rowcount-1] = '' then
-        Rowcount:= RowCount-1;
-      Cells[0,0]:= 'Parameter';
-      Cells[1,0]:= 'Value';
-      FixedCols:= 1;
-      FixedRows:= 1;
-      bm_scroll.x:= 0;
-      bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
-      LEDbusy.Checked:= false;
-      EnableStatus;  // automatische Upates freischalten
-    end;
-  ResetToolflags;
+  if Key in [#10, #13, #27] then SgGrblSettingsExit(Sender);
 end;
 
-
-procedure TForm1.BtnSendGrblSettingsClick(Sender: TObject);
-var i : Integer;
-  my_str0, my_str1: String;
-
-begin
-  if isGrblActive then begin
-    DisableStatus;
-    grbl_checkResponse;
-    with SgGrblSettings do begin
-      Progressbar1.max:= RowCount;
-      if (RowCount < 3) then begin
-        showmessage('GRBL settings are empty.');
-        exit;
-      end else for i:= 1 to Rowcount-1 do begin
-        LEDbusy.Checked:= true;
-        if isWaitExit then
-          break;
-        if Cells[0,i] = '' then
-          continue;
-        my_str0:= Cells[0,i];
-        my_str0:= copy(my_str0, 0, pos('=', my_str0));
-        my_str1:= Cells[1,i];
-        Progressbar1.Position:= i;
-        grbl_sendStr(my_str0+my_str1+#13, true);
-        mdelay(50);
-      end;
-    end;
-    Progressbar1.Position:= 0;
-    LEDbusy.Checked:= false;
-    BtnRefreshGrblSettingsClick(Sender);
-    EnableStatus;  // automatische Upates freischalten
-  end;
-  ResetToolflags;
+procedure TForm1.SgGrblSettingsSelectCell(Sender: TObject; ACol, ARow: Integer;
+  var CanSelect: Boolean);
+begin                                        // right col is for hide focus only
+  if ACol = SgGrblSettings.ColCount-1 then begin CanSelect:= false; exit end;
+  SgEditorOff(SgGrblSettings);
+  if (ACol < 1) or (ARow < 1) then exit;
+  if (ACol = 1) then SgEditorOn(SgGrblSettings,ACol,ARow,true,true);
 end;
 
+// #############################################################################
+// ########################## GRBL DEFAULT BUTTONS #############################
+// #############################################################################
 
 procedure TForm1.BtnLoadGrblSetupClick(Sender: TObject);
 begin

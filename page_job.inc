@@ -40,19 +40,26 @@ begin
 end;
 
 procedure ProveNewGBR(FileName:string;i: integer);
-var GbrName, CmdStr: string;
 begin
-   GbrName := ChangeFileExt(FileName, '.gbr');              // Quelle ist *.gbr?
-   if not FileExists(GbrName) then begin
-     GbrName := ChangeFileExt(FileName, '.gbl');            // Quelle ist *.gbl?
-     if not FileExists(GbrName) then exit;// Quelle nicht gefunden, nur NC laden
-   end;
-                // TestS enthält nun den Namen der ursprünglichen Gerber-Datei!!
-   if FileAge(FileName) < FileAge(GbrName) then
-     CmdStr := CallPcb2Gcode(GbrName,
-                             pos('front',GbrName) > 0,
-                             FileParamArray[i-1].user1,
-                             '500');
+  if not FileExists(FileParamArray[i].gbr_name) then begin
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);// Quelle nicht gefunden, nur NC laden
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('WARNING: Mill file not found!');
+    exit;
+  end;
+                                            // G-Code is older than gerber data?
+  if FileAge(FileName) < FileAge(FileParamArray[i].gbr_name) then begin
+    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
+    Form1.Memo1.lines.add('');
+    Form1.Memo1.lines.add('WARNING: One or more mill/drill file(s)');
+    Form1.Memo1.lines.add('have been changed since last job was saved.');
+    Form1.Memo1.lines.add('All mill paths will be rebuild and enabled!');
+
+    CallPcb2Gcode(FileParamArray[i].gbr_name,
+                            FileParamArray[i].gbr_mirror,
+                            FileParamArray[i].gbr_inflate,
+                            '500');
+  end;
 end;
 
 Procedure OpenFilesInGrid;
@@ -60,6 +67,7 @@ var
   i, pen_override: Integer;
   my_path, my_ext: String;
   use_excellon: Boolean;
+  Sx, Sy: integer;
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -82,8 +90,8 @@ begin
       FileParamArray[i-1].mirror:= Cells[3, i] = 'ON';
       FileParamArray[i-1].offset.X:= round(StrToFloatDef(Cells[4, i], 0) * c_hpgl_scale);
       FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
-      FileParamArray[i-1].scale:= StrToFloatDef(Cells[6, i], 100.0);
-      FileParamArray[i-1].user1:= StrToFloatDef(Cells[7, i], 0.2);
+      FileParamArray[i-1].scale.X:= StrToFloatDef(Cells[6, i], 100.0);
+      FileParamArray[i-1].scale.Y:= StrToFloatDef(Cells[7, i], 100.0);
 
       my_path:= Cells[0,i];
 
@@ -105,33 +113,33 @@ begin
       FileParamArray[i-1].enable:= true;
       pen_override:= StrToIntDef(Cells[1, i], -1);
       if FileParamArray[i-1].isdrillfile then begin
-        Cells[8, i]:= 'Drill'; // Replace Pen
+        Cells[9, i]:= 'Drill'; // Replace Pen
         use_excellon:= job.use_excellon_dia and (pen_override < 0);
         drill_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1), use_excellon);
       end else if (my_ext = '.HPGL') or (my_ext = '.HPG') or (my_ext = '.PLT') or (my_ext = '.PEN') then begin
-        Cells[8, i]:= 'Plot'; // Replace Pen
+        Cells[9, i]:= 'Plot'; // Replace Pen
         hpgl_fileload(my_path, i-1, StrToIntDef(Cells[1, i], -1))
       end else if (my_ext = '.NC') or (my_ext = '.NGC') or (my_ext = '.TAP') or (my_ext = '.CNC') then begin
-        Cells[8, i]:= 'GCode'; // Remark
+        Cells[9, i]:= 'GCode'; // Remark
         gcode_fileload(my_path, i-1, -1);
       end else if (my_ext = '.DIM') then begin             // dimensions for PCB
-        Cells[8, i]:= 'Dimensions'; // Replace Pen
+        Cells[9, i]:= 'Dimensions'; // Replace Pen
         Cells[1, i]:= '7';                                        // Replace Pen
         dim_fileload(my_path, i-1, StrToIntDef(Cells[1, i], 7));
       end else if (my_ext = '.NCF') then begin
         ProveNewGBR(my_path,i);
-        Cells[8, i]:= 'PCB top'; // Remark
+        Cells[9, i]:= 'PCB top'; // Remark
         Cells[1, i]:= '8'; // Replace Pen
         gcode_fileload(my_path, i-1, 8);
         SetPCBmillTool(8);
       end else if (my_ext = '.NCB') then begin
         ProveNewGBR(my_path,i);
-        Cells[8, i]:= 'PCB bottom'; // Remark
+        Cells[9, i]:= 'PCB bottom'; // Remark
         Cells[1, i]:= '9'; // Replace Pen
         gcode_fileload(my_path, i-1, 9);
         SetPCBmillTool(9);
       end else if (my_ext = '.SVG') then begin
-        Cells[8, i]:= 'SVG'; // Remark
+        Cells[9, i]:= 'SVG'; // Remark
         svg_fileload(my_path, i-1, -1);
       end else
         Form1.Memo1.lines.add('Unknown File Extension:' + ExtractFileName(my_path));
@@ -151,17 +159,35 @@ begin
 
   JobToPenGridList;
   apply_pen_change;
-  NeedsRedraw:= true;
-
   Form1.SgPens.Repaint;
   GLSneedsATCupdateTimeout:= 1;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Mill/drill files (re)loaded.');
+
+                                       // set part dimensions (X and Y) and zoom
+  if (final_bounds_mm.max.x > 10) and (final_bounds_mm.max.y > 10) then begin
+                                                          // Dimension aufrunden
+    job.partsize_x:= 10*round((final_bounds_mm.max.x+6)/10);
+    job.partsize_y:= 10*round((final_bounds_mm.max.y+6)/10);
+                                                        // Werkstückgröße setzen
+    Form1.SgJobDefaults.Cells[1,1]:= FloatToStr(job.partsize_x);
+    Form1.SgJobDefaults.Cells[1,2]:= FloatToStr(job.partsize_y);
+
+    Sx:= round(Form2.DrawingBox.Width  / job.partsize_x) - 1;
+    Sy:= round(Form2.DrawingBox.Height / job.partsize_y) - 1;
+
+    if Sx < Sy then Form2.TrackBarZoom.Position:= Sx
+               else Form2.TrackBarZoom.Position:= Sy;
+
+    bm_scroll.x:= 0;
+    bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
+  end;
+
+  NeedsRedraw:= true;
 end;
 
 Procedure OpenJobFile;
-var i, my_date: integer;
-    my_path:    String;
+var i: integer;
 
   ///// load Job-File in Windows-Ini-Format ////////////////////////////////////
   procedure LoadIniFormat;
@@ -209,10 +235,12 @@ var i, my_date: integer;
           Cells[3,i]:= Ini.ReadString(Section, 'Mirror',  Cells[3,i]);
           Cells[4,i]:= Ini.ReadString(Section, 'Xofs',    Cells[4,i]);
           Cells[5,i]:= Ini.ReadString(Section, 'Yofs',    Cells[5,i]);
-          Cells[6,i]:= Ini.ReadString(Section, 'Scale',   Cells[6,i]);
-          Cells[7,i]:= Ini.ReadString(Section, 'User1',   Cells[7,i]);
-          Cells[8,i]:= Ini.ReadString(Section, 'Remark',  Cells[8,i]);
-          Cells[9,i]:= Ini.ReadString(Section, 'Date',    Cells[9,i]);
+          Cells[6,i]:= Ini.ReadString(Section, 'ScaleX',  Cells[6,i]);
+          Cells[7,i]:= Ini.ReadString(Section, 'ScaleY',  Cells[7,i]);
+          Cells[9,i]:= Ini.ReadString(Section, 'Remark',  Cells[8,i]);
+          FileParamArray[i].gbr_name:=               Ini.ReadString(Section,'GbrName',              FileParamArray[i].gbr_name);
+          FileParamArray[i].gbr_mirror:=  StrToBool (Ini.ReadString(Section,'GbrMirror', BoolToStr (FileParamArray[i].gbr_mirror)));
+          FileParamArray[i].gbr_inflate:= StrToFloat(Ini.ReadString(Section,'GbrInflate',FloatToStr(FileParamArray[i].gbr_inflate)));
         end;
         Repaint;
         OpenFilesInGrid;
@@ -297,22 +325,6 @@ begin
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Job and block/path settings applied.');
   end;
-  // sind Files noch aktuell?
-  for i:= 1 to c_numOfFiles +1 do begin
-    my_path:= Form1.SgFiles.Cells[0,i];
-    if (length(my_path) < 4) or (not FileExists(my_path)) then
-      continue;
-    my_date:= FileAge(Form1.SgFiles.Cells[0,i]);
-    if my_date <> StrToIntDef(Form1.SgFiles.Cells[9,i],0) then begin
-      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-      Form1.Memo1.lines.add('');
-      Form1.Memo1.lines.add('WARNING: One or more mill/drill file(s)');
-      Form1.Memo1.lines.add('have been changed since last job was saved.');
-      Form1.Memo1.lines.add('All mill paths will be rebuild and enabled!');
-      OpenFilesInGrid;
-      break;
-    end;
-  end;
   for i := 0 to high(final_array) do
     final_array[i].enable:= is_any_milling_enabled(final_array[i]);
   ListBlocks;
@@ -320,7 +332,7 @@ begin
 end;
 
 procedure SaveJob;
-var i, p, my_date:   Integer;
+var i, p:               Integer;
     my_filename:        String;
     block_str, Section: String;
     Ini:                TIniFile;
@@ -335,19 +347,18 @@ begin
                                    // save the relativ file name to the job file
       my_filename:= ExtractRelativePath(JobSettingsPath,Form1.SgFiles.Cells[0,i]);
       if (length(my_filename) <= 3) then continue;                 // line empty
-      if FileExists(my_filename)                             // save change date
-        then my_date:= FileAge(Form1.SgFiles.Cells[0,i])
-        else my_date:= 0;
       Ini.WriteString(Section, 'Name',    my_filename);
-      Ini.WriteString(Section, 'Date',    IntToStr(my_date));
-      Ini.WriteString(Section, 'Replace', Form1.SgFiles.Cells[1,i]);
-      Ini.WriteString(Section, 'Rotate',  Form1.SgFiles.Cells[2,i]);
-      Ini.WriteString(Section, 'Mirror',  Form1.SgFiles.Cells[3,i]);
-      Ini.WriteString(Section, 'Xofs',    Form1.SgFiles.Cells[4,i]);
-      Ini.WriteString(Section, 'Yofs',    Form1.SgFiles.Cells[5,i]);
-      Ini.WriteString(Section, 'Scale',   Form1.SgFiles.Cells[6,i]);
-      Ini.WriteString(Section, 'User1',   Form1.SgFiles.Cells[7,i]);
-      Ini.WriteString(Section, 'Remark',  Form1.SgFiles.Cells[8,i]);
+      Ini.WriteString(Section, 'Replace',   Form1.SgFiles.Cells[1,i]);
+      Ini.WriteString(Section, 'Rotate',    Form1.SgFiles.Cells[2,i]);
+      Ini.WriteString(Section, 'Mirror',    Form1.SgFiles.Cells[3,i]);
+      Ini.WriteString(Section, 'Xofs',      Form1.SgFiles.Cells[4,i]);
+      Ini.WriteString(Section, 'Yofs',      Form1.SgFiles.Cells[5,i]);
+      Ini.WriteString(Section, 'ScaleX',    Form1.SgFiles.Cells[6,i]);
+      Ini.WriteString(Section, 'ScaleY',    Form1.SgFiles.Cells[7,i]);
+      Ini.WriteString(Section, 'Remark',    Form1.SgFiles.Cells[9,i]);
+      Ini.WriteString(Section, 'GbrName',              FileParamArray[i].gbr_name);
+      Ini.WriteString(Section, 'GbrMirror', BoolToStr (FileParamArray[i].gbr_mirror));
+      Ini.WriteString(Section, 'GbrInflate',FloatToStr(FileParamArray[i].gbr_inflate));
     end;
 
     for i:=1 to Form1.SgPens.Rowcount-1 do begin                   // pens table
@@ -432,10 +443,17 @@ begin
 end;
 
 procedure TForm1.JobSaveAsExecute(Sender: TObject);
-var
-  my_ext: String;
+var my_ext: String;
+    i:      integer;
 begin
+  i:= 1;
+  while (i<=c_numOfFiles) and (SaveJobDialog.Filename='') do begin
+    if Trim(Form1.SgFiles.Cells[0,i]) <>'' then
+      SaveJobDialog.Filename:= ChangeFileExt(Form1.SgFiles.Cells[0,i],'job');
+    inc(i);
+  end;
   if SaveJobDialog.Execute then begin
+//  Application.ProcessMessages;
     JobSettingsPath := SaveJobDialog.Filename;
     my_ext:= AnsiUpperCase(ExtractFileExt(JobSettingsPath));
     if my_ext <> '.JOB' then
@@ -488,8 +506,7 @@ end;
 
 procedure TForm1.SgJobDefaultsExit(Sender: TObject);
 begin
-  with SgJobDefaults do
-    Options:= Options - [goEditing, goAlwaysShowEditor];
+  SgEditorOff(SgJobDefaults);
   OpenFilesInGrid;
   NeedsRedraw:= true;
   ListBlocks;
@@ -497,79 +514,44 @@ end;
 
 procedure TForm1.SgJobDefaultsKeyPress(Sender: TObject; var Key: Char);
 begin
-  if (Key = #13) or (Key = #10) then begin
-    SgJobDefaultsExit(Sender);;
-  end;
+  if Key in [#10, #13, #27] then SgJobDefaultsExit(Sender);
 end;
 
-
-procedure TForm1.SgJobDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-// wird vor SgJobDefaultsClick aufgerufen!
-var
-  my_row, my_col, i: integer;
+procedure TForm1.SgJobDefaultsSelectCell(Sender: TObject; ACol, ARow: Integer;
+  var CanSelect: Boolean);
+var i: integer;
+    P: TPoint;
 begin
-  SgJobDefaults.MouseToCell( X,Y, my_col, my_row );
-  if (my_row < 1) or (my_col < 1) then
-    exit;
-  with SgJobDefaults do begin
-    Options:= Options - [goEditing, goAlwaysShowEditor];
-    if my_Col = 1 then begin
-      if Cells[1, my_row] = 'ON' then begin
-        Cells[1, my_row]:= 'OFF';
+  with SgJobDefaults do begin                // right col is for hide focus only
+    if ACol = ColCount-1 then begin CanSelect:= false; exit end;
+    SgEditorOff(SgJobDefaults);
+    if (ACol < 1) or (ARow < 1) then exit;
+    if ACol = 1 then begin
+      if Cells[1, ARow] = 'ON' then begin
+        Cells[1, ARow]:= 'OFF';
         OpenFilesInGrid;
-      end else if Cells[1, my_row] = 'OFF' then begin
-        Cells[1, my_row]:= 'ON';
-      end else if (my_row = 4) then begin                            // Material
+      end else if Cells[1, ARow] = 'OFF' then begin
+        Cells[1, ARow]:= 'ON';
+      end else if (ARow = 4) then begin                              // Material
         for i:= 0 to PopupMenuMaterial.Items.Count - 1 do           // set focus
           PopupMenuMaterial.Items[i].Checked:= job.Material = i;
-                                                                   // start menu
-        PopupMenuMaterial.Popup(X+left+Form1.left, Y+ top+Form1.top);
-      end else
-        Options:= Options + [goEditing, goAlwaysShowEditor];
+        P:= ClientToScreen(CellRect(ACol,ARow).BottomRight);       // start menu
+        PopupMenuMaterial.Popup(P.X,P.Y-120);
+      end else SgEditorOn(SgJobDefaults,ACol,ARow,true,true);
     end;
   end;
-end;
-
-procedure TForm1.SgJobDefaultsClick(Sender: TObject);
-begin
-  with SgJobDefaults do
-    Options:= Options - [goEditing, goAlwaysShowEditor];
-//  if SgJobDefaults.Row > 7 then
-              // adapt parameters also after leaving cell by click to other cell
-  OpenFilesInGrid;
-  NeedsRedraw:= true;
-  ListBlocks;
 end;
 
 // #############################################################################
 // GRBLize Defaults auf Defaults-Seite!
 // #############################################################################
 
-procedure TForm1.SgAppDefaultsExit(Sender: TObject);
-begin
-  with SgAppDefaults do
-    Options:= Options - [goEditing, goAlwaysShowEditor];
-  DefaultsGridListToJob;
-end;
-
-
-procedure TForm1.SgAppDefaultsKeyPress(Sender: TObject; var Key: Char);
-begin
-  if (Key = #13) or (Key = #10) then begin
-    SgAppDefaultsExit(Sender);;
-  end;
-end;
-
 procedure TForm1.SgAppDefaultsDrawCell(Sender: TObject; ACol, ARow: Integer;
   Rect: TRect; State: TGridDrawState);
-var
-  aRect: TRect;
-  aStr: String;
-
+var aRect: TRect;
+    aStr:  String;
 begin
-//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
-  aStr:= SgAppDefaults.Cells[ACol, ARow];
+{  aStr:= SgAppDefaults.Cells[ACol, ARow];
   if aRow = 0 then with SgAppDefaults,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
@@ -596,42 +578,84 @@ begin
       DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
     end;
   end;
-end;
-
-procedure TForm1.SgAppDefaultsMouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var pt: TPoint;
-  my_row, my_col: integer;
-begin
-  SgAppDefaults.MouseToCell( X,Y, my_col, my_row );
-  if (my_row < 1) or (my_col < 1) then
-    exit;
-  pt.X:= X;
-  pt.Y:= Y;
-  with SgAppDefaults do begin
-    Options:= Options - [goEditing];
-    if Col = 1 then begin
-      if Cells[1, my_Row] = 'ON' then
-         Cells[1, my_Row]:= 'OFF'
-      else if Cells[1, my_Row] = 'OFF' then begin
-        Cells[1, my_Row]:= 'ON';
-      end else
-        Options:= Options + [goEditing, goAlwaysShowEditor];
+}
+  with SgAppDefaults,Canvas do begin
+    aStr:= Cells[ACol, ARow];
+    if aRow = 0 then begin
+      Font.Style := [fsBold];
+      TextRect(Rect, Rect.Left + 2, Rect.Top + 2, aStr);
+    end else begin
+      Pen.Color := cl3Dlight;
+      Font.Color:=clblack;
+      if (aCol = 1) and ((aStr= 'ON') or (aStr= 'OFF') or (ARow=defJoypadZaxisButton))
+      then begin                                                      // ON, OFF
+        FrameRect(Rect);
+        inc(Rect.Left);
+        inc(Rect.Top);
+        Brush.Color := clgray;
+        FrameRect(Rect);
+        Brush.Color := cl3Dlight;
+        InflateRect(Rect, -1, -1);
+        Font.Color := clblack;
+        if aStr = 'ON' then
+          Font.Style := [fsBold]
+        else
+          Font.Style := [];
+        aRect := Rect;
+        FillRect(Rect);
+        aStr:= Cells[ACol, ARow];
+        aRect.Top := aRect.Top + 1; // adjust top to center vertical
+        DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
+      end;
     end;
   end;
+end;
+
+procedure TForm1.SgAppDefaultsExit(Sender: TObject);
+begin
+  SgEditorOff(SgAppDefaults);
   DefaultsGridListToJob;
 end;
 
-procedure TForm1.SgAppDefaultsClick(Sender: TObject);
+procedure TForm1.SgAppDefaultsKeyPress(Sender: TObject; var Key: Char);
 begin
-  with SgAppDefaults do
-    Options:= Options - [goEditing, goAlwaysShowEditor];
+  if Key in [#10, #13, #27] then SgAppDefaultsExit(Sender);
+end;
+
+procedure TForm1.SgAppDefaultsSelectCell(Sender: TObject; ACol, ARow: Integer;
+  var CanSelect: Boolean);
+begin
+  with SgAppDefaults do begin                // right col is for hide focus only
+    if ACol = ColCount-1 then begin CanSelect:= false; exit end;
+    SgEditorOff(SgAppDefaults);
+    if (ACol < 1) or (ARow < 1) then exit;
+    if ACol = 1 then begin
+      if Cells[1, ARow] = 'ON' then
+         Cells[1, ARow]:= 'OFF'
+      else if Cells[1, ARow] = 'OFF' then
+        Cells[1, ARow]:= 'ON'
+      else if ARow in [defJoypadZaxisButton] then
+        case Cells[1,defJoypadZaxisButton][1] of
+          #82: Cells[1,defJoypadZaxisButton]:= 'U';                       // 'R'
+          #85: Cells[1,defJoypadZaxisButton]:= 'V';                       // 'U'
+          #86: Cells[1,defJoypadZaxisButton]:= 'Z';                       // 'V'
+          #90: Cells[1,defJoypadZaxisButton]:= 'R';                       // 'Z'
+          else Cells[1,defJoypadZaxisButton]:= 'R';
+        end
+      else if ARow in [defAtcToolReleaseCmd,
+                       defAtcToolClampCmd] then
+        SgEditorOn(SgAppDefaults,ACol,ARow,false,false)
+      else SgEditorOn(SgAppDefaults,ACol,ARow,true,true);
+    end;
+  end;
+  DefaultsGridListToJob;
 end;
 
 // #############################################################################
 // ########################### Stringgrid Handler ##############################
 // #############################################################################
 
+//##### SgFiles ################################################################
 
 procedure TForm1.SgFilesDrawCell(Sender: TObject; ACol, ARow: Integer;
   Rect: TRect; State: TGridDrawState);
@@ -639,7 +663,6 @@ var
   aRect: TRect;
   aStr: String;
 begin
-//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   if aRow = 0 then with SgFiles,Canvas do begin
     Font.Style := [fsBold];
     TextRect(Rect, Rect.Left + 2, Rect.Top + 2, Cells[ACol, ARow]);
@@ -689,7 +712,7 @@ begin
           aRect.Top := aRect.Top + 1; // adjust top to center
           DrawText(Canvas.Handle, PChar(aStr), Length(aStr), aRect, DT_CENTER);
         end;
-      7:  // Clear-"Button"
+      8:  // Clear-"Button"
         begin
           FrameRect(Rect);
           inc(Rect.Left);
@@ -710,54 +733,64 @@ begin
   end;
 end;
 
+procedure TForm1.SgFilesExit(Sender: TObject);
+begin
+  with SgFiles do begin
+    job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
+    SgEditorOff(SgFiles);
+    Repaint;
+    OpenFilesInGrid;
+  end;
+  SgFiles.EditorMode:= false;
+end;
+
+procedure TForm1.SgFilesKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key in [#10, #13, #27] then SgFilesExit(Sender);
+end;
 
 procedure TForm1.ComboBox1Exit(Sender: TObject);
 begin
-  with sender as TComboBox do begin
-    hide;
-    SgFiles.Options:= SgFiles.Options - [goEditing, goAlwaysShowEditor];
-    if ItemIndex >= 0 then
-      with SgFiles do
-        if (Row > 0) and (Col= 1) then begin
-          Cells[col, row] := IntToStr(ItemIndex-1); //  := Items[ItemIndex];
-          job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
-          UnHilite;
-          OpenFilesInGrid;
-          Repaint;
-        end;
+  with (sender as TComboBox),SgFiles do begin
+    TComboBox(sender).hide;
+    Options:= Options - [goEditing, goAlwaysShowEditor];
+    if (ItemIndex >= 0) then
+      if (Row > 0) and (Col= 1) then begin
+        Cells[Col, Row] := IntToStr(ItemIndex-1); //  := Items[ItemIndex];
+        job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
+        UnHilite;
+        OpenFilesInGrid;
+        Repaint;
+      end;
   end;
-  SgFiles.Options:= SgFiles.Options - [goEditing];
 end;
 
-
-procedure TForm1.SgFilesMouseDown(Sender: TObject; Button: TMouseButton;
-  Shift: TShiftState; X, Y: Integer);
-var R: TRect;
-  org: TPoint;
-    i: Integer;
-  my_row, my_col: integer;
-  my_ext: String;
+procedure TForm1.SgFilesSelectCell(Sender: TObject; ACol, ARow: Integer;
+  var CanSelect: Boolean);
+var R:      TRect;
+    org:    TPoint;
+    i:      Integer;
+    my_ext: String;
 begin
-  SgFiles.MouseToCell( X,Y, my_col, my_row );
-  if (my_row < 1) then
-    exit;
-  with SgFiles do begin
-    Options:= Options - [goEditing, goAlwaysShowEditor];
-    case Col of
+  with SgFiles do begin                      // right col is for hide focus only
+    if ACol = ColCount-1 then begin CanSelect:= false; exit end;
+    SgEditorOff(SgFiles);
+//    if (ACol < 1) then exit;
+    case ACol of
       0:
         begin
           UnHilite;
           OpenFileDialog.FilterIndex:= 0;
           if OpenFileDialog.Execute then begin
-            Cells[0, Row]:= OpenFileDialog.Filename;
-            job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
+            Cells[0, ARow]:= OpenFileDialog.Filename;
+            job.fileDelimStrings[ARow-1]:= ShortString(Rows[ARow].DelimitedText);
             UnHilite;
             my_ext:= AnsiUpperCase(ExtractFileExt(OpenFileDialog.Filename));
             if (my_ext = '.GBR') or (my_ext = '.GBL') or (my_ext = '.GTL') then begin
-              sgFiles.Cells[0, Row]:= '';
+              sgFiles.Cells[0, ARow]:= '';
               ConvertedFileName:='';
               GerberFileName:= OpenFileDialog.Filename;
-              GerberFileNumber:= Row;
+              GerberFileNumber:= ARow;
               FormGerber.ShowModal;
             end else
               OpenFilesInGrid;
@@ -765,14 +798,14 @@ begin
         end;
       1:
         begin
-          R := SgFiles.CellRect(my_Col, my_Row);
+          R := SgFiles.CellRect(ACol, ARow);
           org := self.ScreenToClient(self.ClientToScreen(R.TopLeft));
           perform( WM_CANCELMODE, 0, 0 ); // verhindert Mausaktion in Stringgrid
           with ComboBox1 do begin
             SetBounds(org.X-10, org.Y-2, R.Right-R.Left+10, Form1.Height);
-            ItemIndex := Items.IndexOf('Pen '+SgFiles.Cells[my_Col, my_Row]);
-            if ItemIndex < 0 then
-              ItemIndex:= 1;
+            ItemIndex := Items.IndexOf('Pen '+SgFiles.Cells[ACol, ARow]);
+            if SgFiles.Cells[ACol, ARow] = '-1' then ItemIndex:= 0;
+            if SgFiles.Cells[ACol, ARow] = '10' then ItemIndex:= 11;
             Show;
             BringToFront;
             SetFocus;
@@ -781,66 +814,52 @@ begin
         end;
       2:
         begin
-          if Cells[2, my_Row] = '0°' then
-            Cells[2, my_Row]:= '90°'
-          else if Cells[2, my_Row] = '90°' then
-            Cells[2, my_Row]:= '180°'
-          else if Cells[2, my_Row] = '180°' then
-            Cells[2, my_Row]:= '270°'
+          if Cells[2, ARow] = '0°' then
+            Cells[2, ARow]:= '90°'
+          else if Cells[2, ARow] = '90°' then
+            Cells[2, ARow]:= '180°'
+          else if Cells[2, ARow] = '180°' then
+            Cells[2, ARow]:= '270°'
           else
-            Cells[2, my_Row]:= '0°';
+            Cells[2, ARow]:= '0°';
           Repaint;
           OpenFilesInGrid;
         end;
       3:
         begin
-          if Cells[3, my_Row] = 'ON' then
-            Cells[3, my_Row]:= 'OFF'
+          if Cells[3, ARow] = 'ON' then
+            Cells[3, ARow]:= 'OFF'
           else
-            Cells[3, my_Row]:= 'ON';
+            Cells[3, ARow]:= 'ON';
           Repaint;
           OpenFilesInGrid;
         end;
-      4,5,6, 8:
-        begin
-//          Options:= Options + [goEditing, goAlwaysShowEditor];
-          Options:= Options + [goEditing, goAlwaysShowEditor];
-        end;
-      7:
+      4,5,6,7: SgEditorOn(SgFiles,ACol,Arow,true,true);
+      8:
         begin
           UnHilite;
-          Cells[0, my_Row]:= '';
-          Cells[1, my_Row]:= '-1';
-          Cells[2, my_Row]:= '0°';
-          Cells[3, my_Row]:= 'OFF';
-          Cells[8, my_Row]:= '';
-          for i:= 0 to c_numOfPens do
-            job.pens[i].used:= false;
+          Rows[ARow].DelimitedText:= '"",-1,0°,OFF,0,0,100,100,0,""';
+          for i:= 0 to c_numOfPens do job.pens[i].used:= false;
           OpenFilesInGrid;
         end;
-     end;
-    job.fileDelimStrings[my_Row-1]:= ShortString(Rows[my_Row].DelimitedText);
+      9: SgEditorOn(SgFiles,ACol,ARow,false,false)
+    end;
+    job.fileDelimStrings[ARow-1]:= ShortString(Rows[ARow].DelimitedText);
   end;
 end;
 
-procedure TForm1.SgFilesKeyPress(Sender: TObject; var Key: Char);
+
+//#### MemoComment #############################################################
+procedure TForm1.MemoCommentClick(Sender: TObject);
 begin
-  if (Key = #13) or (Key = #10) then
-    with SgFiles do begin
-      job.fileDelimStrings[Row-1]:= ShortString(Rows[Row].DelimitedText);
-      Repaint;
-      OpenFilesInGrid;
-    end;
+//  TouchKeyboardOn(MemoComment,0,0,false,false);
 end;
 
-procedure TForm1.SgFilesExit(Sender: TObject);
+procedure TForm1.MemoCommentExit(Sender: TObject);
 begin
-
+//  TouchKeyboardOff;
 end;
 
-procedure TForm1.SgFilesClick(Sender: TObject);
-begin
-  SgFiles.Options:= SgFiles.Options - [goEditing, goAlwaysShowEditor];
-end;
+
 
 

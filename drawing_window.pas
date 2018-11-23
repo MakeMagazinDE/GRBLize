@@ -937,6 +937,9 @@ begin
 
   bm_scroll.x:= 0;
   bm_scroll.y:= ClientHeight - DrawingBox.Height;
+
+  mouse_start.x:= MaxInt;           // block moving up to left click into window
+
 // if form_visible then
 //    show;
 end;
@@ -1035,13 +1038,16 @@ procedure TForm2.DrawingBoxMouseMove(Sender: TObject; Shift: TShiftState; X,
 // Grafik verschieben
 begin
   if (ssLeft in Shift) then begin
-    bm_scroll.x:= bm_scroll.x + X - mouse_start.x;
-    bm_scroll.y:= bm_scroll.y + Y - mouse_start.y;
+                           // move only, if sequenz was starting with left click
+    if (mouse_start.x <> MaxInt) then begin
+      bm_scroll.x:= bm_scroll.x + X - mouse_start.x;
+      bm_scroll.y:= bm_scroll.y + Y - mouse_start.y;
+      set_drawing_scales;
+      draw_grid(Form2.DrawingBitmap);
+      NeedsRedraw:= true;
+    end;
     mouse_start.x:= X;
     mouse_start.y:= Y;
-    set_drawing_scales;
-    draw_grid(Form2.DrawingBitmap);
-    NeedsRedraw:= true;
     Application.ProcessMessages;
   end;
 end;
@@ -1108,6 +1114,7 @@ procedure TForm2.DrawingBoxMouseUp(Sender: TObject; Button: TMouseButton;
 begin
 //  draw_cnc_all;
   Cursor := crCross;
+  mouse_start.x:= MaxInt;                                   // deactivate moving
   NeedsRedraw:= true;
   TrackBarZoom.SetFocus;
 end;

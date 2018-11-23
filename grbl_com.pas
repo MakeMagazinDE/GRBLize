@@ -141,7 +141,6 @@ var
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
   grbl_sendlist: TSTringList;
-  grbl_checksema: boolean;
   grbl_delay_short, grbl_delay_long: Word;
   ComFile: THandle;
   AliveIndicatorDirection: Boolean;
@@ -150,19 +149,62 @@ var
   grbl_is_connected: boolean;
 
   GrblComm: TextFile;
-  DebugName: string = 'd:\temp\serial.txt';
+  DebugName: string = 'c:\temp\serial.txt';
 //  DebugName: string = '';
 
 implementation
 
 uses grbl_player_main, glscene_view, drawing_window, Graphics;
 
-procedure WriteGrblComm(s:string);
+var ms0: int64;
+
+procedure WriteGrblComm(serial:string; out:boolean);
+var i:       integer;
+    s, d:   string;
+    ms, ms1: int64;
 begin
   if DebugName <> '' then begin
-    Append(GrblComm);
-    writeln(GrblComm,s);
-    CloseFile(GrblComm);
+    d:=DateTimeToStr(Now);                                    // time in seconds
+
+    s:=IntToStr(MilliSecondOf(Now)); // milliseconds of the second with 3 digits
+    if length(s) = 1 then s:= '00' + s else
+    if length(s) = 2 then s:=  '0' + s;
+    d:= d + '.' + s;
+
+    ms1:= MilliSecondOfTheYear(Now);
+    ms:= ms1-ms0;                                     // delay to the last event
+    if ms >=10000 then s:= 'longer'                   // display max. 10s delays
+    else begin
+      s:=IntToStr(ms);
+      if length(s) = 1 then s:= '   ' + s else
+      if length(s) = 2 then s:=  '  ' + s else
+      if length(s) = 3 then s:=   ' ' + s;
+      s:= '(' + s + ')';
+    end;
+    d:= d + ' ' + s + ' ';
+
+    ms0:=ms1;                                             // remember last event
+
+    if out then d:=d+'>>> ' else d:=d+'<<< ';               // include direction
+
+    for i:=1 to length(serial) do
+    begin
+      if (serial[i] >= #32) and (serial[i] <= #127) then s:=serial[i] else
+      if (serial[i] =   #8) then s:='<BS>' else
+      if (serial[i] =  #10) then s:='<LF>' else
+      if (serial[i] =  #13) then s:='<CR>' else
+      if (serial[i] =  #24) then s:='<CAN>' else                         // ^X
+      if (serial[i] = #$84) then s:='<SafetyDoor>' else
+      if (serial[i] = #$85) then s:='<JogCancel>'  else
+      if (serial[i] = #$90) then s:='<Feed 100%>'  else
+      if (serial[i] = #$91) then s:='<Feed +10%>'  else
+      if (serial[i] = #$92) then s:='<Feed -10%>'  else
+      if (serial[i] = #$93) then s:='<Feed +1%>'   else
+      if (serial[i] = #$94) then s:='<Feed -1%>'   else
+         s:='#'+inttostr(ord(serial[i]));
+      d:=d+s;
+    end;
+    writeln(GrblComm, d);
   end;
 end;
 
@@ -466,7 +508,6 @@ end;
 procedure COMRxClear;
 // evt. im Buffer stehende Daten löschen
 begin
-//  PurgeComm(ComFile,PURGE_TXCLEAR);
   PurgeComm(ComFile,PURGE_RXCLEAR);
 end;
 
@@ -488,7 +529,7 @@ begin
   if not GetCommState(ComFile, DCB) then
     Result := False;
   // hier die Baudrate, Parität usw. konfigurieren
-  Config := 'baud' + baud_str + 'parity=n data=8 stop=1';
+  Config := 'baud=' + baud_str + ' parity=n data=8 stop=1';
   if not BuildCommDCB(@Config[1], DCB) then
     Result := False;
   if not SetCommState(ComFile, DCB) then
@@ -567,7 +608,7 @@ begin
     end;
   end;
   Result:= my_str;
-  WriteGrblComm('<<< ' + my_str);
+  WriteGrblComm(my_str,false);
 end;
 
 function COMsendStr(sendStr: String; my_getok: boolean): String;
@@ -578,12 +619,10 @@ var
   BytesWritten: DWORD;
   my_str: AnsiString;
 begin
-  WriteGrblComm('>>> ' + sendStr);
+  WriteGrblComm(sendStr,true);
   my_str := AnsiString(sendStr);
   WriteFile(ComFile, my_str[1], Length(my_str), BytesWritten, nil);
-  if my_getok then begin
-    Result:= COMReceiveStr(0);
-  end;
+  if my_getok then Result:= COMReceiveStr(0);
 end;
 
 // #############################################################################
@@ -639,7 +678,7 @@ begin
     end;
   end;
   Result:= my_str;
-  WriteGrblComm('<<< ' + my_str);
+  WriteGrblComm(my_str,false);
 end;
 
 function FTDIsendStr(sendStr: String; my_getok: boolean): String;
@@ -650,7 +689,7 @@ var
   i: longint;
   my_str: AnsiString;
 begin
-  WriteGrblComm('>>> ' + sendStr);
+  WriteGrblComm(sendStr,true);
   my_str:= AnsiString(sendStr);
   Result:= '';
   ftdi.write(@my_str[1], length(my_str), i);
@@ -706,7 +745,7 @@ function grbl_sendStr(sendStr: String; my_getok: boolean): String;
 // String sollte mit #13 abgeschlossen sein, kann aber auch einzelnes
 // GRBL-Steuerzeichen sein (?,!,~,CTRL-X)
 begin
-  result:= '';
+  result:= '';      // no other user should send something during waiting for OK
   repeat
     if ftdi_isopen then
       result:= FTDIsendStr(sendStr, my_getok);
@@ -714,7 +753,6 @@ begin
       result:= COMsendStr(sendStr, my_getok);
   until not CheckForPushmessage(result);
 end;
-
 
 function grbl_SendWithShortTimeout(my_cmd: String): String;
 // bei abgeschaltetem Status senden und empfangen
@@ -741,12 +779,11 @@ end;
 // #############################################################################
 
 procedure grbl_wait_for_timeout(timeout: Integer);
-var my_str: String;
+var my_str:   String;
 begin
   if isGrblActive then
     repeat
-//      if StartupDone then
-        Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
+      Application.ProcessMessages;         // funktioniert bei CreateForm nicht!
       sleep(0);
       my_str:= grbl_receiveStr(timeout);
       CheckForPushmessage(my_str);
@@ -763,10 +800,10 @@ begin
 end;
 
 function grbl_checkResponse: Boolean;
-var my_str1, my_str2: String;
-  i: Integer;
-  sl_options: TSTringList;
-  realtime_request_ok: Boolean;
+var my_str1, my_str2, my_str3: String;
+    i:                         Integer;
+    sl_options:                TSTringList;
+    realtime_request_ok:       Boolean;
 
 begin
   ShowAliveState(s_alive_wait_timeout);
@@ -781,17 +818,17 @@ begin
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Startup Message and Version Info:');
     repeat
-      my_str1:= grbl_receiveStr_noCheck(500);
+      my_str1:= grbl_receiveStr_noCheck(200);
       CheckForPushmessage(my_str1);
     until my_Str1 = '[Timeout]';
+
     my_str1:= grbl_statusStr;
     realtime_request_ok:= AnsiContainsStr(my_str1, '>');
     if realtime_request_ok then begin
-//      grbl_SendRealTimeCmd(#$D0);  // Enable device #0
       grbl_SendStr('$I' + #13, false);
-      my_str1:= grbl_receiveStr_noCheck(100);
-      my_str2:= grbl_receiveStr_noCheck(100);
-      grbl_wait_for_timeout(50);
+      my_str1:= grbl_receiveStr_noCheck(100);                      // [VER: ...]
+      my_str2:= grbl_receiveStr_noCheck(100);                      // [OPT: ...]
+      my_str3:= grbl_receiveStr_noCheck(100);                      // OK
       if CheckForPushmessage(my_str1) then begin
         // get version info
         if AnsiContainsStr(my_str1, 'VER:1') then
@@ -842,9 +879,9 @@ begin
     MachineOptions.PositiveSpace:= get_AppDefaults_bool(defPositivMachineSpace);
     HomingPerformed:= false;
     MachineState:= none;
-    grbl_wait_for_timeout(50);
+    sleep(50);                   // grbl_wait_for_timeout(50) does not work here
     GetStatus;
-    grbl_wait_for_timeout(50);
+    sleep(50);                   // grbl_wait_for_timeout(50) does not work here
 
     case MachineState of
       alarm:
@@ -868,7 +905,7 @@ begin
       idle:
         begin
           grbl_SendRealTimeCmd(#13);
-          my_str1:= ansiuppercase(grbl_receiveStr_noCheck(20));
+          my_str1:= ansiuppercase(grbl_receiveStr_noCheck(40));
           if (pos('OK',my_str1) > 0) then begin
             result:= true;
             HomingPerformed:= true;
@@ -900,13 +937,10 @@ end;
 // Highlevel-Funktionen
 // #############################################################################
 
-
 function GetStatus: Boolean;
 begin
-  if MachineOptions.NewGrblVersion then
-    result:= GetStatus11
-  else
-    result:= GetStatus09;
+  if MachineOptions.NewGrblVersion then result:= GetStatus11
+                                   else result:= GetStatus09;
 end;
 
 procedure grbl_checkZ(var z: Double);
@@ -1280,11 +1314,18 @@ begin
   end;
 end;
 
-begin
+//begin
+initialization
   if DebugName <> '' then begin
     AssignFile(GrblComm, DebugName);
 {$i-}    rewrite(GrblComm);   {$i+}
     if IOResult <> 0 then
       DebugName:= '';
   end;
+
+  ms0:= MilliSecondOfTheYear(Now);
+
+finalization
+  if DebugName <> '' then CloseFile(GrblComm);
+
 end.

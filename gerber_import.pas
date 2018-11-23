@@ -18,10 +18,10 @@ uses ShellApi, Winapi.Windows, MMsystem, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Vcl.Dialogs,
   import_files, grbl_com, Vcl.ComCtrls;
 
-function CallPcb2Gcode(my_source_path: String;
-                       FrontSide:      boolean;
-                       my_offset:      Double;
-                       Dpi:            String):String;
+function CallPcb2Gcode(source_path: String;
+                       Mirrored:    boolean;
+                       my_offset:   Double;
+                       Dpi:         String):String;
 
 type
   TFormGerber = class(TForm)
@@ -279,30 +279,34 @@ begin { Mirror }
   end; { Assigned(Picture.Graphic) }
 end; { Mirror }
 
-function CallPcb2Gcode(my_source_path: String;
-                       FrontSide:      boolean;
-                       my_offset:      Double;
-                       Dpi:            String):String;
+function CallPcb2Gcode(source_path: String;
+                       Mirrored:    boolean;
+                       my_offset:   Double;
+                       Dpi:         String):String;
 var my_converter_path, my_side, my_arg: String;
+    target_ext, S: string;
 begin
   Result := '';                           // Leerstring entspricht Fehlermeldung
   my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\pcb2gcode.exe';
-  if not FileExists(my_converter_path) then
+  if not FileExists(my_converter_path) then          // Konverter nicht gefunden
     exit;
 
-  if FrontSide then
-    my_side:= '--front'
-  else
-    my_side:= '--back';
+  target_ext:= '.ncb';
+  S:= ansiuppercase(ExtractFileName(source_path));
+  if (pos(  'TOP',S) > 0) or
+     (pos('FRONT',S) > 0) or
+     (pos(  '_01',S) > 0) then target_ext:= '.ncf';
 
-  ConvertedFileName:= ChangeFileExt(my_source_path, '.nc' + my_side[3]);
+  my_side:= '--front'; if Mirrored then my_side:= '--back';
 
-  my_arg:= my_side + #32 + my_source_path
+  ConvertedFileName:= ChangeFileExt(source_path, target_ext);
+
+  my_arg:= my_side + #32 + source_path
     + ' --nog81 --dpi ' + Dpi
     + ' --zsafe 1 --zchange 30 --zwork -0.2'
     + ' --offset ' + FloatToStrDot(my_offset)
     + ' --mill-feed 200'
-    + ' --optimise=1 --mill-speed 6000 --metric=1 --metricoutput=1 '
+    + ' --optimise=1 --mill-speed 3000 --metric=1 --metricoutput=1 '
     + my_side + '-output ' + ConvertedFileName;
   ExecuteFile(my_converter_path, my_arg, ExtractFilePath(my_converter_path), true, true);
   Result := my_arg;
@@ -324,8 +328,8 @@ begin
   Screen.Cursor:= crHourglass;
 
   CmdStr := CallPcb2Gcode(GerberFileName,
-                          not CheckMirror.Checked,
-                          FileParamArray[GerberFileNumber-1].user1,
+                          CheckMirror.Checked,
+                          FileParamArray[GerberFileNumber-1].gbr_inflate,
                           '500');
 
   if CmdStr = '' then begin
@@ -388,10 +392,6 @@ begin
   if v > InflateBar.Max then v0:= InflateBar.Max;
   if v0 <> -1 then EditInflate.Text:= FloatToStr(v/10);
   if abs(InflateBar.Position - v) > 0.9 then InflateBar.Position:= round(v);
-
-  FileParamArray[GerberFileNumber-1].user1:= StrToFloatDef(EditInflate.Text, 0.1);
-  Form1.SgFiles.Cells[7, GerberFileNumber]:= EditInflate.Text;
-
   InflateChange;
 end;
 
@@ -403,7 +403,7 @@ begin
   PlaySound('SYSTEMHAND', 0, SND_ASYNC);
 end;
 
-procedure set_top_bottom;
+procedure set_mirrored;
 var my_filename: String;
 begin
   my_filename:= ansiuppercase(ExtractFileName(GerberFileName));
@@ -413,7 +413,8 @@ begin
      (pos(  '_16',my_filename) > 0) then begin
     FormGerber.CheckMirror.checked:= false;
   end else begin;
-    FormGerber.Memo2.Lines.Add('Assume PCB should be be mirrored.');
+    FormGerber.Memo2.Lines.Add('Assume PCB should be mirrored.');
+    FormGerber.CheckMirror.checked:= true;
   end;
 end;
 
@@ -437,7 +438,7 @@ begin
     if pos(#32,GerberFileName) > 0 then
       blank_warning
     else begin
-      set_top_bottom;
+      set_mirrored;
       Caption:= 'Convert Gerber to GCode: ' + ExtractFileName(GerberFileName);
       InflateEditExit(Sender);
     end;
@@ -493,6 +494,10 @@ begin
 
     Form1.SgJobDefaults.Cells[1, 3]:= ComboThickness.Text;
     job.partsize_z:= StrToFloatDef(ComboThickness.Text, 1.6);
+
+    FileParamArray[GerberFileNumber].gbr_name:=    GerberFileName;
+    FileParamArray[GerberFileNumber].gbr_mirror:=  CheckMirror.Checked;
+    FileParamArray[GerberFileNumber].gbr_inflate:= StrToFloatDef(EditInflate.Text, 0.1);
 
     Memo2.Lines.Add('Added file '+ ConvertedFileName);
     OpenFilesInGrid;

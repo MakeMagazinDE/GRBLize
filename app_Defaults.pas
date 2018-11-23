@@ -55,6 +55,7 @@ const
     defJoypadSpindleToggle = 46;
     defJoypadFeedHold      = 47;
     defPositivMachineSpace = 48;
+    defTouchKeyboard       = 49;
 
 type
   T_machine_options = record   // Ausstattungsdetails
@@ -209,17 +210,9 @@ var i: Integer;
 begin
   init_blockarrays;
   for i := 0 to c_numOfFiles do with Form1.SgFiles do begin
-    Cells[0,i+1]:= '';
-    Cells[1,i+1]:= 'OFF';
-    Cells[2,i+1]:= '0°';
-    Cells[3,i+1]:= 'OFF';
-    Cells[4,i+1]:= '0';
-    Cells[5,i+1]:= '0';
-    Cells[6,i+1]:= '100';
-    Cells[6,i+1]:= 'YES';
-    Cells[7,i+1]:= '0.9';
-    Cells[8,i+1]:= '';
-    job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100';
+    job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100,100,0,""';
+    Form1.SgFiles.Rows[i+1].DelimitedText:= string(job.fileDelimStrings[i]);
+
     with FileParamArray[i] do begin
       bounds.min.x := high(Integer);
       bounds.min.y := high(Integer);
@@ -250,7 +243,7 @@ begin
   Form1.SgPens.Rows[0].DelimitedText:=
     'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc",ATC,Tip,Blades';
   Form1.SgFiles.Rows[0].DelimitedText:=
-    '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"XY %",Clear,"Remark"';
+    '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"X %","Y %",Clear,"Remark"';
   Form1.SgBlocks.Rows[0].DelimitedText:=
     '#,Tool,Ena,Dia,Shape,"Polygons [closed vectors] -open vectors-"';
   Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';
@@ -316,7 +309,7 @@ end;
 procedure InitAppdefaults;
 begin
   with Form1.SgAppDefaults do begin
-    RowCount:= 49;
+    RowCount:= 50;
     Rows[defHeadline].DelimitedText:=            'Parameter,Value';
     Rows[defToolchangePause].DelimitedText:=     '"Enable Tool Change in Job",OFF';
     Rows[defToolchangeX].DelimitedText:=         '"Tool Change Position X absolute",10';
@@ -366,6 +359,7 @@ begin
     Rows[defJoypadSpindleToggle].DelimitedText:= '"Joypad SpindleToggle Button",3';
     Rows[defJoypadFeedHold].DelimitedText:=      '"Joypad FeedHold Button",1';
     Rows[defPositivMachineSpace].DelimitedText:= '"Positive Machine Space",OFF';
+    Rows[defTouchKeyboard].DelimitedText:=       '"TouchKeyboard",OFF';
   end;
   ClearFiles;
   Form1.Memo1.lines.add('Job/application default settings applied');
@@ -496,6 +490,7 @@ begin
       ReadDef(defJoypadFeedHold,     'Jogpad',      'FeedHoldButton');
       ReadDef(defPositivMachineSpace,'Other',       'PositiveMachineSpace');
       ReadDef(defInvertZ,            'Other',       'InvertZinG-Code');
+      ReadDef(defTouchKeyboard,      'Other',       'TouchKeyboard');
     finally
       Ini.Free;
     end;
@@ -557,6 +552,7 @@ begin
       Ini.WriteString('Jogpad',      'FeedHoldButton',       Cells[1,defJoypadFeedHold]);
       Ini.WriteString('Other',       'PositiveMachineSpace', Cells[1,defPositivMachineSpace]);
       Ini.WriteString('Other',       'InvertZinG-Code',      Cells[1,defInvertZ]);
+      Ini.WriteString('Other',       'TouchKeyboard',        Cells[1,defTouchKeyboard]);
     end;
   finally
     Ini.Free;
@@ -568,7 +564,7 @@ var
   my_StringList, my_Line: TStringList;
   aCol, aRow: Integer;
 begin
-  aGrid.RowCount := 2; //clear any previous data
+  aGrid.RowCount := 2;                                 //clear any previous data
   my_StringList := TStringList.Create;
   try
     my_Line := TStringList.Create;
