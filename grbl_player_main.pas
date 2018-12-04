@@ -2205,9 +2205,9 @@ end;
 procedure TForm1.TimerDrawElapsed(Sender: TObject);
 begin
   if NeedsRedraw and Form1.WindowMenu1.Items[0].Checked then begin
+    NeedsRedraw:= false;
     draw_cnc_all;
   end;
-  NeedsRedraw:= false;
 end;
 
 // #############################################################################

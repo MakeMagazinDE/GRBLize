@@ -179,88 +179,94 @@ procedure search_entry_in_drawing(mx, my: Integer);
 // (Maus-XY) innerhalb Drawingbox
 // Liefert BlockArray-Index mit am besten passenden Eintrag zurück
 // oder -1 falls nichts gefunden (Klick außerhalb)
-var i, f, p: Integer;
-  x1, x2, y1, y2, dx, dy, dxy, old_dxy: Integer;
-  my_bounds: Tbounds;
-  my_point, my_offset: TintPoint;
-
+var i, f, p:                 Integer;
+    a, dx, dy, dxy, old_dxy: Integer;
+    my_bounds:               Tbounds;
+    my_point, my_offset:     TintPoint;
 begin
   UnHilite;
-  old_dxy:= high(old_dxy);
+  old_dxy:= high(old_dxy);                             // highest possible value
 
   if length(final_array) < 1 then
     exit;
   // zunächst Punkt suchen wg. Drills
-  for f:= 0 to length(final_array) - 1 do begin // penPathArray
+{  for f:= 0 to length(final_array) - 1 do begin                  // penPathArray
     my_bounds:= final_array[f].bounds; // Bounds im Path #
     my_offset:= job.pens[final_array[f].pen].offset;
-    for p:= 0 to length(final_array[f].millings) - 1 do // Milling-# im Block (Childs)
-      for i:= 0 to length(final_array[f].millings[p]) - 1 do begin // Milling Path
-        my_point:= final_array[f].millings[p,i]; // Point im Milling Path #
-        my_offset:= job.pens[final_array[f].pen].offset;
+    for p:= 0 to length(final_array[f].millings)-1 do // Milling-# im Block (Childs)
+      for i:= 0 to length(final_array[f].millings[p])-1 do begin // Milling Path
 
-        x1:= x_to_screen(my_point.x + my_offset.x);
-        if mx < x1 - 7 then
-          continue;
+        my_point:= final_array[f].millings[p,i];      // Point im Milling Path #
 
-        y1:= y_to_screen(my_point.y + my_offset.y);
-        if my > y1 + 7 then
-          continue;
+        a:= x_to_screen(my_point.x + my_offset.x);
+        if (mx < a - 7) or (mx > a + 7) then continue;
 
-        x2:= x_to_screen(my_point.x + my_offset.x);
-        if mx > x2 + 7 then
-          continue;
+        a:= y_to_screen(my_point.y + my_offset.y);
+        if (my > a + 7) or (my < a - 7) then continue;
 
-        y2:= y_to_screen(my_point.y + my_offset.y);
-        if my < y2 - 7 then
-          continue
-        else begin  // Abstand Maus zum Mittelpunkt
-          dx:= mx - (x_to_screen(my_bounds.min.x + my_offset.x)
-            + x_to_screen(my_bounds.max.x + my_offset.x)) div 2;
-          dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
-            + x_to_screen(my_bounds.max.y + my_offset.y)) div 2;
-          dxy:= round(sqrt(dx*dx + dy*dy));
-          if dxy < old_dxy then begin
-            HilitePoint:= i;
-            HilitePath:= p;
-            HiliteBlock:= f;
-            HilitePen:= final_array[f].pen;
-          end;
+        dx:= mx - (x_to_screen(my_bounds.min.x + my_offset.x)
+                 + x_to_screen(my_bounds.max.x + my_offset.x)) div 2;
+        dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
+                 + y_to_screen(my_bounds.max.y + my_offset.y)) div 2;
+        dxy:= round(sqrt(dx*dx + dy*dy));
+        if dxy < old_dxy then begin
+          HilitePoint:= i;
+          HilitePath:=  p;
+          HiliteBlock:= f;
+          HilitePen:=   final_array[f].pen;
+          old_dxy:= dxy;
+        end;
+      end;
+  end;}
+  for f:= 0 to length(final_array) - 1 do begin                  // penPathArray
+    my_bounds:= final_array[f].bounds; // Bounds im Path #
+    my_offset:= job.pens[final_array[f].pen].offset;
+    for p:= 0 to length(final_array[f].hilites)-1 do // hilite-# im Block (Childs)
+      for i:= 0 to length(final_array[f].hilites[p])-1 do begin       // Hilites
+
+        my_point:= final_array[f].hilites[p,i];      // Point im Milling Path #
+
+        a:= x_to_screen(my_point.x + my_offset.x);
+        if (mx < a - 7) or (mx > a + 7) then continue;
+
+        a:= y_to_screen(my_point.y + my_offset.y);
+        if (my > a + 7) or (my < a - 7) then continue;
+
+        dx:= mx - (x_to_screen(my_bounds.min.x + my_offset.x)
+                 + x_to_screen(my_bounds.max.x + my_offset.x)) div 2;
+        dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
+                 + y_to_screen(my_bounds.max.y + my_offset.y)) div 2;
+        dxy:= round(sqrt(dx*dx + dy*dy));
+        if dxy < old_dxy then begin
+          HilitePoint:= i;
+          HilitePath:=  p;
+          HiliteBlock:= f;
+          HilitePen:=   final_array[f].pen;
+          old_dxy:= dxy;
         end;
       end;
   end;
-  if HilitePoint >= 0 then
-    exit;
-  // kein Punkt gefunden, ggf. Pfad suchen
-  for f:= 0 to length(final_array) - 1 do begin // penPathArray
-    my_bounds:= final_array[f].bounds; // Bounds im Path #
+  if HilitePoint >= 0 then exit;
+                                        // kein Punkt gefunden, ggf. Pfad suchen
+  for f:= 0 to length(final_array) - 1 do begin                  // penPathArray
+    my_bounds:= final_array[f].bounds;                         // Bounds of Path
     my_offset:= job.pens[final_array[f].pen].offset;
 
-    x1:= x_to_screen(my_bounds.min.x + my_offset.x);
-    if mx < x1 - 4 then
-      continue;
+                    // outside if left/right/lower or higher then limits of path
+    if (mx < x_to_screen(my_bounds.min.x + my_offset.x) - 4) then continue;
+    if (mx > x_to_screen(my_bounds.max.x + my_offset.x) + 4) then continue;
+    if (my > y_to_screen(my_bounds.min.y + my_offset.y) - 4) then continue;
+    if (my < y_to_screen(my_bounds.max.y + my_offset.y) + 4) then continue;
 
-    y1:= y_to_screen(my_bounds.min.y + my_offset.y);
-    if my > y1 + 4 then
-      continue;
-
-    x2:= x_to_screen(my_bounds.max.x + my_offset.x);
-    if mx > x2 + 4 then
-      continue;
-
-    y2:= y_to_screen(my_bounds.max.y + my_offset.y);
-    if my < y2 - 4 then
-      continue
-    else begin  // Abstand Maus zum Mittelpunkt
-      dx:= mx - (x_to_screen(my_bounds.min.x + my_offset.x)
-        + x_to_screen(my_bounds.max.x + my_offset.x)) div 2;
-      dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
-        + x_to_screen(my_bounds.max.y + my_offset.y)) div 2;
-      dxy:= round(sqrt(dx*dx + dy*dy));
-      if dxy < old_dxy then begin
-        HiliteBlock:= f;
-        HilitePen:= final_array[f].pen;
-      end;
+    dx:= mx - (x_to_screen(my_bounds.min.x + my_offset.x)
+      + x_to_screen(my_bounds.max.x + my_offset.x)) div 2;
+    dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
+      + x_to_screen(my_bounds.max.y + my_offset.y)) div 2;
+    dxy:= round(sqrt(dx*dx + dy*dy));
+    if dxy < old_dxy then begin
+      HiliteBlock:= f;
+      HilitePen:= final_array[f].pen;
+      old_dxy:= dxy;
     end;
   end;
 end;
@@ -268,7 +274,6 @@ end;
 // #############################################################################
 // Drawing-Routinen für Screen
 // #############################################################################
-
 
 procedure set_drawing_scales;
 begin
@@ -468,10 +473,8 @@ end;
 // #############################################################################
 procedure set_colors(is_enabled, is_highlited: Boolean; var my_pen_color,
                  my_line_color, my_fill_color1, my_fill_color2: Tcolor);
-
 const
   c_disabled: Tcolor = $00404040;
-
 begin
   if is_enabled then begin
     if is_highlited then
@@ -502,7 +505,6 @@ var i, p: Integer;
   vlen_ok: boolean;
   has_multiple_millings: Boolean;
   my_offset: TIntPoint;
-
 begin
   if length(my_final_entry.outlines) = 0 then
     exit;
@@ -515,7 +517,8 @@ begin
   if (my_final_entry.shape = drillhole) or
      (not has_multiple_millings) or
      (not my_final_entry.enable) or
-     (my_final_entry.out_of_work) then begin
+     (my_final_entry.out_of_work)
+  then begin
    // Default-Farben der Drill-Vektoren und falls es nur einen Milling Path gibt
     my_pen_color:= job.pens[my_final_entry.pen].Color;
     set_colors( (my_final_entry.enable and not my_final_entry.out_of_work),
@@ -523,13 +526,10 @@ begin
     my_fill_color3:= colorDim(my_pen_color, 80);
   end;
 
-
   with Form2.DrawingBitmap do begin
-
 // -----------------------------------------------------------------------------
 // Bohrungen des milling-Pfads malen falls Drill-Shape
 // -----------------------------------------------------------------------------
-
     if my_final_entry.shape = drillhole then begin
       Canvas.Pen.Width := 1;
       Canvas.Pen.Mode:= pmCopy;
@@ -547,29 +547,16 @@ begin
           Canvas.Pen.Mode := pmCopy;
           draw_toolvec(p2, p2, my_final_entry.enable, is_highlited,
                 my_line_color, my_fill_color2, my_fill_color3, my_radius);
-          if is_highlited and (HilitePath = 0) and (HilitePoint = i) then begin
-            Canvas.Pen.Width := 2;
-            Canvas.Pen.Color:= clred;
-            Canvas.ellipse(p2.x-8, p2.y-8, p2.x+8, p2.y+8);
-            Canvas.Pen.Width := 3;
-            Canvas.Pen.Color:= clWhite;
-            Canvas.ellipse(p2.x-5, p2.y-5, p2.x+5, p2.y+5);
-            Canvas.Pen.Width := 1;
-          end;
           p1:= p2;
         end;
-        if my_final_entry.enable then begin
-//          draw_move(last_point, po1, clgray, true, false); // Seek-Linie zum ersten Punkt
-          last_point:= p2;                          // neuer letzter Punkt
-        end;
+        if my_final_entry.enable then last_point:= p2;    // neuer letzter Punkt
       end;
-      exit;  // keine weitere Aktion erforderlich
+      exit;                                 // keine weitere Aktion erforderlich
     end;
 
 // -----------------------------------------------------------------------------
 // Werkzeugweg mit Werkzeugdurchmesser malen, ggf. mit Pfeilen
 // -----------------------------------------------------------------------------
-
     if Form2.CheckBoxToolpath.checked then begin
       my_pathcount:= length(my_final_entry.millings);
       if my_pathcount > 0 then begin
@@ -603,9 +590,9 @@ begin
           end;  // if closed
         end;    // for my_pathcount
 
-        if my_final_entry.enable then begin
-          draw_move(last_point, po1, clgray, true, false); // Seek-Linie zum ersten Punkt
-          last_point:= p2;                          // neuer letzter Punkt
+        if my_final_entry.enable then begin       // Seek-Linie zum ersten Punkt
+          draw_move(last_point, po1, clgray, true, false);
+          last_point:= p2;                                // neuer letzter Punkt
         end;
       end;
     end;
@@ -613,10 +600,8 @@ begin
 // -----------------------------------------------------------------------------
 // Kontur/Outline malen
 // -----------------------------------------------------------------------------
-
     my_pathcount:= length(my_final_entry.outlines);
-    if my_pathcount = 0 then
-      exit;
+    if my_pathcount = 0 then exit;
     for p:= my_pathcount - 1 downto 0 do begin // innere Child-Pfade zuerst
       Canvas.Pen.Width := 1;
       Canvas.Pen.Mode:= pmCopy;
@@ -642,21 +627,8 @@ begin
         continue;
       get_bm_point(my_final_entry.outlines[p], 0, my_offset, po1);
       Canvas.moveto(po1.x, po1.y);        // zum ersten Punkt
-      for i:= 1 to my_pathlen - 1 do begin
-        if not get_bm_point(my_final_entry.outlines[p], i, my_offset, p1) then
-          break;
-        if is_highlited and (HilitePath = p) then begin
-          if HilitePoint = i then begin
-            Canvas.Pen.Width := 2;
-            Canvas.Pen.Color:= clred;
-            Canvas.ellipse(p1.x-8, p1.y-8, p1.x+8, p1.y+8);
-            Canvas.Pen.Width := 3;
-            Canvas.Pen.Color:= clWhite;
-            Canvas.ellipse(p1.x-5, p1.y-5, p1.x+5, p1.y+5);
-          end;
-          Canvas.Pen.Color:= clWhite;
-          Canvas.Pen.Width := 1;
-        end;
+      for i:= 0 to my_pathlen - 1 do begin
+        if not get_bm_point(my_final_entry.outlines[p], i, my_offset, p1) then break;
         Canvas.lineto(p1.x, p1.y);                               // draw conture
       end;
       if my_final_entry.closed then begin
@@ -666,9 +638,42 @@ begin
     Canvas.Pen.Style:= psSolid;     // psDashDot , psDot
 
 // -----------------------------------------------------------------------------
+// Hilites and HilitePoint
+// -----------------------------------------------------------------------------
+    my_pathcount:= length(my_final_entry.hilites);
+    if my_pathcount > 0 then begin         // why hilites are in path 0 only????
+      my_pathlen:= length(my_final_entry.hilites[0]);
+      Canvas.Pen.Width := 1;
+      Canvas.Pen.Mode:= pmCopy;
+      for i:= 0 to my_pathlen - 1 do begin
+        if not get_bm_point(my_final_entry.hilites[0], i, my_offset, p2) then break;
+        Canvas.Pen.Mode := pmCopy;
+        Canvas.Pen.Width:= 2;
+        Canvas.Pen.Color:= clBlue;
+        Canvas.ellipse(p2.x-8, p2.y-8, p2.x+8, p2.y+8);
+        Canvas.Pen.Width:= 3;
+        Canvas.Pen.Color:= clGray;
+        Canvas.ellipse(p2.x-5, p2.y-5, p2.x+5, p2.y+5);
+        Canvas.Pen.Width:= 1;
+      end;         // will be done seperatly to make sure Hilite is in forground
+      if is_highlited and
+         (HilitePath = 0) and
+         (HilitePoint >= 0) and
+         get_bm_point(my_final_entry.hilites[0], HilitePoint, my_offset, p2)
+      then begin
+        Canvas.Pen.Width:= 2;
+        Canvas.Pen.Color:= clRed;
+        Canvas.ellipse(p2.x-8, p2.y-8, p2.x+8, p2.y+8);
+        Canvas.Pen.Width:= 3;
+        Canvas.Pen.Color:= clWhite;
+        Canvas.ellipse(p2.x-5, p2.y-5, p2.x+5, p2.y+5);
+        Canvas.Pen.Width:= 1;
+      end;
+    end;
+
+// -----------------------------------------------------------------------------
 // Dimensionspfeile zeichnen
 // -----------------------------------------------------------------------------
-
     if Form2.CheckBoxDimensions.Checked and my_final_entry.enable then begin
       Canvas.Pen.Color:= my_fill_color1 or $00404040;  // Linienfarbe
       Canvas.Brush.Color:= Canvas.Pen.Color;

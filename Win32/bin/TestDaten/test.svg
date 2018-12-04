@@ -2,6 +2,7 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
+   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -12,12 +13,21 @@
    width="210mm"
    height="297mm"
    viewBox="0 0 744.09448819 1052.3622047"
-   id="svg4136"
+   id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
-   sodipodi:docname="BdL.svg">
+   sodipodi:docname="svg-test.svg">
   <defs
-     id="defs4138" />
+     id="defs4">
+    <linearGradient
+       id="linearGradient4141"
+       osb:paint="solid">
+      <stop
+         style="stop-color:#00ff00;stop-opacity:1;"
+         offset="0"
+         id="stop4143" />
+    </linearGradient>
+  </defs>
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
@@ -25,43 +35,37 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.35"
-     inkscape:cx="-820.61237"
-     inkscape:cy="517.14286"
+     inkscape:zoom="2.1637467"
+     inkscape:cx="415.47025"
+     inkscape:cy="289.07555"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1920"
-     inkscape:window-height="1056"
-     inkscape:window-x="-4"
-     inkscape:window-y="-4"
-     inkscape:window-maximized="1" />
+     inkscape:window-width="1853"
+     inkscape:window-height="998"
+     inkscape:window-x="2403"
+     inkscape:window-y="113"
+     inkscape:window-maximized="0" />
   <metadata
-     id="metadata4141">
+     id="metadata7">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <g
-     inkscape:label="Ebene 1"
+     inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
-    <g
-       id="g4140"
-       transform="matrix(1.5990848,0,0,1.5990848,0,455.57565)"
-       style="stroke-width:8.86333755;stroke-miterlimit:4;stroke-dasharray:none">
-      <circle
-         r="100"
-         cy="100"
-         cx="250"
-         id="path4684-62"
-         style="opacity:1;fill:none;stroke-width:8.86333755;stroke-miterlimit:4;stroke-dasharray:none" />
-    </g>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#ffff00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 270,750 h 70 v -70 H 270 V 750"
+       id="path4155"
+       inkscape:connector-curvature="0" />
   </g>
 </svg>

@@ -1,4 +1,7 @@
-﻿// #############################################################################
+﻿// Offen:
+// - Elypse: Mittelpunkte fehlen
+
+// #############################################################################
 // HPGL Import
 // #############################################################################
 
@@ -89,6 +92,7 @@ var
   xx, yy: Double;
   ca, res, dir, a, dx, dy, r: Double;
   dummy_str: String;
+  Pt: TIntPoint;
 
 begin
   my_pos:= 1;
@@ -97,7 +101,7 @@ begin
     if my_cmd = cmd_exit then
       exit;
     case my_cmd of
-      cmd_pa:
+      cmd_pa:                                         // Stift bewegen, absolute
         begin
           my_valid:= ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
@@ -105,13 +109,13 @@ begin
             LastPoint.x:= round(xx);
             LastPoint.y:= round(yy);
           end;
-          if LastAction >= mill then begin // war unten
-            append_point(fileID, CurrentBlockID, LastPoint);
+          if LastAction >= mill then begin                          // war unten
+            append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
             blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
             check_filebounds(FileID, LastPoint);
           end;
         end;
-      cmd_pu:
+      cmd_pu:                                                   // Stift anheben
         begin
           my_valid:=               ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
@@ -121,12 +125,12 @@ begin
           end;
           LastAction:= seek;
         end;
-      cmd_pd:
+      cmd_pd:                                                    // Stift senken
         begin
           if LastAction <= seek then begin
           // war oben, letzte Koordinaten sind erster Punkt im Block
             CurrentBlockID:= new_block(fileID);
-            append_point(fileID, CurrentBlockID, LastPoint);
+            append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
             blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
             check_filebounds(FileID, LastPoint);
           end;
@@ -137,17 +141,17 @@ begin
             LastPoint.x:= round(xx);
             LastPoint.y:= round(yy);
           end;
-          append_point(fileID, CurrentBlockID, LastPoint);
+          append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
           check_filebounds(FileID, LastPoint);
           LastAction:= mill;
         end;
-      cmd_in:
+      cmd_in:                                                 // Initialisierung
         begin
           ParseLine(my_pos, my_line, xx, dummy_str);
           ParseLine(my_pos, my_line, xx, dummy_str);
           LastAction:= lift;
         end;
-      cmd_sp:
+      cmd_sp:                                                 // Stift auswählen
         begin
           my_valid:= ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_pen:= round(xx);
@@ -161,7 +165,7 @@ begin
             CurrentPen:= 0;
           LastAction:= lift;
         end;
-      cmd_aa:      // AA x,y,CentralAngel[°] [,Resolution[°]]
+      cmd_aa:        // Kreisbogen absolute x,y,CentralAngel[°] [,Resolution[°]]
         begin
           my_valid:=               ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
@@ -177,6 +181,10 @@ begin
             if dy < 0 then a:= 2*pi - a;                            // Q3 und Q4
 
             if LastAction >= mill then begin                         // was down
+           // hilite the beginning, the center and (see below) the end of the arc
+              append_point(fileID, CurrentBlockID, LastPoint, [t_hilite]);
+              Pt.X:= round(xx); Pt.Y:= round(yy);
+              append_point(fileID, CurrentBlockID, Pt, [t_hilite]);
               dir:= 1; if ca < 0 then begin dir:= -1; ca:= -ca; end;
               while ca > 0 do begin                      // calculate new points
                 if res < ca then begin               // calc angle to next point
@@ -188,10 +196,11 @@ begin
                 end;
                 LastPoint.x:= round(xx + r*cos(a));  // calculate next LastPoint
                 LastPoint.y:= round(yy + r*sin(a));
-                append_point(fileID, CurrentBlockID, LastPoint);
+                append_point(fileID, CurrentBlockID, LastPoint, [t_mill]);
                 blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
                 check_filebounds(FileID, LastPoint);
-              end;
+              end;                                // point at the end of the arc
+              append_point(fileID, CurrentBlockID, LastPoint, [t_hilite]);
             end else begin                                             // was up
               LastPoint.x:= round(xx + r*sin(a+ca));  // calculate new LastPoint
               LastPoint.y:= round(yy + r*cos(a+ca));
@@ -355,13 +364,13 @@ var Scale  : double;                          // scale between file and internal
           if LastAction <= seek then begin
           // war oben, letzte Koordinaten sind erster Punkt im Block
             CurrentBlockID:= new_block(fileID);
-            append_point(fileID, CurrentBlockID, LastPoint);
+            append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
             blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
             check_filebounds(FileID, LastPoint);
           end;
           LastPoint.x:= round(xx);
           LastPoint.y:= round(yy);
-          append_point(fileID, CurrentBlockID, LastPoint);
+          append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
           check_filebounds(FileID, LastPoint);
           LastAction:= mill;
         end;
@@ -477,7 +486,7 @@ type  // use of objects because type "string" can't part of a variant record
   TSvgGroup = class(TSvg)
     public
       function  Scale:double;                      // Skalierungsfaktor auf [mm]
-      procedure AddPoint(Pf: TFloatPoint);
+      procedure AddPoint(Pf: TFloatPoint; AType: TPtType);
       procedure EllypseAddMiddlePoint(P0, P                : TFloatPointP;
                                       rx, ry, cx, cy, x_rot: double);
       function  Analysis(const Line: string):boolean; override;
@@ -726,7 +735,7 @@ begin
   Scale := Hmm / Hpx;
 end;
 
-procedure TSvgGroup.AddPoint(Pf: TFloatPoint);
+procedure TSvgGroup.AddPoint(Pf: TFloatPoint; AType: TPtType);
 var Ph: TFloatPoint;
     Pi: TIntpoint;
 begin             // Matrixprodukt zur Transformation rekursiv über alle Gruppen
@@ -737,25 +746,28 @@ begin             // Matrixprodukt zur Transformation rekursiv über alle Gruppe
 
   Pi.x := round(Ph.X * c_hpgl_scale * Scale);        // Umrechnung Pixel in [mm]
   Pi.y := round(Ph.Y * c_hpgl_scale * Scale);        // & Skalierung auf 1/40mm
-  append_point(F, CurrentBlockID, Pi);
+  append_point(F, CurrentBlockID, Pi, AType);
   blockArrays[F, CurrentBlockID].pen:= GetPen;
   check_filebounds(F, Pi);
 end;
 
 procedure TSvgGroup.EllypseAddMiddlePoint(P0, P                : TFloatPointP;
                                           rx, ry, cx, cy, x_rot: double);
-var P1: TFloatPointP;
-begin
-// rx, ry, x_rot, cx, cy
-  P1.t := (P0.t + P.t) / 2;             // Parameter zum Mittelpunkt bestimmen
+var P1: TFloatPointP;                       // P0: start point
+begin                                       // P: end point
+                                            // rx: first radius
+                                            // ry: second radius
+                                            // cx, cy: coordinates of the center
+                                            // x_rot: rotation
+  P1.t := (P0.t + P.t) / 2;               // Parameter zum Mittelpunkt bestimmen
   Vector2Rotate(rx*cos(P1.t),ry*sin(P1.t),x_rot,P1.P.X,P1.P.Y);
-  P1.P.X := P1.P.X + cx;                          // Verschieben zum Nullpunkt
+  P1.P.X := P1.P.X + cx;                            // Verschieben zum Nullpunkt
   P1.P.Y := P1.P.Y + cy;
 
   if Vector2DistP(P0.P, P.P, P1.P) < 4
   then begin
-    AddPoint(P1.P);
-    AddPoint(P.P);
+    AddPoint(P1.P,[t_mill]);
+    AddPoint(P.P,[t_mill]);
   end else begin
     EllypseAddMiddlePoint(P0, P1, rx, ry, cx, cy, x_rot);
     EllypseAddMiddlePoint(P1,  P, rx, ry, cx, cy, x_rot);
@@ -882,7 +894,7 @@ begin
   if CmdContinue
   then begin
     LastAction := mill;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
   end;
 
   if next_is_first_point or (LastAction = lift) then PS := P.P;
@@ -907,7 +919,7 @@ begin
     P.P.Y := P0.P.Y + P.P.Y
   end;
 
-  AddPoint(P.P);
+  AddPoint(P.P,[t_mill,t_hilite]);
 
   LastAction:= mill;
   next_is_first_point:= false;
@@ -927,7 +939,7 @@ begin
   // relative zu absoluten Koordinaten konvertieren
   if (cmd > 'Z') then P.P.X := P0.P.X + P.P.X;
 
-  AddPoint(P.P);
+  AddPoint(P.P,[t_mill,t_hilite]);
 
   LastAction:= mill;
   next_is_first_point:= false;
@@ -947,7 +959,7 @@ begin
   // relative zu absoluten Koordinaten konvertieren
   if (cmd > 'Z') then P.P.Y := P0.P.Y + P.P.Y;
 
-  AddPoint(P.P);
+  AddPoint(P.P,[t_mill,t_hilite]);
 
   LastAction:= mill;
   next_is_first_point:= false;
@@ -963,15 +975,15 @@ var P1,P2   : TFloatPoint;       // Bezierparameter, gloable innerhalb C-Handler
   var P01, P12: TFloatPoint;
       PB      : TFloatPointP;
   begin
-    PB.t := (PB0.t+PB1.t)/2;
-    Vector2Scale(P0.P,P1,PB.t,P01);                  // P01: Mittelpunkt P0/P1
-    Vector2Scale(P1,P2,PB.t,P12);                    // P12: Mittelpunkt P1/P2
-    Vector2Scale(P01,P12,PB.t,PB.P);       // Zielpunkt: Mittelpunkt P012/P123
+    PB.t:= (PB0.t+PB1.t)/2;
+    Vector2Scale(P0.P,P1,PB.t,P01);                    // P01: Mittelpunkt P0/P1
+    Vector2Scale(P1,P2,PB.t,P12);                      // P12: Mittelpunkt P1/P2
+    Vector2Scale(P01,P12,PB.t,PB.P);         // Zielpunkt: Mittelpunkt P012/P123
 
     if Vector2DistP(PB0.P, PB1.P, PB.P) < 4
     then begin
-      AddPoint(PB.P);
-      AddPoint(PB1.P);
+      AddPoint(PB.P, [t_mill]);
+      AddPoint(PB1.P,[t_mill]);
     end
     else begin
       Bezier2AddPoint(PB0, PB);
@@ -1003,6 +1015,9 @@ begin
     P2.Y := P0.P.Y + P2.Y;
   end;
 
+  AddPoint(P1,[t_hilite]);
+  AddPoint(P2,[t_hilite]);
+
   // Berechnung der neuen Wegpunkte
   PB0.P := P0.P; PB0.t := 0;
   PB1.P := P2;   PB1.t := 1;
@@ -1033,8 +1048,8 @@ var P1, P2  : TFloatPoint;           // Hilfspunkte, gloable innerhalb C-Handler
 
     if Vector2DistP(PB0.P, PB1.P, PB.P) < 4
     then begin
-      AddPoint(PB.P);
-      AddPoint(PB1.P);
+      AddPoint(PB.P,[t_mill]);
+      AddPoint(PB1.P,[t_mill]);
     end
     else begin
       Bezier3AddPoint(PB0, PB);
@@ -1069,6 +1084,8 @@ begin                                              // Parameter: x1 y1 x2 y2 x y
     P2.X  := P0.P.X + P2.X;  P2.Y  := P0.P.Y + P2.Y;
     P.P.X := P0.P.X + P.P.X; P.P.Y := P0.P.Y + P.P.Y
   end;
+
+  AddPoint(P2,[t_hilite]);
 
   // Berechnung der neuen Wegpunkte
   PB0.P := P0.P; PB0.t := 0;
@@ -1119,7 +1136,8 @@ begin          // Parameter: rx ry x-axis-rotation large-arc-flag sweep-flag x y
   if (P0.P.X = P.P.X) and (P0.P.Y = P.P.Y) then exit;
 
   if (rx=0) or (ry=0) then begin
-    AddPoint(P.P);         // wenn rx=0 oder ry=0 ==> gerade Linie (ungetestet!)
+           // wenn rx=0 oder ry=0 ==> gerade Linie (ungetestet!)
+    AddPoint(P.P,[t_mill,t_hilite]);
   end else begin
 
     // Wandlung in die Zentraldarstellung (siehe Wikipedia: SVG-Pfade)
@@ -1165,6 +1183,8 @@ begin          // Parameter: rx ry x-axis-rotation large-arc-flag sweep-flag x y
     EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, x_rot);
   end;
 
+  AddPoint(P.P,[t_hilite]);
+
   LastAction:= mill;
   next_is_first_point:= false;
   P0 := P;
@@ -1203,15 +1223,15 @@ begin
     if ParseLine(pw, PLine, val, s) <> p_letters then CmdContinue := true
     else begin
       cmd:= s[1];                 // neues Kommando, ist immer nur ein Buchstabe
-      if cmd = 'z' then cmd := 'Z';
+      if cmd = 'z' then
+        cmd := 'Z';
       CmdContinue := false
     end;
 
     if ( (LastAction = lift) and
-         ( (CmdContinue) or not CharInSet(cmd, ['Z', 'M', 'm']) ) ) then begin
-//         ( (CmdContinue) or not (cmd in ['Z', 'M', 'm']) ) ) then begin
+       ( (CmdContinue) or not CharInSet(cmd, ['Z', 'M', 'm']) ) ) then begin
       CurrentBlockID:= new_block(F);
-      AddPoint(PS);
+      AddPoint(PS,[t_mill,t_hilite]);
     end;
 
     case upcase(cmd) of
@@ -1306,41 +1326,44 @@ begin
     if Ry = MAXDOUBLE then Ry := Rx;
     P.P.X := X + Rx;
     P.P.Y := Y;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
     P.P.X := P.P.X + Width - 2*Rx;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := 3*pi/2;
     P.P.X := P.P.X + Rx; P.P.Y := P.P.Y + Ry; P.t  := 2*pi;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P0.P.X, P.P.Y, 0);
+    AddPoint(P.P,[t_hilite]);
 
     P.P.Y := P.P.Y + Height - 2*Ry;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := 0;
     P.P.X := P.P.X - Rx; P.P.Y := P.P.Y + Ry; P.t  := pi/2;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P.P.X, P0.P.Y, 0);
+    AddPoint(P.P,[t_hilite]);
 
     P.P.X := P.P.X - (Width - 2*Rx);
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := pi/2;
     P.P.X := P.P.X - Rx; P.P.Y := P.P.Y - Ry; P.t  := pi;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P0.P.X, P.P.Y, 0);
+    AddPoint(P.P,[t_hilite]);
 
     P.P.Y := P.P.Y - (Height - 2*Ry);
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := pi;
     P.P.X := P.P.X + Rx; P.P.Y := P.P.Y - Ry; P.t  := 3*pi/2;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P.P.X, P0.P.Y, 0);
   end
   else begin
-    P.P.X := X; P.P.Y := Y;  AddPoint(P.P);
-    P.P.Y := P.P.Y + Height; AddPoint(P.P);
-    P.P.X := P.P.X + Width;  AddPoint(P.P);
-    P.P.Y := P.P.Y - Height; AddPoint(P.P);
-    P.P.X := P.P.X - Width;  AddPoint(P.P);
+    P.P.X := X; P.P.Y := Y;  AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.Y := P.P.Y + Height; AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.X := P.P.X + Width;  AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.Y := P.P.Y - Height; AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.X := P.P.X - Width;  AddPoint(P.P,[t_mill]);
   end;
   blockArrays[F, CurrentBlockID].closed:= true;
 end;
@@ -1409,18 +1432,22 @@ begin
   P0.P.X := cx + rx; P0.P.Y := cy;      P0.t := 0;
   P.P.X  := cx;      P.P.Y  := cy + ry; P.t  := pi/2;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   P0    := P;
   P.P.X := cx - rx;  P.P.Y := cy;       P.t  := pi;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   P0    := P;
   P.P.X := cx;       P.P.Y := cy - ry;  P.t  := 3*pi/2;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   P0    := P;
   P.P.X := cx + rx;  P.P.Y := cy;       P.t  := 2*pi;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   blockArrays[F, CurrentBlockID].closed:= true;
 end;
@@ -1525,24 +1552,30 @@ begin
 
     P.P.X:= cx;
     P.P.Y:= cy;
-    AddPoint(P.P);                                         //    Punkt eintragen
+    AddPoint(P.P,[t_mill,t_hilite]);                          // Punkt eintragen
   end else begin
     CurrentBlockID:= new_block(F);
 
     P0.P.X := cx + r; P0.P.Y := cy;     P0.t := 0;
-    P.P.X  := cx;     P.P.Y  := cy + r; P.t  := pi/2;
+    P.P.X  := cx;     P.P.Y  := cy + r; P.t  := pi/2;
+    AddPoint(P.P,[t_hilite]);                                   // hilite Norden
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     P0    := P;
     P.P.X := cx - r;  P.P.Y := cy;      P.t  := pi;
+    AddPoint(P.P,[t_hilite]);                                   // hilite Westen
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     P0    := P;
     P.P.X := cx;      P.P.Y := cy - r;  P.t  := 3*pi/2;
+    AddPoint(P.P,[t_hilite]);                                    // hilite Süden
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     P0    := P;
-    P.P.X := cx + r;  P.P.Y := cy;      P.t  := 2*pi;
+                      P.P.Y := cy;      P.t  := 2*pi;
+    AddPoint(P.P,[t_hilite]);                              // hilite Mittelpunkt
+    P.P.X := cx + r;
+    AddPoint(P.P,[t_hilite]);                                    // hilite Osten
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     blockArrays[F, CurrentBlockID].closed:= true;
@@ -1730,7 +1763,7 @@ begin
   until my_pos > my_len;
   if got_new_xy and (my_action = mill)
   and (CurrentBlockID < length(blockArrays[fileID])) then begin
-    append_point(fileID, CurrentBlockID, LastPoint);
+    append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
     check_filebounds(FileID, LastPoint);
   end;
 

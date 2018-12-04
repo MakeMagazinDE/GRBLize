@@ -109,7 +109,7 @@ begin
             LastPoint.X:= round(my_x * c_hpgl_scale);
             LastPoint.Y:= round(my_y * c_hpgl_scale);
             my_block_Idx:= length(blockArrays[fileID])-1;
-            append_point(fileID, my_block_idx, LastPoint);
+            append_point(fileID, my_block_idx, LastPoint, [t_mill,t_hilite]);
             blockArrays[fileID, my_block_idx].pen:= CurrentPen;
             check_filebounds(FileID, LastPoint);
 
