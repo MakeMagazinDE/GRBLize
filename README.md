@@ -29,6 +29,7 @@ auch GRBL 0.9j sowie GRBL auf Arduino und ähnlichen Boards.
 
 ### Version History
 
+- 1.5 noGL: Version ohne das recht umständlich zu installierende OpenGL-Derivat "GLscene"
 - 1.5: Unterstützung für GRBL 1.1 kompilierbar, noch nicht vollständig getestet. 
 Binary ist für GRBL 0.9j. Korrekte Behandlung der File-XY-Offsets auch bei Roatation/Mirror, Pfade im 
 Drawing Window einzeln deaktivierbar. Instant-Mill-Funktionen für Kreise und Rechtecke ab Tool-Position.
