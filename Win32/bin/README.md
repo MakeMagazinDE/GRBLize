@@ -1,14 +1,14 @@
-#GRBLize
+# GRBLize
 
-###CNC-Steuerung für GRBL-JOG Projekt
+### CNC-Steuerung fÃ¼r GRBL-JOG Projekt
 
-Ausführbare Datei für Windows XP/7/8. Benötigt keine Installation, lediglich die Kofigurationsdatei
-"default.job" und ggf. die Beispiele im gleichen Verzeichnis. FTDI-Treiber für serielles Interface müssen installiert sein.
+AusfÃ¼hrbare Datei fÃ¼r Windows XP/7/8. BenÃ¶tigt keine Installation, lediglich die Kofigurationsdatei
+"default.job" und ggf. die Beispiele im gleichen Verzeichnis. FTDI-Treiber fÃ¼r serielles Interface mÃ¼ssen installiert sein.
 
 Bitte beachten Sie unbedingt den Artikel in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)** mit der 
-Anleitung für dieses Programm.
+Anleitung fÃ¼r dieses Programm.
 
-###CNC Control Software for GRBL Jogger Project
+### CNC Control Software for GRBL Jogger Project
 
 Executable for Windows XP/7/8. No Installation required, but configuration file "default.job" and example plot files 
 must be placed in same folder. Please see article in **[c't Hacks 4/2014](http://shop.heise.de/katalog/ct-hacks-4-2014)** 
