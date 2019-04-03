@@ -402,9 +402,9 @@ begin
         Memo1.lines.add('=========================================');
         grbl_sendlist.add(BitChangeStr(my_entry));
         if my_entry.shape = drillhole then
-          grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
+          grbl_drillpath(my_entry.millings[p], my_entry.pen)
         else
-          grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
+          grbl_millpath(my_entry.millings[p], my_entry.pen, my_entry.closed);
         SendListToGrbl;
       end;
     end;

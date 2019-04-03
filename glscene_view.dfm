@@ -183,7 +183,6 @@ object Form4: TForm4
           Material.FrontProperties.Emission.Color = {000000000000000000000000D9CEF73E}
           Material.BlendingMode = bmTransparency
           Material.Texture.Compression = tcHighSpeed
-          Direction.Coordinates = {00000000000000800000803F00000000}
           Position.Coordinates = {00000000000000000000803F0000803F}
           Visible = False
           Pickable = False
@@ -431,7 +430,6 @@ object Form4: TForm4
         object GLArrowLineZ: TGLArrowLine
           Material.FrontProperties.Diffuse.Color = {CDCC4C3FCDCC4C3FBBBA3A3F0000803F}
           Material.FrontProperties.Emission.Color = {AFAEAE3E00000000A1A0A03D0000803F}
-          Direction.Coordinates = {00000000000000800000803F00000000}
           Position.Coordinates = {000080BF000080BF0000003F0000803F}
           BottomRadius = 0.100000001490116100
           Height = 4.000000000000000000
@@ -442,7 +440,6 @@ object Form4: TForm4
           BottomArrowHeadRadius = 0.200000002980232200
         end
         object GLDummyCubeTool: TGLDummyCube
-          Direction.Coordinates = {00000000000000800000803F00000000}
           Position.Coordinates = {00000000000000000000A0400000803F}
           Pickable = False
           CubeSize = 1.000000000000000000
@@ -6006,7 +6003,6 @@ object Form4: TForm4
         Material.FrontProperties.Ambient.Color = {F3F2F23EE3E2E23EBFBEBE3E0000803F}
         Material.FrontProperties.Diffuse.Color = {A5A4243FF7F6F63EAFAEAE3E0000803F}
         Material.FaceCulling = fcCull
-        Direction.Coordinates = {00000000000000800000803F00000000}
         Position.Coordinates = {0000000000000000000000BF0000803F}
         CubeSize = {0000B041000040410000803F}
       end

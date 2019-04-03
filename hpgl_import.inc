@@ -1,5 +1,7 @@
 ﻿// Offen:
-// - Elypse: Mittelpunkte fehlen
+// - SVG: Elypse: Mittelpunkte fehlen
+// - SVG: Rotate als Transformation
+// - SVG: Verzerren in X- bzw. Y-Richtung als Transformation
 
 // #############################################################################
 // HPGL Import
@@ -253,7 +255,7 @@ begin
   end;
   my_sl.free;
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, true); // auto close path
+  file_Rotate_Mirror_Scale_Offset(fileID, true); // auto close path
   block_scale_file(fileID);
 end;
 
@@ -430,16 +432,13 @@ begin
   end;
   CloseFile(my_ReadFile);
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, true); // auto close path
+  file_Rotate_Mirror_Scale_Offset(fileID, true); // auto close path
   block_scale_file(fileID);
 end;
 
 // #############################################################################
 // SVG Import, contributed by Frank Kaiser
 // #############################################################################
-
-// Offen: - Rotate als Transformation
-//        - Verzerren in X- bzw. Y-Richtung als Transformation
 
 type                                      // 2D-Punkt mit zusätzlichem Parameter
   TFloatPointP = record
@@ -468,7 +467,8 @@ type  // use of objects because type "string" can't part of a variant record
       penOverride       : integer;
       M                 : TMatrix33;
       filled            : boolean;                // Kreis ausgefüllt ==> Bohren
-      pen               : integer;                       // zu verwendendes Tool
+                        // pen[0]: Anzahl der Tools für Pfad, pen[x]: Toolnummer
+      pen               : array[0..c_numOfPens+1] of integer;
       Hmm               : double;                          // Seitenhöhe in [mm]
       Hpx               : double;                          // Seitenhöhe in [px]
       val               : double;
@@ -632,7 +632,7 @@ begin
   if Predecessor = nil then begin
     M:= TMatrix33.Create(1,0,0,  0,1,0,   0,0,1);       // Transformationsmatrix
     filled   := false;                                             // nur Kontur
-    pen      := 1;                      // Standardstift, falls keiner angegeben
+    pen[0]   := 0;                                   // noch kein Stift vergeben
     F        := MAXINT;                       // ID für Pfad muss gesetzt werden
     Hmm      := MAXDOUBLE;             // Seitenhöhe in [mm] muss gesetzt werden
     Hpx      := MAXDOUBLE;             // Seitenhöhe in [px] muss gesetzt werden
@@ -654,7 +654,10 @@ begin
   Create(Predecessor);
   F           := fid;
   penOverride := pid;
-  if (pid >= 0) then Pen := pid;
+  if (pid >= 0) then begin
+    Pen[0] := 1;
+    Pen[1] := pid;
+  end;
 end;
 
 destructor TSvg.Destroy;
@@ -695,7 +698,9 @@ end;
 function TSvg.Valid:boolean;
 begin
   if (state = incomplete) and
-     (pen <> MAXINT) and                            // Stift muss gesetzt werden
+       ((pen[0] > 0) or
+        (Self.ClassType = TSvgGroup) or
+        (Self.ClassType = TSvgGroup)) and                               // Stift muss gesetzt werden
      (Hmm <> MAXDOUBLE) and            // Seitenhöhe in [mm] muss gesetzt werden
      (Hpx <> MAXDOUBLE) then           // Seitenhöhe in [px] muss gesetzt werden
     state:= complete;
@@ -712,8 +717,8 @@ end;
 
 function TSvg.GetPen:integer;
 var P: integer;
-begin
-  P := pen;
+begin            // das blockarray wird erst mal nur für den ersten Pen angelegt
+  P := pen[1];   // und, wenn vollständig, für alle weiteren Pens kopiert
   if penOverride >= 0 then P := penOverride;
   if (P<0) or (P >=32) then P := 0;
   GetPen:= P;
@@ -775,9 +780,9 @@ begin                                       // P: end point
 end;
 
 function TSvgGroup.Analysis(const Line: string):boolean;
-var i, j            : integer;
-    s               : string;
-    NewPen          : integer;
+var i, j, n, p      : integer;
+    s, color        : string;
+    ch              : char;
     a, b, c, d, e, f: double;
 begin
   Analysis := false;                         // letzte Zeile noch nicht erreicht
@@ -786,7 +791,6 @@ begin
 try
   if pos('style="',Line) > 0 then begin
     state  := incomplete;
-    NewPen := MaxInt;
     i:= pos('stroke:#', Line) + 8;                      // Linienfarbe ermitteln
     j:= pos('fill:#', Line) + 6;                           // Füllung? ermitteln
     if (i > 8) or (j > 6)  then
@@ -800,21 +804,19 @@ try
         inc(i);
       end;
 
-      if s = '000000' then NewPen := 0 else
-      if s = '804000' then NewPen := 1 else
-      if s = 'FF0000' then NewPen := 2 else
-      if s = 'FF8000' then NewPen := 3 else
-      if s = 'FFFF00' then NewPen := 4 else
-      if s = '00FF00' then NewPen := 5 else
-      if s = '0080FF' then NewPen := 6 else
-      if s = 'FF00FF' then NewPen := 7 else
-      if s = '00FFFF' then NewPen := 8 else
-      if s = 'A2A2DC' then NewPen := 9;
+      n:=0;
+      for p:=0 to 9 do begin
+        color:= IntToHex(int64(job.pens[p].color),6);
+        ch:= color[1]; color[1]:= color[5]; color[5]:= ch;
+        ch:= color[2]; color[2]:= color[6]; color[6]:= ch;
+        if s = color then begin
+          inc(n);
+          pen[0]:= n;
+          pen[n]:= p;
+        end;
+      end;
     end;
 
-    if NewPen = MaxInt then exit;
-
-    Pen := NewPen;                                          // neue Farbe setzen
     filled := pos('fill:#',Line) <> 0;                // Objekt mit Hintergrund?
   end;
 
@@ -847,9 +849,9 @@ finally
     Form1.Memo1.lines.add('ERROR: Zeile nicht auswertbar: ' + Line);
     state:= corrupt;
   end;
-  i := pos('</g>',Line);
-  if i > 0 then
-     i:= i;
+//  i := pos('</g>',Line);
+//  if i > 0 then
+//     i:= i;
   Analysis := pos('</g>',Line) > 0
 end;
 
@@ -982,8 +984,8 @@ var P1,P2   : TFloatPoint;       // Bezierparameter, gloable innerhalb C-Handler
 
     if Vector2DistP(PB0.P, PB1.P, PB.P) < 4
     then begin
-      AddPoint(PB.P, [t_mill]);
-      AddPoint(PB1.P,[t_mill]);
+      AddPoint(PB.P, [t_mill]);                  // additional calculated points
+      AddPoint(PB1.P,[t_mill]);                  // are for milling only
     end
     else begin
       Bezier2AddPoint(PB0, PB);
@@ -991,8 +993,7 @@ var P1,P2   : TFloatPoint;       // Bezierparameter, gloable innerhalb C-Handler
     end;
   end;
 
-begin
-                                                   // Parameter: x1 y1 x2 y2 x y
+begin                                              // Parameter: x1 y1 x2 y2 x y
   if not CmdContinue then                                             // read x1
     if ParseLine(pw, PLine, val, s) <> p_number then exit;
   P1.X := val;
@@ -1015,8 +1016,7 @@ begin
     P2.Y := P0.P.Y + P2.Y;
   end;
 
-  AddPoint(P1,[t_hilite]);
-  AddPoint(P2,[t_hilite]);
+  AddPoint(P2,[t_hilite]);                   // set end point of the path hilite
 
   // Berechnung der neuen Wegpunkte
   PB0.P := P0.P; PB0.t := 0;
@@ -1470,54 +1470,54 @@ begin
 
   Analysis := false;
   if state <> incomplete then exit;
-try
-  if Find('cx="', Line, i) then
-    if ParseLine(i, Line, cx, s) <> p_number then exit;     // Zentrum.x in [px]
 
-  if Find('cy="', Line, i) then
-    if ParseLine(i, Line, cy, s) <> p_number then exit;     // Zentrum.y in [px]
+  try
+    if Find('cx="', Line, i) then
+      if ParseLine(i, Line, cx, s) <> p_number then exit;   // Zentrum.x in [px]
 
-  if Find('r="', Line, i) then
-    if ParseLine(i, Line, r, s) <> p_number then exit;         // Radius in [px]
+    if Find('cy="', Line, i) then
+      if ParseLine(i, Line, cy, s) <> p_number then exit;   // Zentrum.y in [px]
 
-  state := incomplete;
+    if Find('r="', Line, i) then
+      if ParseLine(i, Line, r, s) <> p_number then exit;       // Radius in [px]
 
-finally
-  if state = error then begin
-    Form1.Memo1.lines.add('ERROR: Zeile nicht auswertbar: ' + Line);
-    state:= corrupt;
-  end;
+    state := incomplete;
 
-  result := pos('/>',Line) > 0;                        // Analyse ist abgeschlossen
-
-  if result and filled                               // Loch soll gebohrt werden
-  then begin
-    r := round(10 * r * Scale) / 10;   // r in mm umrechnen und auf 0,1mm runden
-
-    Tool:=11;
-    while (Tool <= c_numOfPens)              and
-          (Job.pens[Tool].used)              and
-          (Job.pens[Tool].shape = drillhole) and
-          (abs(Job.pens[Tool].diameter - 2*r) > 0.1) do Tool:=Tool+1;
-
-    if Tool > c_numOfPens then begin                 // ==> kein Platz mehr frei
+  finally
+    if state = error then begin
+      Form1.Memo1.lines.add('ERROR: Zeile nicht auswertbar: ' + Line);
       state:= corrupt;
-      Form1.Memo1.lines.add('ERROR: Zu wenige Tools!');
-    end else begin
-      pen:= Tool;                   // Werkzeug neu setzen, Farbe wird ignoriert
+    end;
 
-      if (not Job.pens[Tool].used)            // Bohrer muss neu angelegt werden
-      then begin
-        job.pens[Tool].diameter:= 2*r;          // Attribute für Werkzeug setzen
-        job.pens[Tool].tipdia:= 2*r;
-        job.pens[Tool].used:= true;
-        job.pens[Tool].shape:= drillhole;
+    result := pos('/>',Line) > 0;                   // Analyse ist abgeschlossen
+
+    if result and filled                             // Loch soll gebohrt werden
+    then begin
+      r := round(10 * r * Scale) / 10; // r in mm umrechnen und auf 0,1mm runden
+
+      Tool:=10;
+      while (Tool <= c_numOfPens)              and
+            (Job.pens[Tool].used)              and
+            (Job.pens[Tool].shape = drillhole) and
+            (abs(Job.pens[Tool].diameter - 2*r) > 0.1) do Tool:=Tool+1;
+
+      if Tool > c_numOfPens then begin               // ==> kein Platz mehr frei
+        state:= corrupt;
+        Form1.Memo1.lines.add('ERROR: Zu wenige Tools!');
+      end else begin
+        pen[0]:= 1;
+        pen[pen[0]]:= Tool;         // Werkzeug neu setzen, Farbe wird ignoriert
+
+        if (not Job.pens[Tool].used)          // Bohrer muss neu angelegt werden
+        then begin
+          job.pens[Tool].diameter:= 2*r;        // Attribute für Werkzeug setzen
+          job.pens[Tool].tipdia:= 2*r;
+          job.pens[Tool].used:= true;
+          job.pens[Tool].shape:= drillhole;
+        end;
       end;
     end;
   end;
-
-end;
-
 end;
 
 function TSvgCircle.Valid:boolean;
@@ -1538,11 +1538,11 @@ begin
 
   if filled
   then begin
-    CurrentBlockID:= MAXINT;                   // wird der Bohrer schon genutzt?
+    CurrentBlockID:= MAXINT;   // wird der Bohrer schon genutzt? Block ermitteln
     if length(blockArrays[F]) > 0 then
       for i:= 0 to length(blockArrays[F])-1 do
-        if (blockArrays[F, i].pen = pen) and
-           (job.pens[pen].shape = drillhole)
+        if (blockArrays[F, i].pen = pen[1]) and
+           (job.pens[pen[1]].shape = drillhole)
         then begin
           CurrentBlockID := i;
           break;
@@ -1589,7 +1589,7 @@ var
   my_ReadFile : TextFile;
   s           : string;
   SVG, SVGtemp: TSvg;
-  z           : integer;
+  z, i, j, n  : integer;
 begin
   if not FileExists(my_name) then begin
     FileParamArray[fileID].valid := false;
@@ -1653,13 +1653,22 @@ begin
 
     if SVG <> nil then begin
       if SVG.Analysis(s) then begin
-        if SVG.valid
-          then SVG.Draw
-          else Form1.Memo1.lines.add('ERROR (Zeile ' + inttostr(z) + '): Element nicht korrekt!');
+        if not SVG.valid then Form1.Memo1.lines.add('ERROR (Zeile ' + inttostr(z) + '): Element nicht korrekt!')
+        else begin
+          n:= SVG.pen[0];
+          for i:=1 to n do begin
+            SVG.Draw;                                          // draw first pen
+            if n > 1 then begin                                   // rotate pens
+              for j:=n downto 1 do
+                SVG.pen[j+1]:= SVG.pen[j];
+              SVG.pen[1]:=SVG.pen[n+1];
+            end;
+          end;
+        end;
         if SVG.Pred <> nil then begin
           SVGtemp := SVG.Pred;
           SVG.Destroy;
-          SVG := SVGtemp;
+          SVG:= SVGtemp;
         end;
       end;
     end;
@@ -1674,7 +1683,7 @@ begin
   LastPoint.x:= 0;
   LastPoint.y:= 0;
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, true);                               // Auto-close!
+  file_Rotate_Mirror_Scale_Offset(fileID, true);                  // Auto-close!
   block_scale_file(fileID);
 end;
 
@@ -1796,7 +1805,7 @@ begin
   end;
   my_sl.free;
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, true); // auto close path
+  file_Rotate_Mirror_Scale_Offset(fileID, true);              // auto close path
   block_scale_file(fileID);
 end;
 

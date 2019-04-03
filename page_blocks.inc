@@ -44,13 +44,17 @@ begin
         Cells[0,my_row]:= IntToStr(my_row);
         Cells[1,my_row]:= IntToStr(final_array[i].pen);
         my_bounds:= final_array[i].bounds;
+
         my_offset:= job.pens[final_array[i].pen].offset;
-        my_bounds.min.x:= my_bounds.min.x + my_offset.x;
-        my_bounds.min.y:= my_bounds.min.y + my_offset.y;
-        my_bounds.max.x:= my_bounds.max.x + my_offset.x;
-        my_bounds.max.y:= my_bounds.max.y + my_offset.y;
-        my_bounds.mid.x:= my_bounds.mid.x + my_offset.x;
-        my_bounds.mid.y:= my_bounds.mid.y + my_offset.y;
+        my_offset.x:= my_offset.x + job.global_offset.x;
+        my_offset.y:= my_offset.y + job.global_offset.y;
+
+//test        my_bounds.min.x:= my_bounds.min.x + my_offset.x;
+//        my_bounds.min.y:= my_bounds.min.y + my_offset.y;
+//        my_bounds.max.x:= my_bounds.max.x + my_offset.x;
+//        my_bounds.max.y:= my_bounds.max.y + my_offset.y;
+//        my_bounds.mid.x:= my_bounds.mid.x + my_offset.x;
+//        my_bounds.mid.y:= my_bounds.mid.y + my_offset.y;
         if my_bounds.min.x < final_bounds.min.x then
           final_bounds.min.x:= my_bounds.min.x;
         if my_bounds.min.y < final_bounds.min.y then

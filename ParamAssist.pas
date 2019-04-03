@@ -17,7 +17,7 @@ uses
   Vcl.Dialogs,
   Vcl.StdCtrls,
   Vcl.Menus,
-  import_files;
+  import_files, Vcl.Touch.Keyboard;
 
 type
   TFormParamAssist = class(TForm)
@@ -35,6 +35,7 @@ type
     ComboBoxMaterial: TComboBox;
     OKButton: TButton;
     CancelButton: TButton;
+    TouchKeyboard1: TTouchKeyboard;
     constructor Create(AOwner: TComponent);       override;
     procedure CancelButtonClick(Sender: TObject);
     procedure OKButtonClick(Sender: TObject);

@@ -126,13 +126,18 @@ begin
 end;
 
 procedure TForm1.SgPensExit(Sender: TObject);
+var c: integer;
 begin
+  c:= SgPens.Col;
   SgEditorOff(SgPens);
-  SgPens.Repaint;
-  PenGridListToJob;
-  apply_pen_change;
-  GLSneedsRedrawTimeout:= 2;
-  GLSneedsATCupdateTimeout:= 3;
+  if c in [6,7,8] then OpenFilesInGrid
+  else begin
+    SgPens.Repaint;
+    PenGridListToJob;
+    apply_pen_change;
+    GLSneedsRedrawTimeout:= 2;
+    GLSneedsATCupdateTimeout:= 3;
+  end;
 end;
 
 procedure TForm1.SgPensKeyPress(Sender: TObject; var Key: Char);
@@ -153,10 +158,12 @@ begin
     case ACol of
     1:                                                                  // Color
       begin
-        ColorDialog1.Color:= job.pens[ARow-1].color;
+        ColorDialog1.Color:=     job.pens[ARow-1].color;
         if not ColorDialog1.Execute then Exit;
-        Cells[1,ARow]:= IntToStr(ColorDialog1.Color);
-      end;
+        Cells[1,ARow]:=          IntToStr(ColorDialog1.Color);
+        job.pens[ARow-1].color:= ColorDialog1.Color;
+        OpenFilesInGrid;          // in case of SVG the color inflence the
+      end;                        // relation between the path and the used pen!
     2:                                                                 // Enable
       begin
         job.pens[ARow-1].enable:= not job.pens[ARow-1].enable;
@@ -165,13 +172,8 @@ begin
         else
           Cells[2,ARow]:= 'OFF';
       end;
-    3, 4, 5, 6, 7, 10, 13:        // Diameter, Z, F, Xofs, Yofs, Z/Cycle, Blades
-      SgEditorOn(SgPens,ACol,ARow,true,true);
-    8:  // Scale
-      begin
+    3, 4, 5, 6, 7, 8, 10, 13:     // Diameter,Z,F,Xofs,Yofs,Scale,Z/Cycle,Blades
         SgEditorOn(SgPens,ACol,ARow,true,true);
-        job.pens[ARow-1].Scale:= StrToFloatDef(Cells[8,ARow],100);
-      end;
     9:  // Shapes
      if ARow > 0 then begin
         perform( WM_CANCELMODE, 0, 0 );   // verhindert Mausaktion in Stringgrid

@@ -6,13 +6,13 @@ interface
 
 uses
   Dialogs, Math, StdCtrls, ComCtrls, ToolWin, Buttons, ExtCtrls, ImgList,
-  Controls, StdActns, Classes, ActnList, Menus, GraphUtil, StrUtils, Windows,
+  StdActns, Classes, ActnList, Menus, GraphUtil, StrUtils, Windows,
   Graphics, Messages, Spin, FileCtrl, Grids, Registry, ShellApi, MMsystem,
   VFrames, ExtDlgs, XPMan, CheckLst, drawing_window, glscene_view, GLColor,
   ValEdit, System.ImageList, System.Actions, FTDItypes, deviceselect, grbl_com,
   Vcl.ColorGrd, Vcl.Samples.Gauges, System.UItypes, app_defaults, DateUtils,
   TouchButton, Forms, GLScene, GLFullScreenViewer, System.IniFiles, SysUtils,
-  Vcl.Touch.Keyboard;
+  Vcl.Touch.Keyboard, GLCrossPlatform, GLBaseClasses, Controls;
 
 const
   c_ProgNameStr: String = 'GRBLize ';
@@ -74,14 +74,15 @@ type
     HelpAbout1: TAction;
     ImageList1: TImageList;
     BtnRescan: TButton;
-    DeviceView: TEdit;
-    OpenFileDialog: TOpenDialog;
     TimerDraw: TTimer;
     BtnClose: TButton;
     XPManifest1: TXPManifest;
     N7: TMenuItem;
-    OpenJobDialog: TOpenDialog;
-    SaveJobDialog: TSaveDialog;
+    OpenFileDialog: TOpenDialog;
+    OpenJobDialog:  TOpenDialog;
+    GerberImportDialog: TOpenDialog;
+    SaveJobDialog:  TSaveDialog;
+    ColorDialog1:   TColorDialog;
     PageControl1: TPageControl;
     TabSheetPens: TTabSheet;
     Label7: TLabel;
@@ -92,7 +93,6 @@ type
     SgGrblSettings: TStringGrid;
     Bevel3: TBevel;
     Label11: TLabel;
-    ColorDialog1: TColorDialog;
     BtnRunJob: TSpeedButton;
     CheckEndPark: TCheckBox;
     MposX: TLabel;
@@ -227,12 +227,12 @@ type
     UpDown3: TUpDown;
     Label36: TLabel;
     Label19: TLabel;
-    LabelJoyInfo: TLabel;
-    LabelJoySend: TLabel;
+    LabelInfo1: TLabel;
+    LabelInfo2: TLabel;
     BtnReloadAll: TButton;
     PanelPinState: TPanel;
-    LabelStatusFaults: TLabel;
-    LabelResponse: TLabel;
+    LabelInfo3: TLabel;
+    LabelInfo4: TLabel;
     MposC: TLabel;
     BtnZeroC: TSpeedButton;
     TabSheetPos: TTabSheet;
@@ -307,7 +307,6 @@ type
     PosX_2: TLabel;
     PosY_2: TLabel;
     PosZ_2: TLabel;
-    GerberImportDialog: TOpenDialog;
     ToolButton3: TToolButton;
     ToolButton4: TToolButton;
     ToolButton5: TToolButton;
@@ -316,6 +315,12 @@ type
     ToolButton10: TToolButton;
     ToolButton11: TToolButton;
     TouchKeyboard: TTouchKeyboard;
+    TouchButton11: TTouchButton;
+    LabelJoySend: TLabel;
+    LabelJoyInfo: TLabel;
+    LabelResponse: TLabel;
+    LabelStatusFaults: TLabel;
+    DeviceView: TPanel;
     procedure BtnEmergencyStopClick(Sender: TObject);
     procedure TimerStatusElapsed(Sender: TObject);
     procedure PageControl1Change(Sender: TObject);
@@ -475,6 +480,8 @@ type
     procedure SgPensDblClick(Sender: TObject);
     procedure SgPensContextPopup(Sender: TObject; MousePos: TPoint;
       var Handled: Boolean);
+    procedure SystemTouchKeyboardOn(Sender: TObject);
+    procedure SystemTouchKeyboardOff(Sender: TObject);
 
   private
     { Private declarations }
@@ -483,15 +490,19 @@ type
     JogDelay      : integer;
     CntrDelay     : integer;
     ActiveCntrButtom : TSpeedButton;
+    procedure TouchKeyboardOn(Edit: TCustomEdit; NumMode:boolean);
+    procedure TouchKeyboardOff;
 
   public
     { Public declarations }
+    GLScene1: TGLScene;
     FrameCounter: integer;
     BtnDownTime:  int64;
     BtnDownTag:   integer;
     fVideoImage:  TVideoImage;
     fVideoBitmap: TBitmap;
     procedure OnNewVideoFrame(Sender : TObject; Width, Height: integer; DataPtr: pointer);
+    function TouchSupport:boolean;
   end;
 
   TLed = class
@@ -743,7 +754,7 @@ const
 
 implementation
 
-uses import_files, Clipper, About, bsearchtree, gerber_import, ParamAssist;
+uses import_files, Clipper, About, bsearchtree, gerber_import, ParamAssist, Winapi.TlHelp32;
 
 {$R *.dfm}
 
@@ -1006,10 +1017,6 @@ begin
     WorkZeroYdone:= true;
     WorkZeroZdone:= true;
     WorkZeroAllDone:= true;
-//    WorkZeroXdone:= false;
-//    WorkZeroYdone:= false;
-//    WorkZeroZdone:= false;
-//    WorkZeroAllDone:= false;
   end else begin
     WorkZeroXdone:= false;
     WorkZeroYdone:= false;
@@ -1147,7 +1154,7 @@ begin
     OpenFTDIport
   else if com_was_open then
     OpenCOMport;
-  SavedPortnameForSim:= Form1.DeviceView.Text;
+  SavedPortnameForSim:= Form1.DeviceView.Caption;
   PortOpenedCheck;
   EnableStatus;
   grbl_sendStr(#$85, false);  // Jog Cancel
@@ -1187,8 +1194,11 @@ begin
   deviceselectbox.hide;
 
   ///// initialisation of Mill Parameter Assistent /////////////////////////////
-  if not IsFormOpen('FormParamAssist') then
+  if not IsFormOpen('FormParamAssist') then begin
     FormParamAssist := TFormParamAssist.Create(Self);
+    if TouchSupport then FormParamAssist.Width:= 690         // touch supported?
+                    else FormParamAssist.Width:= 380;
+  end;
   FormParamAssist.hide;
 
   ///// initialisation of PopupMenuMaterial ////////////////////////////////////
@@ -1426,15 +1436,24 @@ begin
     Form2.Close;
 end;
 
+function TForm1.TouchSupport:boolean;
+begin
+  result:= false;
+  if not (tcReady in GetTouchCapabilities) then exit;
+  if get_AppDefaults_bool(defTouchKeyboard) then result:= true;
+end;
+
 // #############################################################################
 // #### TouchKeyBoard                                                        ###
 // #############################################################################
 
 procedure TForm1.SgEditorOn(Sg: TStringGrid; ACol,ARow:integer; NumMode,SideWise:boolean);
 var X0, Y0, X1, Y1: integer;
-    P2:                    TPoint;
+    P2:             TPoint;
 begin
   Sg.Options:= Sg.Options + [goEditing, goAlwaysShowEditor];  // activate editor
+
+  if not TouchSupport then exit;                             // touch supported?
 
   with Sg do begin
     P2:= ClientToParent(CellRect(ACol,ARow).TopLeft,Form1);        // start menu
@@ -1442,8 +1461,6 @@ begin
     X1:= X0 + ColWidths[ACol]+1;
     Y1:= Y0 + RowHeights[ARow]+1;
   end;
-                                                      // activate Touchkeyboard?
-  if not get_AppDefaults_bool(defTouchKeyboard) then exit;
 
   if NumMode then begin                             // NumPad or normal keyboard
     TouchKeyboard.Layout:='NumPad';
@@ -1497,6 +1514,96 @@ begin
   end;
   Sg.Selection:= GR;
   TouchKeyboard.Hide;                                     // deactivate touchpad
+end;
+
+procedure TForm1.TouchKeyboardOn(Edit: TCustomEdit; NumMode:boolean);
+var P0:             TPoint;
+begin
+  if not TouchSupport then exit;                             // touch supported?
+
+  if NumMode then begin                             // NumPad or normal keyboard
+    TouchKeyboard.Layout:='NumPad';
+    TouchKeyboard.Width:=400;
+  end else begin
+    TouchKeyboard.Layout:='Standard';
+    TouchKeyboard.Width:=800;
+  end;
+ // upper left corner, place in the middle of the object (TabSheet1 coordinates)
+  P0.X:= Edit.Left + ((Edit.Width - TouchKeyboard.Width) div 2);
+  P0.Y:= Edit.Top + Edit.Height;                       // place under the object
+                                                 // convert to Form1 coordinates
+  P0:= Form1.ScreenToClient(TabSheet1.ClientToScreen(P0));
+
+  if P0.X < 0 then P0.X:= 0;                    // correct if outside the screen
+  if P0.X > Form1.Width - TouchKeyboard.width then
+     P0.X:= Form1.Width - TouchKeyboard.width-10;
+                                               // enough space under the object?
+  if (P0.Y + TouchKeyboard.Height) > Form1.Height then begin
+    if (P0.Y - Edit.Height) > TouchKeyboard.Height  // enough space over object?
+      then P0.Y:= P0.Y - TouchKeyboard.Height - Edit.Height
+      else P0.Y:= Form1.Height - TouchKeyboard.Height;
+  end;
+
+  TouchKeyboard.Left:= P0.X;
+  TouchKeyboard.Top:=  P0.Y;
+  TouchKeyboard.Show;
+end;
+
+procedure TForm1.TouchKeyboardOff;
+begin
+  TouchKeyboard.Hide;                                     // deactivate touchpad
+end;
+
+Function Wow64DisableWow64FsRedirection(Var Wow64FsEnableRedirection: LongBool): LongBool; StdCall;
+  External 'Kernel32.dll' Name 'Wow64DisableWow64FsRedirection';
+
+procedure TForm1.SystemTouchKeyboardOn(Sender: TObject);
+var Wow64FsEnableRedirection: LongBool;
+    OSK:                      string;
+begin
+  if not TouchSupport then exit;                             // touch supported?
+
+  OSK:= GetEnvironmentVariable('SYSTEMROOT') + '\system32\osk.exe';
+  If TosVersion.Architecture = arIntelX86
+  then begin                             // 32-bit Windows, run OSK.EXE directly
+    if ShellExecute(Application.Handle,'open',LPCTSTR(OSK),'','',SW_ShowNA) < 32 then RaiseLastOSError()
+  end else begin
+         // manipulate 32bit emulation to start 64bit program from 32bit program
+    if Wow64DisableWow64FsRedirection(Wow64FsEnableRedirection) then
+      if ShellExecute(Application.Handle,'open',LPCTSTR(OSK),nil,nil,SW_SHOWNA) < 32 then RaiseLastOSError();
+  end;
+end;
+
+procedure TForm1.SystemTouchKeyboardOff(Sender: TObject);
+var processHandle: THandle;
+
+  function determineProcessHandleForExeName(const exeName: String; out processHandle: THandle): Boolean;
+  var snapShot: THandle;
+      process:  TProcessEntry32;
+      pid:      DWORD;
+  begin
+    Result := False;
+    snapShot := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    try
+      process.dwSize := SizeOf(TProcessEntry32);
+      if Process32First(snapShot, process) then
+        while Process32Next(snapShot, process) do
+          if String(process.szExeFile).ToLowerInvariant() = exeName then begin
+            pid := process.th32ProcessID;
+            processHandle := OpenProcess(PROCESS_TERMINATE, False, pid);
+            Exit(True);
+          end;
+    finally
+      CloseHandle(snapShot);
+    end;
+  end;
+
+begin                           // touchscreen availible and configured for use?
+  if not (tcReady in GetTouchCapabilities) then exit;
+  if not get_AppDefaults_bool(defTouchKeyboard) then exit;
+
+  if determineProcessHandleForExeName('osk.exe', processHandle) then
+    Win32Check( TerminateProcess(processHandle, ERROR_SUCCESS) );
 end;
 
 // #############################################################################
@@ -1725,21 +1832,21 @@ procedure TForm1.CheckBoxSimClick(Sender: TObject);
 begin
   ResetToolflags;
   if isSimActive then begin
-    SavedPortnameForSim:= DeviceView.Text;
+    SavedPortnameForSim:= DeviceView.Caption;
     ResetSimulation;
     ResetCoordinates;
     Form4.FormReset;
     GLSsetATCandProbe;
     ForceToolPositions(grbl_wpos.X, grbl_wpos.Y, grbl_wpos.Z);
     HomingPerformed:= true;
-    DeviceView.Text:= 'SIMULATION';
+    DeviceView.Caption:= 'SIM';
     DeviceView.Font.Color:= clred;
     DeviceView.Font.Style:= [fsbold];
   end else begin
     EnableStatus;
     DeviceView.Font.Color:= clWindowText;
     DeviceView.Font.Style:= [];
-    DeviceView.Text:= SavedPortnameForSim;
+    DeviceView.Caption:= SavedPortnameForSim;
   end;
 end;
 
@@ -2963,3 +3070,5 @@ begin
 end;
 
 end.
+
+

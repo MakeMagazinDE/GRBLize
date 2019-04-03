@@ -8,7 +8,7 @@ begin
   Form1.Memo1.lines.add(com_name + ' connected - please wait...');
   if com_isopen then begin
     COMSetup(trim(deviceselectbox.EditBaudrate.Text));
-    Form1.DeviceView.Text:= com_name;
+    Form1.DeviceView.Caption:= com_name;
     Form1.DeviceView.Font.Color:= clWindowText;
     Form1.DeviceView.Font.Style:= [];
     sleep(2000);  // Arduino Startup Time
@@ -30,7 +30,7 @@ begin
       Form1.Memo1.lines.add(InitFTDIbySerial(ftdi_serial,deviceselectbox.EditBaudrate.Text)
         + ' - please wait...');
       ftdi.getDeviceInfo(my_device, pid, vid, my_description, ftdi_serial);
-      Form1.DeviceView.Text:= ftdi_serial + ' - ' + my_description;
+      Form1.DeviceView.Caption:= ftdi_serial + my_description;
       Form1.DeviceView.Font.Color:= clWindowText;
       Form1.DeviceView.Font.Style:= [];
       ftdi_isopen:= true;
@@ -235,7 +235,7 @@ begin
     BtnConnect.Enabled:= true;
   end;
   grbl_is_connected:= false;
-  DeviceView.Text:= 'SIMULATION';
+  DeviceView.Caption:= 'SIM';
   DeviceView.Font.Color:= clred;
   DeviceView.Font.Style:= [fsbold];
 

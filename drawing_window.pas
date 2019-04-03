@@ -14,6 +14,23 @@ uses
 type
   TForm2 = class(TForm)
     DrawingBox: TPaintBox;
+    Panel1: TPanel;
+    BtnZoomReset: TButton;
+    CheckBoxDimensions: TCheckBox;
+    CheckBoxDirections: TCheckBox;
+    CheckBoxToolpath: TCheckBox;
+    BtnDecZoom: TButton;
+    BtnIncZoom: TButton;
+    ViewZoom: TStaticText;
+    StaticText4: TStaticText;
+    PopupMenuPoint: TPopupMenu;
+    pu_PointEnabled: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
+    MenuItem7: TMenuItem;
     PopupMenuObject: TPopupMenu;
     pu_ObjectEnabled: TMenuItem;
     N1: TMenuItem;
@@ -21,52 +38,9 @@ type
     pu_inside: TMenuItem;
     pu_outside: TMenuItem;
     pu_pocket: TMenuItem;
-    N2: TMenuItem;
-    PopupMenuPart: TPopupMenu;
-    pu_moveZero2: TMenuItem;
-    pu_isAtZero2: TMenuItem;
-    pu_isatCenter1: TMenuItem;
-    N5: TMenuItem;
-    pu_camIsAtZero2: TMenuItem;
-    pu_moveCamToZero2: TMenuItem;
-    pu_camIsAtCenter: TMenuItem;
-    pu_moveCamToCenter: TMenuItem;
-    Panel1: TPanel;
-    BtnZoomReset: TButton;
-    TrackBarZoom: TTrackBar;
-    CheckBoxDimensions: TCheckBox;
-    CheckBoxDirections: TCheckBox;
-    StaticText2: TStaticText;
-    StaticText3: TStaticText;
-    CheckBoxToolpath: TCheckBox;
-    Label1: TLabel;
     Drill1: TMenuItem;
-    pu_moveCenter1: TMenuItem;
-    PopupMenuPoint: TPopupMenu;
-    MenuItem2: TMenuItem;
-    MenuItem3: TMenuItem;
-    MenuItem4: TMenuItem;
-    MenuItem5: TMenuItem;
-    MenuItem6: TMenuItem;
-    MenuItem7: TMenuItem;
-    MenuItem8: TMenuItem;
-    MenuItem10: TMenuItem;
-    MenuItem12: TMenuItem;
-    pu_MoveToPoint: TMenuItem;
-    MenuItem18: TMenuItem;
-    pu_MoveCamToPoint: TMenuItem;
-    N3: TMenuItem;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure pu_camIsAtPointClick(Sender: TObject);
-    procedure pu_camIsAtCenterClick(Sender: TObject);
-    procedure pu_moveCamToPointClick(Sender: TObject);
     procedure pu_moveCamToCenterClick(Sender: TObject);
-    procedure pu_moveCamToPartZeroClick(Sender: TObject);
-    procedure pu_camIsAtPartZeroClick(Sender: TObject);
-    procedure pu_toolIsAtCenterClick(Sender: TObject);
-    procedure pu_moveToolToCenterClick(Sender: TObject);
-    procedure pu_toolisAtPartZeroClick(Sender: TObject);
-    procedure pu_moveToolToPartZeroClick(Sender: TObject);
     procedure BtnZoomResetClick(Sender: TObject);
     procedure FormPaint(Sender: TObject);
     procedure FormResize(Sender: TObject);
@@ -78,23 +52,24 @@ type
         Shift: TShiftState; X, Y: Integer);
     procedure DrawingBoxMouseDown(Sender: TObject; Button: TMouseButton;
         Shift: TShiftState; X, Y: Integer);
-    procedure pu_PathEnabledClick(Sender: TObject);
-    procedure pu_radioClick(Sender: TObject);
-    procedure pu_moveToolToPointClick(Sender: TObject);
-    procedure pu_toolisatpointClick(Sender: TObject);
     procedure CheckBoxDirectionsClick(Sender: TObject);
     procedure CheckBoxDimensionsClick(Sender: TObject);
     procedure ScrollBarChange(Sender: TObject);
-    procedure TrackBarZoomChange(Sender: TObject);
     procedure FormMouseWheel(Sender: TObject; Shift: TShiftState;
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
-    procedure pu_ObjectenabledClick(Sender: TObject);
+    procedure BrtZoomDecClick(Sender: TObject);
+    procedure BtnZoomIncClich(Sender: TObject);
+    procedure pu_PathEnabledClick(Sender: TObject);
+    procedure pu_RadioClick(Sender: TObject);
+    procedure pu_ObjectEnabledClick(Sender: TObject);
 
   private
-    { Private-Deklarationen }
+    ZoomValue: double;
+    ZoomDistance: integer;
+    procedure SetZoom(Z: double);
   public
-    { Public-Deklarationen }
     DrawingBitmap: TBitmap;
+    property Zoom: double read ZoomValue write SetZoom;
   end;
 
 const
@@ -118,7 +93,7 @@ procedure UnHilite;
 procedure draw_cnc_all;
 procedure hilite_to(var x,y: Double);
 procedure hilite_center_to(var x,y: Double);
-procedure Uncheck_Popups;
+//procedure Uncheck_Popups;
 procedure SetDrawingToolPosMM(x, y, z: Double);
 procedure SetAllPosZupMM(x, y: Double);
 
@@ -154,13 +129,13 @@ begin
   FloatPointToOffsGraph.Y:= drawing_offset_Y - round(pf.Y * Scale);  // neue Grafik-Kordinaten
 end;
 
-function HPGLPointToOffsGraph(pi, po: TIntPoint):Tpoint;
+function HPGLPointToOffsGraph(pi: TIntPoint):Tpoint;
 // HPGL-Point auf Grafik umrechnen inkl. Offset
 var pf: TFloatPoint;
 begin
-  pf.X:= (pi.X + po.X) / c_hpgl_scale;  // pf in mm
+  pf.X:= (pi.X) / c_hpgl_scale;  // pf in mm
   HPGLPointToOffsGraph.x:= round(pf.x * Scale) + drawing_offset_x;  // neue Grafik-Kordinaten
-  pf.Y:= (pi.Y + po.Y) / c_hpgl_scale;  // pf in mm
+  pf.Y:= (pi.Y) / c_hpgl_scale;  // pf in mm
   HPGLPointToOffsGraph.Y:= drawing_offset_Y - round(pf.Y * Scale);  // neue Grafik-Kordinaten
 end;
 
@@ -190,37 +165,13 @@ begin
   if length(final_array) < 1 then
     exit;
   // zunächst Punkt suchen wg. Drills
-{  for f:= 0 to length(final_array) - 1 do begin                  // penPathArray
-    my_bounds:= final_array[f].bounds; // Bounds im Path #
-    my_offset:= job.pens[final_array[f].pen].offset;
-    for p:= 0 to length(final_array[f].millings)-1 do // Milling-# im Block (Childs)
-      for i:= 0 to length(final_array[f].millings[p])-1 do begin // Milling Path
-
-        my_point:= final_array[f].millings[p,i];      // Point im Milling Path #
-
-        a:= x_to_screen(my_point.x + my_offset.x);
-        if (mx < a - 7) or (mx > a + 7) then continue;
-
-        a:= y_to_screen(my_point.y + my_offset.y);
-        if (my > a + 7) or (my < a - 7) then continue;
-
-        dx:= mx - (x_to_screen(my_bounds.min.x + my_offset.x)
-                 + x_to_screen(my_bounds.max.x + my_offset.x)) div 2;
-        dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
-                 + y_to_screen(my_bounds.max.y + my_offset.y)) div 2;
-        dxy:= round(sqrt(dx*dx + dy*dy));
-        if dxy < old_dxy then begin
-          HilitePoint:= i;
-          HilitePath:=  p;
-          HiliteBlock:= f;
-          HilitePen:=   final_array[f].pen;
-          old_dxy:= dxy;
-        end;
-      end;
-  end;}
   for f:= 0 to length(final_array) - 1 do begin                  // penPathArray
     my_bounds:= final_array[f].bounds; // Bounds im Path #
+
     my_offset:= job.pens[final_array[f].pen].offset;
+    my_offset.x:= my_offset.x + job.global_offset.x;
+    my_offset.y:= my_offset.y + job.global_offset.y;
+
     for p:= 0 to length(final_array[f].hilites)-1 do // hilite-# im Block (Childs)
       for i:= 0 to length(final_array[f].hilites[p])-1 do begin       // Hilites
 
@@ -237,8 +188,8 @@ begin
         dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
                  + y_to_screen(my_bounds.max.y + my_offset.y)) div 2;
         dxy:= round(sqrt(dx*dx + dy*dy));
-        if dxy < old_dxy then begin
-          HilitePoint:= i;
+        if dxy <= old_dxy then begin               // equal is necessary to find
+          HilitePoint:= i;                         // the highest path/hipoint
           HilitePath:=  p;
           HiliteBlock:= f;
           HilitePen:=   final_array[f].pen;
@@ -251,6 +202,8 @@ begin
   for f:= 0 to length(final_array) - 1 do begin                  // penPathArray
     my_bounds:= final_array[f].bounds;                         // Bounds of Path
     my_offset:= job.pens[final_array[f].pen].offset;
+    my_offset.x:= my_offset.x + job.global_offset.x;
+    my_offset.y:= my_offset.y + job.global_offset.y;
 
                     // outside if left/right/lower or higher then limits of path
     if (mx < x_to_screen(my_bounds.min.x + my_offset.x) - 4) then continue;
@@ -263,8 +216,8 @@ begin
     dy:= my - (y_to_screen(my_bounds.min.y + my_offset.y)
       + x_to_screen(my_bounds.max.y + my_offset.y)) div 2;
     dxy:= round(sqrt(dx*dx + dy*dy));
-    if dxy < old_dxy then begin
-      HiliteBlock:= f;
+    if dxy <= old_dxy then begin                   // equal is necessary to find
+      HiliteBlock:= f;                             // the highest path/hipoint
       HilitePen:= final_array[f].pen;
       old_dxy:= dxy;
     end;
@@ -279,7 +232,7 @@ procedure set_drawing_scales;
 begin
   drawing_offset_x:= c_center_offs_x + bm_scroll.x;
   drawing_offset_y:= Form2.DrawingBox.Height + bm_scroll.y - c_center_offs_y;
-  Scale:= Int(Form2.TrackBarZoom.Position) * 1.0;
+  Scale:= Form2.Zoom;
 end;
 
 procedure add_scroll_offset(var p:Tpoint);
@@ -385,16 +338,16 @@ begin
 end;
 
 
-function get_bm_point(var my_path: Tpath; my_idx: Integer; my_offset: TIntPoint; var pt: TPoint): Boolean;
+function get_bm_point(var my_path: Tpath; my_idx: Integer; var pt: TPoint): Boolean;
 // Holt einen Punkt und Punkt mit Offset aus BlockArray-Path
 // liefert FALSE, wenn Array-Grenze überschritten
 begin
   get_bm_point:= false;
   if my_idx >= length(my_path) then
     exit;
-  pt.x:= Round((my_path[my_idx].x+ my_offset.X) * Scale * 25) div 1000;  // neue Kordinaten
+  pt.x:= Round((my_path[my_idx].x) * Scale * 25) div 1000;  // neue Kordinaten
   pt.x:= pt.x + drawing_offset_x ;
-  pt.y:= Round((my_path[my_idx].y + my_offset.Y) * Scale * 25) div 1000;
+  pt.y:= Round((my_path[my_idx].y) * Scale * 25) div 1000;
   pt.y:= drawing_offset_y - pt.y;
   get_bm_point:= true;
 end;
@@ -504,7 +457,6 @@ var i, p: Integer;
   my_pen_color, my_line_color, my_fill_color1, my_fill_color2, my_fill_color3: Tcolor;
   vlen_ok: boolean;
   has_multiple_millings: Boolean;
-  my_offset: TIntPoint;
 begin
   if length(my_final_entry.outlines) = 0 then
     exit;
@@ -513,7 +465,7 @@ begin
   my_radius:= round(job.pens[my_final_entry.pen].tipdia * Scale) div 2 + 1;
   if my_radius < 1 then
     my_radius:= 1;
-  my_offset:= job.pens[my_final_entry.pen].offset;
+
   if (my_final_entry.shape = drillhole) or
      (not has_multiple_millings) or
      (not my_final_entry.enable) or
@@ -535,11 +487,11 @@ begin
       Canvas.Pen.Mode:= pmCopy;
       if my_pathcount > 0 then begin
         my_pathlen:= length(my_final_entry.millings[0]);
-        if not get_bm_point(my_final_entry.millings[0], 0, my_offset, po1) then
+        if not get_bm_point(my_final_entry.millings[0], 0, po1) then
           exit; // erster Punkt in po1
         p1:= po1;
         for i:= 0 to my_pathlen - 1 do begin
-          if not get_bm_point(my_final_entry.millings[0], i, my_offset, p2) then
+          if not get_bm_point(my_final_entry.millings[0], i, p2) then
             break;
           Canvas.Pen.Mode := pmMerge;
           if my_final_entry.enable then
@@ -568,14 +520,14 @@ begin
             continue;
           if has_multiple_millings and my_final_entry.enable then begin
             my_pen_color:= job.pens[my_final_entry.pen].Color;
-            set_colors(my_final_entry.milling_enables[p], is_highlited, my_pen_color,
-                 my_line_color, my_fill_color1, my_fill_color2);
+            set_colors( (my_final_entry.milling_enables[p] and not my_final_entry.out_of_work),
+              is_highlited, my_pen_color, my_line_color, my_fill_color1, my_fill_color2);
           end;
-          if not get_bm_point(my_final_entry.millings[p], 0, my_offset, p1) then
+          if not get_bm_point(my_final_entry.millings[p], 0, p1) then
             break;
           po1:= p1;
           for i:= 0 to my_pathlen - 1 do begin
-            if not get_bm_point(my_final_entry.millings[p], i, my_offset, p2) then
+            if not get_bm_point(my_final_entry.millings[p], i, p2) then
               break;
             draw_toolvec(p1, p2, my_final_entry.enable, is_highlited,
               my_line_color, my_fill_color1, my_fill_color2, my_radius);
@@ -612,8 +564,8 @@ begin
       if has_multiple_millings and my_final_entry.enable then begin
         my_pen_color:= job.pens[my_final_entry.pen].Color;
         if p <= high(my_final_entry.milling_enables) then begin
-          set_colors(my_final_entry.milling_enables[p], is_highlited, my_pen_color,
-               my_line_color, my_fill_color1, my_fill_color2);
+          set_colors( (my_final_entry.milling_enables[p] and not my_final_entry.out_of_work),
+            is_highlited, my_pen_color, my_line_color, my_fill_color1, my_fill_color2);
           if my_final_entry.milling_enables[p] then
             Canvas.Pen.Style:= psSolid      // psDashDot , psDot
           else
@@ -625,10 +577,10 @@ begin
       my_pathlen:= length(my_final_entry.outlines[p]);
       if my_pathlen = 0 then
         continue;
-      get_bm_point(my_final_entry.outlines[p], 0, my_offset, po1);
+      get_bm_point(my_final_entry.outlines[p], 0, po1);
       Canvas.moveto(po1.x, po1.y);        // zum ersten Punkt
       for i:= 0 to my_pathlen - 1 do begin
-        if not get_bm_point(my_final_entry.outlines[p], i, my_offset, p1) then break;
+        if not get_bm_point(my_final_entry.outlines[p], i, p1) then break;
         Canvas.lineto(p1.x, p1.y);                               // draw conture
       end;
       if my_final_entry.closed then begin
@@ -646,7 +598,7 @@ begin
       Canvas.Pen.Width := 1;
       Canvas.Pen.Mode:= pmCopy;
       for i:= 0 to my_pathlen - 1 do begin
-        if not get_bm_point(my_final_entry.hilites[0], i, my_offset, p2) then break;
+        if not get_bm_point(my_final_entry.hilites[0], i, p2) then break;
         Canvas.Pen.Mode := pmCopy;
         Canvas.Pen.Width:= 2;
         Canvas.Pen.Color:= clBlue;
@@ -659,7 +611,7 @@ begin
       if is_highlited and
          (HilitePath = 0) and
          (HilitePoint >= 0) and
-         get_bm_point(my_final_entry.hilites[0], HilitePoint, my_offset, p2)
+         get_bm_point(my_final_entry.hilites[0], HilitePoint, p2)
       then begin
         Canvas.Pen.Width:= 2;
         Canvas.Pen.Color:= clRed;
@@ -678,8 +630,8 @@ begin
       Canvas.Pen.Color:= my_fill_color1 or $00404040;  // Linienfarbe
       Canvas.Brush.Color:= Canvas.Pen.Color;
       Canvas.Font.Color:= clwhite;  // Zeichenfarbe
-      pmin:= HPGLPointToOffsGraph(my_final_entry.bounds.min, my_offset);
-      pmax:= HPGLPointToOffsGraph(my_final_entry.bounds.max, my_offset);
+      pmin:= HPGLPointToOffsGraph(my_final_entry.bounds.min);
+      pmax:= HPGLPointToOffsGraph(my_final_entry.bounds.max);
       p1.x:= pmin.x;
       p1.y:= (pmin.y + pmax.y) div 2;
       p2.x:= pmax.x;
@@ -854,18 +806,6 @@ begin
   draw_grid(Form2.DrawingBitmap);
 
   with Form2.DrawingBitmap do begin
-    po1.x := 0;
-    po1.y := 0;
-    add_scroll_offset(po1);
-    po2:= po1;
-    Canvas.Pen.Color:= clwhite;
-    if length(final_Array) > 0 then
-      for j:= 0 to length(final_Array) - 1 do begin
-        draw_final_entry(final_Array[j], HiliteBlock = j, po1);
-//       Application.ProcessMessages;     // sehr langsam!
-      end;
-    draw_move(po1, po2, clgray, true, false);
-
     Canvas.Pen.Color:= clgray;
 
     draw_tool;
@@ -896,6 +836,18 @@ begin
     if (HiliteBlock < 0) then
       Canvas.Pen.Width := 2;
     Canvas.Ellipse(po1.x-6,po1.y-6,po1.x+6,po1.y+6);
+
+    po1.x := 0;
+    po1.y := 0;
+    add_scroll_offset(po1);
+    po2:= po1;
+    Canvas.Pen.Color:= clwhite;
+    if length(final_Array) > 0 then
+      for j:= 0 to length(final_Array) - 1 do begin
+        draw_final_entry(final_Array[j], HiliteBlock = j, po1);
+//       Application.ProcessMessages;     // sehr langsam!
+      end;
+    draw_move(po1, po2, clgray, true, false);
   end;
   if not fActivated then
     update_drawing;
@@ -944,6 +896,7 @@ begin
   bm_scroll.y:= ClientHeight - DrawingBox.Height;
 
   mouse_start.x:= MaxInt;           // block moving up to left click into window
+  ZoomDistance:=  MaxInt;                               // zoom gesture inactive
 
 // if form_visible then
 //    show;
@@ -986,6 +939,8 @@ begin
   if (HiliteBlock >= 0) then begin
     pt:= final_Array[HiliteBlock].bounds.mid;
     ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
+    ZeroOfs.x:= ZeroOfs.x + job.global_offset.x;
+    ZeroOfs.y:= ZeroOfs.y + job.global_offset.y;
     pt.X := pt.X + ZeroOfs.X;
     pt.Y := pt.Y + ZeroOfs.Y;
     x:= pt.X / c_hpgl_scale;
@@ -1000,6 +955,8 @@ begin
   if (HilitePoint >= 0) then begin
     pt:= final_Array[HiliteBlock].millings[HilitePath, HilitePoint];
     ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
+    ZeroOfs.x:= ZeroOfs.x + job.global_offset.x;
+    ZeroOfs.y:= ZeroOfs.y + job.global_offset.y;
     pt.X := pt.X + ZeroOfs.X;
     pt.Y := pt.Y + ZeroOfs.Y;
     x:= pt.X / c_hpgl_scale;
@@ -1007,6 +964,8 @@ begin
   end else if (HiliteBlock >= 0) then begin
     pt:= final_Array[HiliteBlock].bounds.min;
     ZeroOfs:= job.pens[final_Array[HiliteBlock].pen].offset;
+    ZeroOfs.x:= ZeroOfs.x + job.global_offset.x;
+    ZeroOfs.y:= ZeroOfs.y + job.global_offset.y;
     pt.X := pt.X + ZeroOfs.X;
     pt.Y := pt.Y + ZeroOfs.Y;
     x:= pt.X / c_hpgl_scale;
@@ -1057,6 +1016,52 @@ begin
   end;
 end;
 
+{var d0: integer = 0;
+
+procedure TForm2.DrawingBoxGesture(Sender: TObject;
+  const EventInfo: TGestureEventInfo; var Handled: Boolean);
+begin
+exit;
+  if EventInfo.GestureID <> igiZoom then exit;
+  Handled:= true;
+//  WriteGrblComm(IntToHex(byte(EventInfo.Flags),2)+'  '+IntToStr(EventInfo.Distance),true);
+//  Form1.LabelInfo4.Caption:= IntToHex(byte(EventInfo.Flags),4);
+
+  if EventInfo.Flags = [gfBegin] then      Form1.LabelInfo1.Caption:= IntToStr(EventInfo.Distance)
+    else if EventInfo.Flags = [gfEnd] then Form1.LabelInfo2.Caption:= IntToStr(EventInfo.Distance)
+      else                                 Form1.LabelInfo2.Caption:= IntToStr(EventInfo.Distance);
+
+  case byte(EventInfo.Flags) of
+    1: d0:= EventInfo.Distance;      // first message of gesture, store distance
+    4: d0:= MaxInt;                                   // last message of gesture
+    else begin
+      if d0 > 0 then begin                         // handle only if d0 is valid
+        Form1.LabelInfo4.Caption:= FormatFloat('0.00',EventInfo.Distance/d0);
+      end;
+    end;
+  end;
+//    if d0 <> 0 then
+//      Form1.LabelResponse.Caption:= FormatFloat('0.00',EventInfo.Distance/d0);
+
+// TInteractiveGestureFlag = (gfBegin, gfInertia, gfEnd);
+
+  //    if not(TInteractiveGestureFlag.gfBegin in EventInfo.Flags) and
+//       not(TInteractiveGestureFlag.gfEnd in EventInfo.Flags) then begin
+//      D:= EventInfo.Distance;
+//      d:=d;
+  Form1.LabelInfo3.Caption:= IntToStr(d0);
+//      Direction := EventInfo.Distance/FLastDIstance;
+//      LScale := ZoomPanel.Scale.X * Direction;
+//      if LScale < 1 then LScale := 1;
+
+//      ZoomPanel.Scale.X := LScale;
+//      ZoomPanel.Scale.Y := LScale;
+
+//      ZoomPanel.Width := ZoomWidth * LScale;
+//      ZoomPanel.Height := ZoomHeight * LScale;
+//    FLastDIstance := EventInfo.Distance;
+end;
+}
 procedure TForm2.DrawingBoxMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 // Select/Move mit linker Maustaste
@@ -1072,28 +1077,24 @@ begin
     NeedsRedraw:= true;
   end;
   if (ssRight in Shift) then begin
-    // if HiliteBlock < 0 then
-    //  search_entry_in_drawing(x,y);
-    // draw_cnc_all;
-    pt.x := X + 15;
-    pt.y := Y - 10;
+    pt.x := X + 15; pt.y := Y - 10;         // calculate position for Popup-Menu
     pt := DrawingBox.ClientToScreen(pt);
-    move_enabled:= WorkZeroXdone and WorkZeroYdone;
+{    move_enabled:= WorkZeroXdone and WorkZeroYdone;
     pu_MoveCamToCenter.Enabled:= move_enabled;
     pu_MoveCenter1.Enabled:= move_enabled;
     pu_moveZero2.Enabled:= move_enabled;
     pu_moveCamToZero2.Enabled:= move_enabled;
     pu_moveToPoint.Enabled:= move_enabled;
     pu_moveCamToPoint.Enabled:= move_enabled;
-
+}
     if (HiliteBlock >= 0) then begin
       uncheck_Popups;
       if final_array[HiliteBlock].closed then begin
         MenuItem4.Enabled:= true;
         MenuItem6.Enabled:= true;
-      end else begin
-        MenuItem4.Enabled:= false;
-        MenuItem6.Enabled:= false;
+//      end else begin     done by uncheck_popups
+//        MenuItem4.Enabled:= false;
+//        MenuItem6.Enabled:= false;
       end;
       if (HilitePath >= 0) then begin
         if length(final_array[HiliteBlock].millings) > 1 then
@@ -1110,7 +1111,7 @@ begin
       else
         PopupMenuObject.Popup(pt.X, pt.Y);
     end else
-      PopupMenuPart.Popup(pt.X, pt.Y);
+//      PopupMenuPart.Popup(pt.X, pt.Y);
   end;
 end;
 
@@ -1121,20 +1122,36 @@ begin
   Cursor := crCross;
   mouse_start.x:= MaxInt;                                   // deactivate moving
   NeedsRedraw:= true;
-  TrackBarZoom.SetFocus;
 end;
 
 // #############################################################################
 // #############################################################################
 
+procedure TForm2.SetZoom(Z: double);
+begin
+  if (Z < 1) or (Z > 50) then exit;
+  ZoomValue:= Z;
+  ViewZoom.caption:= FormatFloat('00.0',ZoomValue);
+  NeedsRedraw:= true;
+end;
+
+
+procedure TForm2.BrtZoomDecClick(Sender: TObject);
+begin
+  Zoom:= 0.9 * Zoom;
+end;
+
+procedure TForm2.BtnZoomIncClich(Sender: TObject);
+begin
+  Zoom:= Zoom / 0.9;
+end;
 
 procedure TForm2.BtnZoomResetClick(Sender: TObject);
 // Center Scrollbars
 begin
-  TrackBarZoom.Position:= 4;
   bm_scroll.x:= 0;
   bm_scroll.y:= ClientHeight - DrawingBox.Height;
-  NeedsRedraw:= true;
+  Zoom:= 4;
 end;
 
 procedure TForm2.ScrollBarChange(Sender: TObject);
@@ -1152,9 +1169,6 @@ begin
   NeedsRedraw:= true;
 end;
 
-
-
-
 // #############################################################################
 // #############################################################################
 
@@ -1163,7 +1177,8 @@ begin
   if (HiliteBlock >= 0) then begin
     PopupMenuPoint.Items[0].Checked:= not PopupMenuPoint.Items[0].Checked;
     // Block hat mehrere Pfade. nur einzelnen Pfad behandeln
-    if (HilitePath >= 0) then
+    if (HilitePath >= 0) and
+       (length(final_array[HiliteBlock].milling_enables) > 0) then
       final_array[HiliteBlock].milling_enables[HilitePath]:= PopupMenuPoint.Items[0].Checked;
     if length(final_array[HiliteBlock].millings) = 1 then
       final_array[HiliteBlock].enable:= PopupMenuPoint.Items[0].Checked;
@@ -1172,7 +1187,6 @@ begin
     NeedsRedraw:= true;
   end;
 end;
-
 
 procedure TForm2.pu_ObjectEnabledClick(Sender: TObject);
 begin
@@ -1183,7 +1197,6 @@ begin
     NeedsRedraw:= true;
   end;
 end;
-
 
 procedure TForm2.pu_RadioClick(Sender: TObject);
 var my_idx: Integer;
@@ -1207,10 +1220,8 @@ begin
   end;
 end;
 
-
 // #############################################################################
 // #############################################################################
-
 
 procedure SetDrawingToolPosMM(x, y, z: Double);
 begin
@@ -1226,303 +1237,43 @@ begin
   drawing_tool_down:= false;
 end;
 
-// #############################################################################
-
-procedure TForm2.pu_toolisAtPartZeroClick(Sender: TObject);
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Manual Work/part Y zero');
-
-  grbl_offsXY(0, 0);
-  SendListToGrbl;
-
-  WorkZero.X:= grbl_mpos.X;
-  Jog.X:= WorkZero.X;
-  WorkZero.Y:= grbl_mpos.Y;
-  Jog.Y:= WorkZero.Y;
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-  NeedsRedraw:= true;
-end;
-
-procedure TForm2.pu_toolisatpointClick(Sender: TObject);
-var x,y: Double;
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Offset to point');
-  hilite_to(x,y);
-
-  grbl_offsXY(x, y);
-  SendListToGrbl;
-
-  WorkZero.X:= grbl_mpos.X - x;
-  Jog.X:= WorkZero.X;
-  WorkZero.Y:= grbl_mpos.Y - y;
-  Jog.Y:= WorkZero.Y;
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-  NeedsRedraw:= true;
-end;
-
-procedure TForm2.pu_toolIsAtCenterClick(Sender: TObject);
-var x,y: Double;
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Offset tool to center');
-  hilite_center_to(x,y);
-
-  grbl_offsXY(x, y);
-  SendListToGrbl;
-
-  WorkZero.X:= grbl_mpos.X - x;
-  Jog.X:= WorkZero.X;
-  WorkZero.Y:= grbl_mpos.Y - y;
-  Jog.Y:= WorkZero.Y;
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-  NeedsRedraw:= true;
-end;
-
-// #############################################################################
-
-procedure TForm2.pu_camIsAtPartZeroClick(Sender: TObject);
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Offset cam to part zero');
-
-  grbl_offsXY(-job.cam_x, -job.cam_y);
-  SendListToGrbl;
-
-  WorkZero.X:= grbl_mpos.X + job.cam_x;
-  Jog.X:= WorkZero.X;
-  WorkZero.Y:= grbl_mpos.Y + job.cam_x;
-  Jog.Y:= WorkZero.Y;
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-  NeedsRedraw:= true;
-end;
-
-procedure TForm2.pu_camIsAtPointClick(Sender: TObject);
-var x,y: Double;
-begin
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Offset cam to point');
-  hilite_to(x,y);
-
-  x:= x - job.cam_x;
-  y:= y - job.cam_y;
-  grbl_offsXY(x, y);
-  SendListToGrbl;
-
-  WorkZero.X:= grbl_mpos.X - x;
-  Jog.X:= WorkZero.X;
-  WorkZero.Y:= grbl_mpos.Y - y;
-  Jog.Y:= WorkZero.Y;
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-  NeedsRedraw:= true;
-end;
-
-procedure TForm2.pu_camIsAtCenterClick(Sender: TObject);
-var x,y: Double;
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Offset cam to center');
-  hilite_center_to(x,y);
-
-  x:= x - job.cam_x;
-  y:= y - job.cam_y;
-  grbl_offsXY(x, y);
-  SendListToGrbl;
-
-  WorkZero.X:= grbl_mpos.X - x;
-  Jog.X:= WorkZero.X;
-  WorkZero.Y:= grbl_mpos.Y - y;
-  Jog.Y:= WorkZero.Y;
-  WorkZeroXdone:= true;
-  WorkZeroYdone:= true;
-  NeedsRedraw:= true;
-end;
-
-// #############################################################################
-
-procedure TForm2.pu_moveToolToPartZeroClick(Sender: TObject);
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move tool to part zero');
-
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(0, 0, false);
-    if WorkZeroAllDone then begin
-      grbl_moveZ(job.z_penlift, false);
-    end else begin
-      Form1.Memo1.lines.add('WARNING: Z Zero not set!');
-      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-    end;
-    SendListToGrbl;
-  end else begin
-    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-  end;
-end;
-
-procedure TForm2.pu_moveToolToPointClick(Sender: TObject);
-var x,y: Double;
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move tool to point');
-  hilite_to(x, y);
-
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(x, y, false);
-    if WorkZeroAllDone then begin
-      grbl_moveZ(job.z_penlift, false);
-    end else begin
-      Form1.Memo1.lines.add('WARNING: Z Zero not set!');
-      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-    end;
-    SendListToGrbl;
-  end else begin
-    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-  end;
-end;
-
-procedure TForm2.pu_moveToolToCenterClick(Sender: TObject);
-var x,y: Double;
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move tool to center');
-  hilite_center_to(x,y);
-
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(x, y, false);
-    if WorkZeroAllDone then begin
-      grbl_moveZ(job.z_penlift, false);
-    end else begin
-      Form1.Memo1.lines.add('WARNING: Z Zero not set!');
-      PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-    end;
-    SendListToGrbl;
-  end else begin
-    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-  end;
-end;
-
-// #############################################################################
-
-procedure TForm2.pu_moveCamToPartZeroClick(Sender: TObject);
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move cam to part zero');
-
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up absolute
-    grbl_moveXY(-job.cam_x,-job.cam_y, false);
-    grbl_moveZ(job.cam_z_abs, true);
-    SendListToGrbl;
-  end else begin
-    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-  end;
-end;
-
-procedure TForm2.pu_moveCamToPointClick(Sender: TObject);
-var x,y: Double;
-begin
-  WaitForIdle;
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move cam to point');
-  hilite_to(x,y);
-  x:= x - job.cam_x;
-  y:= y - job.cam_y;
-
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(x, y, false);
-    grbl_moveZ(job.cam_z_abs, true);
-    SendListToGrbl;
-  end else begin
-    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-  end;
-end;
-
 procedure TForm2.pu_moveCamToCenterClick(Sender: TObject);
-var x,y: Double;
 begin
-  Form1.Memo1.lines.add('');
-  Form1.Memo1.lines.add('Move cam to center');
-  hilite_center_to(x, y);
-  x:= x - job.cam_x;
-  y:= y - job.cam_y;
-
-  if WorkZeroXdone and WorkZeroYdone then begin
-    grbl_moveZ(0, true);  // move Z up
-    grbl_moveXY(x, y, false);
-    grbl_moveZ(job.cam_z_abs, true);
-    SendListToGrbl;
-  end else begin
-    Form1.Memo1.lines.add('WARNING: X,Y Zero not set!');
-    PlaySound('SYSTEMHAND', 0, SND_ASYNC);
-  end;
 end;
 
 // #############################################################################
 // #############################################################################
-
-procedure TForm2.TrackBarZoomChange(Sender: TObject);
-begin
-  NeedsRedraw:= true;
-end;
-
 
 procedure TForm2.FormMouseWheel(Sender: TObject; Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
 var
   p: TPoint;
-  pos, diff, max: Integer;
+  Zval, diff, Zmax: Integer;
 begin
   Handled:= true;
   p := DrawingBox.ScreenToClient(MousePos);
   p.x:= (p.X - drawing_offset_x);
   p.y:= (p.y - drawing_offset_y);
-  pos:= TrackBarZoom.Position;
-  max:= TrackBarZoom.Max;
-  diff:= pos div 4;
-  if diff = 0 then
-    diff:= 1;  //  diff:=  abs(WheelDelta div 120);
+  Zval:= round(Zoom);
+  Zmax:= 50;
+  diff:= Zval div 4;                                            // change by 25%
+  if diff = 0 then diff:= 1;                     // change linear in lower range
 
-  if WheelDelta < 0 then begin
-// Mittelpunkt neu setzen anhand Maus-Posititon
-    if pos < max then begin
-      if (diff + pos) > max then
-        diff:= max - pos;
-      TrackBarZoom.Position:= pos + diff;
+  if WheelDelta > 0 then begin
+    if Zval < Zmax then begin
+      if (diff + Zval) > Zmax then diff:= Zmax - Zval;// limit to max zoom value
+      Zoom:= Zval + diff;                                      // new zoom value
+                                // correction of middle point by mouse posititon
       bm_scroll.x:= bm_scroll.x - round(diff * p.x / Scale);
       bm_scroll.y:= bm_scroll.y - round(diff * p.y / Scale);
      end;
   end else begin
-    if pos > diff then begin
-      TrackBarZoom.Position:= pos - diff;
+    if Zval > diff then begin
+      Zoom:= Zval - diff;
       bm_scroll.x:= bm_scroll.x + round(diff * p.x / Scale);
       bm_scroll.y:= bm_scroll.y + round(diff * p.y / Scale);
     end;
   end;
-  TrackBarZoom.Perform(CN_HSCROLL, SB_ENDSCROLL, 0);
   NeedsRedraw:= true;
 end;
 

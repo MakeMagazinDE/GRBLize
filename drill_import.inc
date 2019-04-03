@@ -337,7 +337,7 @@ begin
 
   CloseFile(my_ReadFile);
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, false);
+  file_Rotate_Mirror_Scale_Offset(fileID, false);
   if job.optimize_drills then
     optimize_drillfile(fileID);
   block_scale_file(fileID);

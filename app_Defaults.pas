@@ -159,9 +159,9 @@ begin
 
     job.pens[j].z_end:= StrToFloatDef(Cells[4,i],0);
     job.pens[j].speed:= StrToIntDef(Cells[5,i],250);
-    job.pens[j].offset.x:= round(StrToFloatDef(Cells[6,i],0) * c_hpgl_scale);
-    job.pens[j].offset.y:= round(StrToFloatDef(Cells[7,i],0) * c_hpgl_scale);
-    job.pens[j].scale:= StrToFloatDef(Cells[8,i],100);
+    job.pens[j].scale:= StrToFloatDef(Cells[6,i],100);
+    job.pens[j].offset.x:= round(StrToFloatDef(Cells[7,i],0) * c_hpgl_scale);
+    job.pens[j].offset.y:= round(StrToFloatDef(Cells[8,i],0) * c_hpgl_scale);
     job.pens[j].shape:= Tshape(StrToIntDef(Cells[9,i],0));
     job.pens[j].z_inc:= StrToFloatDef(Cells[10,i],1);
     job.pens[j].tooltip:= StrToIntDef(Cells[12,i],0);
@@ -190,9 +190,9 @@ begin
     Cells[3,i+1]:=  FormatFloat('0.00',job.pens[i].diameter);
     Cells[4,i+1]:=  FormatFloat('0.00',job.pens[i].z_end);
     Cells[5,i+1]:=  IntToStr(job.pens[i].speed);
-    Cells[6,i+1]:=  FormatFloat('00.0',job.pens[i].offset.x / c_hpgl_scale);
-    Cells[7,i+1]:=  FormatFloat('00.0',job.pens[i].offset.y / c_hpgl_scale);
-    Cells[8,i+1]:=  FormatFloat('00.0',job.pens[i].scale);
+    Cells[6,i+1]:=  FormatFloat('00.0',job.pens[i].scale);
+    Cells[7,i+1]:=  FormatFloat('00.0',job.pens[i].offset.x / c_hpgl_scale);
+    Cells[8,i+1]:=  FormatFloat('00.0',job.pens[i].offset.y / c_hpgl_scale);
     // Shape in DrawCell erledigt!
     Cells[9,i+1]:=  IntToStr(ord(job.pens[i].shape));
     Cells[10,i+1]:= FormatFloat('0.0',job.pens[i].z_inc);
@@ -210,7 +210,7 @@ var i: Integer;
 begin
   init_blockarrays;
   for i := 0 to c_numOfFiles do with Form1.SgFiles do begin
-    job.fileDelimStrings[i]:= '"",-1,0°,OFF,0,0,100,100,0,""';
+    job.fileDelimStrings[i]:= '"",-1,100,100,0,0,0°,OFF,0,""';
     Form1.SgFiles.Rows[i+1].DelimitedText:= string(job.fileDelimStrings[i]);
 
     with FileParamArray[i] do begin
@@ -241,9 +241,9 @@ procedure InitJob;
 var i: Integer;
 begin
   Form1.SgPens.Rows[0].DelimitedText:=
-    'P/D,Clr,Ena,Dia,Z,F,Xofs,Yofs,"XY %",Shape,"Z-/Cyc",ATC,Tip,Blades';
+    'P/D,Clr,Ena,Dia,Z,F,"XY %",Xofs,Yofs,Shape,"Z-/Cyc",ATC,Tip,Blades';
   Form1.SgFiles.Rows[0].DelimitedText:=
-    '"File (click to open)",Replce,Rotate,Mirror,Xofs,Yofs,"X %","Y %",Clear,"Remark"';
+    '"File (click to open)",Replce,"X %","Y %",Xofs,Yofs,Rotate,Mirror,Clear,"Remark"';
   Form1.SgBlocks.Rows[0].DelimitedText:=
     '#,Tool,Ena,Dia,Shape,"Polygons [closed vectors] -open vectors-"';
   Form1.SgJobdefaults.Rows[0].DelimitedText:= 'Parameter,Value';

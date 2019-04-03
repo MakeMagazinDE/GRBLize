@@ -7,7 +7,7 @@ object Form2: TForm2
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
   Caption = 'Drawing'
-  ClientHeight = 563
+  ClientHeight = 587
   ClientWidth = 856
   Color = clBtnFace
   Constraints.MaxHeight = 800
@@ -28,14 +28,14 @@ object Form2: TForm2
   OnResize = FormResize
   DesignSize = (
     856
-    563)
+    587)
   PixelsPerInch = 96
   TextHeight = 13
   object DrawingBox: TPaintBox
-    Left = 0
-    Top = 0
+    Left = -1
+    Top = 2
     Width = 857
-    Height = 565
+    Height = 547
     Hint = 'Milling View - Drag with left-click or modify with right-click'
     Anchors = [akLeft, akTop, akRight, akBottom]
     Color = clCream
@@ -43,38 +43,34 @@ object Form2: TForm2
     ParentColor = False
     ParentShowHint = False
     ShowHint = True
+    Touch.InteractiveGestures = [igZoom, igPressAndTap]
     OnMouseDown = DrawingBoxMouseDown
     OnMouseMove = DrawingBoxMouseMove
     OnMouseUp = DrawingBoxMouseUp
-    ExplicitWidth = 865
-    ExplicitHeight = 625
   end
   object Panel1: TPanel
-    Left = 725
-    Top = 0
-    Width = 132
-    Height = 177
+    Left = -1
+    Top = 549
+    Width = 857
+    Height = 38
     Align = alCustom
-    Anchors = [akTop, akRight]
+    Anchors = [akLeft, akRight, akBottom]
     TabOrder = 0
-    object Label1: TLabel
-      Left = 24
-      Top = 160
-      Width = 78
-      Height = 13
-      Caption = 'Grid/Ruler in mm'
-    end
+    DesignSize = (
+      857
+      38)
     object BtnZoomReset: TButton
-      Left = 16
-      Top = 129
-      Width = 97
-      Height = 24
+      Left = 771
+      Top = 4
+      Width = 80
+      Height = 30
       HelpType = htKeyword
       HelpKeyword = 'Reset zoom and pan'
-      Caption = 'Zoom Reset'
+      Anchors = [akRight, akBottom]
+      Caption = 'Reset'
       Font.Charset = ANSI_CHARSET
       Font.Color = clBlack
-      Font.Height = -13
+      Font.Height = -19
       Font.Name = 'Arial'
       Font.Style = [fsBold]
       ParentFont = False
@@ -82,178 +78,129 @@ object Form2: TForm2
       TabStop = False
       OnClick = BtnZoomResetClick
     end
-    object TrackBarZoom: TTrackBar
-      Left = 0
-      Top = 88
-      Width = 129
-      Height = 20
-      Hint = 'View zoom - disabled when camera ON'
-      Max = 50
-      Min = 1
-      PageSize = 1
-      Position = 4
-      TabOrder = 1
-      TabStop = False
-      TickStyle = tsNone
-      OnChange = TrackBarZoomChange
-    end
     object CheckBoxDimensions: TCheckBox
       Left = 8
       Top = 8
-      Width = 121
+      Width = 177
       Height = 17
+      Anchors = [akLeft, akBottom]
       Caption = 'Show Dimensions'
-      TabOrder = 2
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -19
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 1
       OnClick = CheckBoxDimensionsClick
     end
     object CheckBoxDirections: TCheckBox
-      Left = 8
-      Top = 32
-      Width = 105
+      Left = 190
+      Top = 8
+      Width = 162
       Height = 17
+      Anchors = [akLeft, akBottom]
       Caption = 'Show Directions'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -19
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 2
+      OnClick = CheckBoxDirectionsClick
+    end
+    object CheckBoxToolpath: TCheckBox
+      Left = 358
+      Top = 8
+      Width = 155
+      Height = 17
+      Anchors = [akLeft, akBottom]
+      Caption = 'Show Tool Path'
+      Checked = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -19
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+      State = cbChecked
       TabOrder = 3
       OnClick = CheckBoxDirectionsClick
     end
-    object StaticText2: TStaticText
-      Left = 8
-      Top = 108
-      Width = 10
-      Height = 17
-      Caption = '1'
+    object BtnDecZoom: TButton
+      Left = 649
+      Top = 4
+      Width = 30
+      Height = 30
+      HelpType = htKeyword
+      HelpKeyword = 'Reset zoom and pan'
+      Anchors = [akRight, akBottom]
+      Caption = '-'
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clBlack
+      Font.Height = -21
+      Font.Name = 'Arial'
+      Font.Style = [fsBold]
+      ParentFont = False
       TabOrder = 4
+      TabStop = False
+      OnClick = BrtZoomDecClick
     end
-    object StaticText3: TStaticText
-      Left = 112
-      Top = 108
-      Width = 16
-      Height = 17
-      Caption = '50'
+    object BtnIncZoom: TButton
+      Left = 730
+      Top = 4
+      Width = 30
+      Height = 30
+      HelpType = htKeyword
+      HelpKeyword = 'Reset zoom and pan'
+      Anchors = [akRight, akBottom]
+      Caption = '+'
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clBlack
+      Font.Height = -21
+      Font.Name = 'Arial'
+      Font.Style = [fsBold]
+      ParentFont = False
       TabOrder = 5
+      TabStop = False
+      OnClick = BtnZoomIncClich
     end
-    object CheckBoxToolpath: TCheckBox
-      Left = 8
-      Top = 56
-      Width = 121
-      Height = 17
-      Caption = 'Show Tool Path'
-      Checked = True
-      State = cbChecked
+    object ViewZoom: TStaticText
+      Left = 685
+      Top = 4
+      Width = 26
+      Height = 29
+      Anchors = [akRight, akBottom]
+      Caption = '50'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -21
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
       TabOrder = 6
-      OnClick = CheckBoxDirectionsClick
     end
-  end
-  object PopupMenuObject: TPopupMenu
-    Left = 1120
-    Top = 8
-    object pu_ObjectEnabled: TMenuItem
-      Caption = 'Object Enabled'
-      Checked = True
-      OnClick = pu_ObjectenabledClick
-    end
-    object N1: TMenuItem
-      Caption = '-'
-    end
-    object pu_online: TMenuItem
-      AutoCheck = True
-      Caption = 'Contour'
-      GroupIndex = 1
-      OnClick = pu_radioClick
-    end
-    object pu_inside: TMenuItem
-      Tag = 1
-      AutoCheck = True
-      Caption = 'Inside'
-      GroupIndex = 1
-      OnClick = pu_radioClick
-    end
-    object pu_outside: TMenuItem
-      Tag = 2
-      AutoCheck = True
-      Caption = 'Outside'
-      GroupIndex = 1
-      OnClick = pu_radioClick
-    end
-    object pu_pocket: TMenuItem
-      Tag = 3
-      AutoCheck = True
-      Caption = 'Pocket'
-      GroupIndex = 1
-      OnClick = pu_radioClick
-    end
-    object Drill1: TMenuItem
-      Caption = 'Drill'
-      GroupIndex = 2
-      OnClick = pu_radioClick
-    end
-    object N2: TMenuItem
-      Caption = '-'
-      GroupIndex = 2
-    end
-    object pu_isatCenter1: TMenuItem
-      Caption = 'Tool is above Object Center'
-      GroupIndex = 2
-      RadioItem = True
-      OnClick = pu_toolIsAtCenterClick
-    end
-    object pu_camIsAtCenter: TMenuItem
-      Caption = 'Cam is above Object Center'
-      GroupIndex = 2
-      RadioItem = True
-      OnClick = pu_camIsAtCenterClick
-    end
-    object N3: TMenuItem
-      Caption = '-'
-      GroupIndex = 2
-    end
-    object pu_moveCenter1: TMenuItem
-      Caption = 'Move Tool to Object Center'
-      GroupIndex = 2
-      OnClick = pu_moveToolToCenterClick
-    end
-    object pu_moveCamToCenter: TMenuItem
-      Caption = 'Move Cam to Object Center'
-      GroupIndex = 2
-      OnClick = pu_moveCamToCenterClick
-    end
-  end
-  object PopupMenuPart: TPopupMenu
-    AutoPopup = False
-    Left = 168
-    Top = 16
-    object pu_isAtZero2: TMenuItem
-      Caption = 'Tool is above Part Zero'
-      GroupIndex = 3
-      RadioItem = True
-      OnClick = pu_toolisAtPartZeroClick
-    end
-    object pu_camIsAtZero2: TMenuItem
-      Caption = 'Cam is above Part Zero'
-      GroupIndex = 3
-      RadioItem = True
-      OnClick = pu_camIsAtPartZeroClick
-    end
-    object N5: TMenuItem
-      Caption = '-'
-      GroupIndex = 3
-    end
-    object pu_moveZero2: TMenuItem
-      Caption = 'Move Tool to Part Zero'
-      GroupIndex = 3
-      RadioItem = True
-      OnClick = pu_moveToolToPartZeroClick
-    end
-    object pu_moveCamToZero2: TMenuItem
-      Caption = 'Move Cam to Part Zero'
-      GroupIndex = 3
-      RadioItem = True
-      OnClick = pu_moveCamToPartZeroClick
+    object StaticText4: TStaticText
+      Left = 577
+      Top = 4
+      Width = 63
+      Height = 29
+      Anchors = [akRight, akBottom]
+      Caption = 'Zoom:'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -21
+      Font.Name = 'Tahoma'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 7
     end
   end
   object PopupMenuPoint: TPopupMenu
     AutoPopup = False
-    Left = 1120
-    Top = 8
+    Left = 84
+    Top = 80
     object pu_PointEnabled: TMenuItem
       Caption = 'Path Enabled'
       Checked = True
@@ -266,63 +213,77 @@ object Form2: TForm2
       AutoCheck = True
       Caption = 'Contour'
       GroupIndex = 1
-      OnClick = pu_radioClick
+      OnClick = pu_RadioClick
     end
     object MenuItem4: TMenuItem
       Tag = 1
       AutoCheck = True
       Caption = 'Inside'
       GroupIndex = 1
-      OnClick = pu_radioClick
+      OnClick = pu_RadioClick
     end
     object MenuItem5: TMenuItem
       Tag = 2
       AutoCheck = True
       Caption = 'Outside'
       GroupIndex = 1
-      OnClick = pu_radioClick
+      OnClick = pu_RadioClick
     end
     object MenuItem6: TMenuItem
       Tag = 3
       AutoCheck = True
       Caption = 'Pocket'
       GroupIndex = 1
-      OnClick = pu_radioClick
+      OnClick = pu_RadioClick
     end
     object MenuItem7: TMenuItem
       Caption = 'Drill'
       GroupIndex = 2
-      OnClick = pu_radioClick
+      OnClick = pu_RadioClick
     end
-    object MenuItem8: TMenuItem
+  end
+  object PopupMenuObject: TPopupMenu
+    Left = 84
+    Top = 24
+    object pu_ObjectEnabled: TMenuItem
+      Caption = 'Object Enabled'
+      Checked = True
+      OnClick = pu_ObjectEnabledClick
+    end
+    object N1: TMenuItem
       Caption = '-'
-      GroupIndex = 2
     end
-    object MenuItem10: TMenuItem
-      Caption = 'Tool is above Point'
-      GroupIndex = 2
-      RadioItem = True
-      OnClick = pu_toolisatpointClick
+    object pu_online: TMenuItem
+      AutoCheck = True
+      Caption = 'Contour'
+      GroupIndex = 1
+      OnClick = pu_RadioClick
     end
-    object MenuItem18: TMenuItem
-      Caption = 'Cam is above Point'
-      GroupIndex = 2
-      RadioItem = True
-      OnClick = pu_camIsAtPointClick
+    object pu_inside: TMenuItem
+      Tag = 1
+      AutoCheck = True
+      Caption = 'Inside'
+      GroupIndex = 1
+      OnClick = pu_RadioClick
     end
-    object MenuItem12: TMenuItem
-      Caption = '-'
-      GroupIndex = 2
+    object pu_outside: TMenuItem
+      Tag = 2
+      AutoCheck = True
+      Caption = 'Outside'
+      GroupIndex = 1
+      OnClick = pu_RadioClick
     end
-    object pu_MoveToPoint: TMenuItem
-      Caption = 'Move Tool to Point'
-      GroupIndex = 2
-      OnClick = pu_moveToolToPointClick
+    object pu_pocket: TMenuItem
+      Tag = 3
+      AutoCheck = True
+      Caption = 'Pocket'
+      GroupIndex = 1
+      OnClick = pu_RadioClick
     end
-    object pu_MoveCamToPoint: TMenuItem
-      Caption = 'Move Cam to Point'
+    object Drill1: TMenuItem
+      Caption = 'Drill'
       GroupIndex = 2
-      OnClick = pu_moveCamToPointClick
+      OnClick = pu_RadioClick
     end
   end
 end

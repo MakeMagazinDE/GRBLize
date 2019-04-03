@@ -3,7 +3,7 @@ object FormParamAssist: TFormParamAssist
   Top = 0
   Caption = 'Mill Parameter Assistent'
   ClientHeight = 277
-  ClientWidth = 375
+  ClientWidth = 674
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -209,5 +209,14 @@ object FormParamAssist: TFormParamAssist
     ParentFont = False
     TabOrder = 4
     OnClick = CancelButtonClick
+  end
+  object TouchKeyboard1: TTouchKeyboard
+    Left = 366
+    Top = 19
+    Width = 300
+    Height = 250
+    GradientEnd = clSilver
+    GradientStart = clGray
+    Layout = 'NumPad'
   end
 end

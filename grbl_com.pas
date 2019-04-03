@@ -14,6 +14,8 @@ type
   TFileBuffer = Array of byte;
    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
+  procedure WriteGrblComm(serial:string; out:boolean);
+
   procedure ExtractMessage(var my_str: String); // GRBL-Message in [] aufbereiten
 
   // holt und dekodiert "?"-Status
@@ -97,10 +99,10 @@ type
   procedure grbl_millXYZ(x, y, z: Double);
 
   // kompletten einzelnen Pfad fräsen, zurück bis Anfang wenn Closed
-  procedure grbl_millpath(millpath: TPath; millpen: Integer; offset: TIntPoint; is_closedpoly: Boolean);
+  procedure grbl_millpath(millpath: TPath; millpen: Integer; is_closedpoly: Boolean);
 
   // kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
-  procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
+  procedure grbl_drillpath(millpath: TPath; millpen: Integer);
 
   procedure grbl_checkXY(var x,y: Double);
   procedure grbl_checkZ(var z: Double);
@@ -1118,7 +1120,7 @@ begin
   grbl_oldz:= z;
 end;
 
-procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
+procedure grbl_drillpath(millpath: TPath; millpen: Integer);
 // kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
 var i, my_len, my_z_feed: Integer;
   x, y: Double;
@@ -1130,15 +1132,15 @@ var i, my_len, my_z_feed: Integer;
     exit;
 
   // Tool ist noch oben
-  x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-  y:= (millpath[0].y + offset.y) / c_hpgl_scale;
+  x:= (millpath[0].x) / c_hpgl_scale;
+  y:= (millpath[0].y) / c_hpgl_scale;
   grbl_moveXY(x,y, false);
 
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
   for i:= 0 to my_len - 1 do begin
     grbl_moveZ(job.z_penup, false);
-    x:= (millpath[i].x + offset.x) / c_hpgl_scale;
-    y:= (millpath[i].y + offset.y) / c_hpgl_scale;
+    x:= (millpath[i].x) / c_hpgl_scale;
+    y:= (millpath[i].y) / c_hpgl_scale;
     grbl_moveXY(x,y,false);
     z:= 0;
     my_z_feed:= job.pens[millpen].speed; // Feed des gewählten Pens
@@ -1160,55 +1162,51 @@ var i, my_len, my_z_feed: Integer;
 end;
 
 
-procedure grbl_millpath(millpath: TPath; millpen: Integer; offset: TIntPoint; is_closedpoly: Boolean);
+procedure grbl_millpath(millpath: TPath; millpen: Integer; is_closedpoly: Boolean);
 // kompletten Pfad fräsen, ggf. wiederholen bis z_end erreicht
-var i, my_len, my_z_feed: Integer;
-  x, y: Double;
-  z, my_z_limit, my_z_end: Double;
+var i, my_len, my_z_feed:    Integer;
+    z, my_z_limit, my_z_end: Double;
 
 begin
   my_len:= length(millpath);
-  if my_len < 1 then
-    exit;
-  // Tool ist noch oben
-  x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-  y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-  grbl_moveXY(x,y, false);
+  if my_len < 1 then exit;
+              // Tool ist noch oben, if not done here too, in case of not closed
+              // pathed the tool will be moved to the first point in low heigth
+  grbl_moveXY(millpath[0].x/c_hpgl_scale, millpath[0].y/c_hpgl_scale, false);
 
-  my_z_limit:= 0;
+  my_z_limit:= 0; z:= 0;             // z_limit and z corresponse to the surface
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
-  repeat
-    my_z_limit:= my_z_limit - job.pens[millpen].z_inc;
-    z:= -job.pens[millpen].z_end;
-    if z < my_z_limit then
-      z:= my_z_limit;
-    grbl_moveZ(job.z_penup, false);
-    x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-    y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-    grbl_moveXY(x,y, false);
-    grbl_moveZ(0.5, false); // annähern auf 0,5 mm über Oberfläche
+  repeat                                    // tool up if the path is not closed
+    if not is_closedpoly then grbl_moveZ(job.z_penup, false);
+                                                       // move to start position
+    grbl_moveXY(millpath[0].x/c_hpgl_scale,millpath[0].y/c_hpgl_scale, false);
 
-    my_z_feed:= job.pens[millpen].speed;
-    if my_z_feed > job.z_feed then
-      my_z_feed:= job.z_feed;
-    grbl_millZF(z, my_z_feed); // langsam eintauchen
-    for i:= 1 to my_len - 1 do begin
-      x:= (millpath[i].x + offset.x) / c_hpgl_scale;
-      y:= (millpath[i].y + offset.y) / c_hpgl_scale;
-      grbl_millXYF(x,y, job.pens[millpen].speed);
+    grbl_moveZ(z+0.5, false);   // annähern auf 0,5 mm über aktueller Oberfläche
+
+    my_z_limit:= my_z_limit - job.pens[millpen].z_inc; // calculate next z level
+    z:= -job.pens[millpen].z_end;
+    if z < my_z_limit then z:= my_z_limit;
+
+    my_z_feed:= job.pens[millpen].speed;                   // langsam eintauchen
+    if my_z_feed > job.z_feed then my_z_feed:= job.z_feed;
+    grbl_millZF(z, my_z_feed);
+
+    for i:= 1 to my_len - 1 do begin                                // mill path
+      grbl_millXYF(millpath[i].x / c_hpgl_scale,
+                   millpath[i].y / c_hpgl_scale,
+                   job.pens[millpen].speed);
       if isCancelled then
         break;
     end;
-    if is_closedpoly and (not isCancelled) then begin
-      x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-      y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-      grbl_millXYF(x,y, job.pens[millpen].speed);
-    end;
+
+    if is_closedpoly and (not isCancelled) then       // close path if necessary
+      grbl_millXYF(millpath[0].x / c_hpgl_scale,
+                   millpath[0].y / c_hpgl_scale,
+                   job.pens[millpen].speed);
 
   until (my_z_limit <= my_z_end) or isCancelled;
   grbl_moveZ(job.z_penup, false);
 end;
-
 
 // #############################################################################
 // #############################################################################

@@ -67,7 +67,8 @@ var
   i, pen_override: Integer;
   my_path, my_ext: String;
   use_excellon: Boolean;
-  Sx, Sy: integer;
+  Sx, Sy, SizeX, SizeY: integer;
+  a: double;
 begin
   PenGridListToJob;
   DefaultsGridListToJob;
@@ -79,22 +80,7 @@ begin
   end;
   with Form1.SgFiles do begin
     for i:= 1 to c_numOfFiles +1 do begin
-      if Cells[2, i] = '90°' then
-        FileParamArray[i-1].rotate:= deg90
-      else if Cells[2, i] = '270°' then
-        FileParamArray[i-1].rotate:= deg270
-      else if Cells[2, i] = '180°' then
-        FileParamArray[i-1].rotate:= deg180
-      else
-        FileParamArray[i-1].rotate:= deg0;
-      FileParamArray[i-1].mirror:= Cells[3, i] = 'ON';
-      FileParamArray[i-1].offset.X:= round(StrToFloatDef(Cells[4, i], 0) * c_hpgl_scale);
-      FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
-      FileParamArray[i-1].scale.X:= StrToFloatDef(Cells[6, i], 100.0);
-      FileParamArray[i-1].scale.Y:= StrToFloatDef(Cells[7, i], 100.0);
-
       my_path:= Cells[0,i];
-
       if length(my_path) < 3 then    // empty fields contains a space character,
         continue;                    // but at least an extesion is necessary
 
@@ -109,6 +95,21 @@ begin
         Form1.Memo1.lines.add('ERROR: No Extension (' + my_path + ')!');
         continue;
       end;
+
+      if Cells[6, i] = '90°' then
+        FileParamArray[i-1].rotate:= deg90
+      else if Cells[6, i] = '270°' then
+        FileParamArray[i-1].rotate:= deg270
+      else if Cells[6, i] = '180°' then
+        FileParamArray[i-1].rotate:= deg180
+      else
+        FileParamArray[i-1].rotate:= deg0;
+      FileParamArray[i-1].mirror:= Cells[7, i] = 'ON';
+      FileParamArray[i-1].scale.X:= StrToFloatDef(Cells[2, i], 100.0);
+      FileParamArray[i-1].scale.Y:= StrToFloatDef(Cells[3, i], 100.0);
+      FileParamArray[i-1].offset.X:= round(StrToFloatDef(Cells[4, i], 0) * c_hpgl_scale);
+      FileParamArray[i-1].offset.Y:= round(StrToFloatDef(Cells[5, i], 0) * c_hpgl_scale);
+
       FileParamArray[i-1].isdrillfile := (my_ext = '.DRL') or (my_ext = '.DRD');
       FileParamArray[i-1].enable:= true;
       pen_override:= StrToIntDef(Cells[1, i], -1);
@@ -157,32 +158,76 @@ begin
     job.pens[i].enable:= job.pens[i].used;
   end;
 
+
   JobToPenGridList;
+
+//**** calculate finalarray and moves if necessary all pathes to Q1 ************
+// Durch das Schieben nach Q1 gehen z.T. Offsets verloren. Das passiert für den
+// - X-Offset bei Drehung nach Q2 und Q3
+// - Y-Offset bei Drehung nach Q3 und Q4
+
+  // have to include into the global offset
+  job.global_offset.X:=0;
+  job.global_offset.Y:=0;
+
   apply_pen_change;
+
+  if final_bounds_mm.min.x < 0 then
+    job.global_offset.X:= {1} - final_bounds.min.x;
+//    job.global_offset.X:= {1} - round(final_bounds_mm.min.x*c_hpgl_scale);
+  if final_bounds_mm.min.y < 0 then
+    job.global_offset.Y:= {1} - final_bounds.min.y;
+//    job.global_offset.Y:= {1} - round(final_bounds_mm.min.y*c_hpgl_scale);
+            // offset will be includes in ListBlocks, called by apply_pen_change
+  if (job.global_offset.X > 0) or (job.global_offset.Y > 0) then
+    apply_pen_change;
+
   Form1.SgPens.Repaint;
   GLSneedsATCupdateTimeout:= 1;
   Form1.Memo1.lines.add('');
   Form1.Memo1.lines.add('Mill/drill files (re)loaded.');
 
-                                       // set part dimensions (X and Y) and zoom
-  if (final_bounds_mm.max.x > 10) and (final_bounds_mm.max.y > 10) then begin
-                                                          // Dimension aufrunden
-    job.partsize_x:= 10*round((final_bounds_mm.max.x+6)/10);
-    job.partsize_y:= 10*round((final_bounds_mm.max.y+6)/10);
-                                                        // Werkstückgröße setzen
-    Form1.SgJobDefaults.Cells[1,1]:= FloatToStr(job.partsize_x);
-    Form1.SgJobDefaults.Cells[1,2]:= FloatToStr(job.partsize_y);
-
-    Sx:= round(Form2.DrawingBox.Width  / job.partsize_x) - 1;
-    Sy:= round(Form2.DrawingBox.Height / job.partsize_y) - 1;
-
-    if Sx < Sy then Form2.TrackBarZoom.Position:= Sx
-               else Form2.TrackBarZoom.Position:= Sy;
-
-    bm_scroll.x:= 0;
-    bm_scroll.y:= Form2.ClientHeight - Form2.DrawingBox.Height;
+//**** set part dimensions (X and Y) and zoom **********************************
+  a:= final_bounds_mm.max.x-final_bounds_mm.min.x;
+  if (final_bounds_mm.min.x >= 0) then begin                  // quadrant 1 or 4
+    job.partsize_x:= 1+round(1.1*final_bounds_mm.max.x);
+    SizeX:= 0;
+  end else begin
+    job.partsize_x:= round(1.1*a);
+    SizeX:= -1-round(1.1*final_bounds_mm.min.x)
   end;
 
+  a:= final_bounds_mm.max.y-final_bounds_mm.min.y;
+  if (final_bounds_mm.min.y >= 0) then begin                   // quadrant 1 or 2
+    job.partsize_y:= 1+round(1.1*final_bounds_mm.max.y);
+    SizeY:= 0;
+  end else begin
+    job.partsize_y:= round(1.1*a);
+    SizeY:= -1-round(1.1*final_bounds_mm.min.y)
+  end;
+
+  Sx:= 4; Sy:= 4; bm_scroll.x:= 0; bm_scroll.y:= 0;            // default values
+  if job.partsize_x + SizeX > 1 then begin                     // avoid division by 0
+    Sx:= round( 0.9 * Form2.DrawingBox.Width  / (job.partsize_x + SizeX)) - 1;
+    bm_scroll.x:=  round(0.9 * SizeX * (Form2.ClientWidth  / (job.partsize_x + SizeX)));
+  end;
+  if job.partsize_y + SizeY > 1 then begin                     // avoid division by 0
+    Sy:= round( 0.9 * Form2.DrawingBox.Height / (job.partsize_y + SizeY)) - 1;
+    bm_scroll.y:= -round(0.9 * SizeY * (Form2.ClientHeight / (job.partsize_y + SizeY)));
+  end;
+
+  if Sx < Sy then Form2.Zoom:= Sx
+             else Form2.Zoom:= Sy;
+
+//**** Werkstückgröße setzen ***************************************************
+  Form1.SgJobDefaults.Cells[1,1]:= FloatToStr(job.partsize_x);
+  Form1.SgJobDefaults.Cells[1,2]:= FloatToStr(job.partsize_y);
+
+//  for i:= 0 to length(final_Array) - 1 do begin
+//    final_Array[i].enable:= false;
+//  end;
+
+  ListBlocks;
   NeedsRedraw:= true;
 end;
 
@@ -217,6 +262,19 @@ var i: integer;
         Repaint;
       end;
 
+     // if color in job differs from standard, it has to be loaded before files!
+     // Xofs, Yofs and scale influence the part dimensions
+      with Form1.SgPens do begin
+        for i:=1 to c_numOfPens do begin                           // pens table
+          Section:= 'Pen' + IntToStr(i-1);
+          Cells[ 1,i]:= Ini.ReadString(Section, 'Color',    Cells[ 1,i]);
+          Cells[ 6,i]:= Ini.ReadString(Section, 'Scale',    Cells[ 6,i]);
+          Cells[ 7,i]:= Ini.ReadString(Section, 'Xofs',     Cells[ 7,i]);
+          Cells[ 8,i]:= Ini.ReadString(Section, 'Yofs',     Cells[ 8,i]);
+        end;
+        PenGridListToJob;
+      end;
+
       with Form1.SgFiles do begin
         for i:= 1 to c_numOfFiles do begin                        // files table
           Section:= 'File' + IntToStr(i);
@@ -231,12 +289,12 @@ var i: integer;
             Cells[0,i]:= ExpandFileName(ExtractFileDir(JobSettingsPath) + '\' + Cells[0,i]);
 
           Cells[1,i]:= Ini.ReadString(Section, 'Replace', Cells[1,i]);
-          Cells[2,i]:= Ini.ReadString(Section, 'Rotate',  Cells[2,i]);
-          Cells[3,i]:= Ini.ReadString(Section, 'Mirror',  Cells[3,i]);
+          Cells[2,i]:= Ini.ReadString(Section, 'ScaleX',  Cells[2,i]);
+          Cells[3,i]:= Ini.ReadString(Section, 'ScaleY',  Cells[3,i]);
           Cells[4,i]:= Ini.ReadString(Section, 'Xofs',    Cells[4,i]);
           Cells[5,i]:= Ini.ReadString(Section, 'Yofs',    Cells[5,i]);
-          Cells[6,i]:= Ini.ReadString(Section, 'ScaleX',  Cells[6,i]);
-          Cells[7,i]:= Ini.ReadString(Section, 'ScaleY',  Cells[7,i]);
+          Cells[6,i]:= Ini.ReadString(Section, 'Rotate',  Cells[6,i]);
+          Cells[7,i]:= Ini.ReadString(Section, 'Mirror',  Cells[7,i]);
           Cells[9,i]:= Ini.ReadString(Section, 'Remark',  Cells[8,i]);
           FileParamArray[i].gbr_name:=               Ini.ReadString(Section,'GbrName',              FileParamArray[i].gbr_name);
           FileParamArray[i].gbr_mirror:=  StrToBool (Ini.ReadString(Section,'GbrMirror', BoolToStr (FileParamArray[i].gbr_mirror)));
@@ -246,17 +304,15 @@ var i: integer;
         OpenFilesInGrid;
       end;
 
+      // OpenFilesInGrid changes the diameter/shape for drills, load after files
       with Form1.SgPens do begin
-        for i:=1 to c_numOfPens do begin                             // pens table
+        for i:=1 to c_numOfPens do begin                           // pens table
           Section:= 'Pen' + IntToStr(i-1);
-          Cells[ 1,i]:= Ini.ReadString(Section, 'Color',    Cells[ 1,i]);
+//          Cells[ 1,i]:= Ini.ReadString(Section, 'Color',    Cells[ 1,i]);
           Cells[ 2,i]:= Ini.ReadString(Section, 'Enable',   Cells[ 2,i]);
           Cells[ 3,i]:= Ini.ReadString(Section, 'Diameter', Cells[ 3,i]);
           Cells[ 4,i]:= Ini.ReadString(Section, 'Z',        Cells[ 4,i]);
           Cells[ 5,i]:= Ini.ReadString(Section, 'Feed',     Cells[ 5,i]);
-          Cells[ 6,i]:= Ini.ReadString(Section, 'Xofs',     Cells[ 6,i]);
-          Cells[ 7,i]:= Ini.ReadString(Section, 'Yofs',     Cells[ 7,i]);
-          Cells[ 8,i]:= Ini.ReadString(Section, 'Scale',    Cells[ 8,i]);
           Cells[ 9,i]:= Ini.ReadString(Section, 'Shape',    Cells[ 9,i]);
           Cells[10,i]:= Ini.ReadString(Section, 'Zcycle',   Cells[10,i]);
           Cells[11,i]:= Ini.ReadString(Section, 'ATC',      Cells[11,i]);
@@ -275,7 +331,11 @@ var i: integer;
         Form1.SgBlocks.Rows[i].DelimitedText:= Ini.ReadString('Blocks', Name, '');
         for j:= 0 to high(ShapeArray) do
           if Form1.SgBlocks.Cells[4,i] = string(ShapeArray[ord(j)]) then
-            final_array[i-1].shape:= Tshape(j);
+            if final_array[i-1].shape <> Tshape(j) then begin
+              final_array[i-1].shape:= Tshape(j);
+              item_change(i-1);
+              NeedsRedraw:= true;
+            end;
         final_array[i-1].enable:= Form1.SgBlocks.Cells[2,i] = 'ON';
         enable_all_millings(final_array[i-1], final_array[i-1].enable);
         inc(i); Name:= 'Block' + IntToStr(i);
@@ -349,12 +409,12 @@ begin
       if (length(my_filename) <= 3) then continue;                 // line empty
       Ini.WriteString(Section, 'Name',    my_filename);
       Ini.WriteString(Section, 'Replace',   Form1.SgFiles.Cells[1,i]);
-      Ini.WriteString(Section, 'Rotate',    Form1.SgFiles.Cells[2,i]);
-      Ini.WriteString(Section, 'Mirror',    Form1.SgFiles.Cells[3,i]);
+      Ini.WriteString(Section, 'ScaleX',    Form1.SgFiles.Cells[2,i]);
+      Ini.WriteString(Section, 'ScaleY',    Form1.SgFiles.Cells[3,i]);
       Ini.WriteString(Section, 'Xofs',      Form1.SgFiles.Cells[4,i]);
       Ini.WriteString(Section, 'Yofs',      Form1.SgFiles.Cells[5,i]);
-      Ini.WriteString(Section, 'ScaleX',    Form1.SgFiles.Cells[6,i]);
-      Ini.WriteString(Section, 'ScaleY',    Form1.SgFiles.Cells[7,i]);
+      Ini.WriteString(Section, 'Rotate',    Form1.SgFiles.Cells[6,i]);
+      Ini.WriteString(Section, 'Mirror',    Form1.SgFiles.Cells[7,i]);
       Ini.WriteString(Section, 'Remark',    Form1.SgFiles.Cells[9,i]);
       Ini.WriteString(Section, 'GbrName',              FileParamArray[i].gbr_name);
       Ini.WriteString(Section, 'GbrMirror', BoolToStr (FileParamArray[i].gbr_mirror));
@@ -368,9 +428,9 @@ begin
       Ini.WriteString(Section, 'Diameter', Form1.SgPens.Cells[ 3,i]);
       Ini.WriteString(Section, 'Z',        Form1.SgPens.Cells[ 4,i]);
       Ini.WriteString(Section, 'Feed',     Form1.SgPens.Cells[ 5,i]);
-      Ini.WriteString(Section, 'Xofs',     Form1.SgPens.Cells[ 6,i]);
-      Ini.WriteString(Section, 'Yofs',     Form1.SgPens.Cells[ 7,i]);
-      Ini.WriteString(Section, 'Scale',    Form1.SgPens.Cells[ 8,i]);
+      Ini.WriteString(Section, 'Scale',    Form1.SgPens.Cells[ 6,i]);
+      Ini.WriteString(Section, 'Xofs',     Form1.SgPens.Cells[ 7,i]);
+      Ini.WriteString(Section, 'Yofs',     Form1.SgPens.Cells[ 8,i]);
       Ini.WriteString(Section, 'Shape',    Form1.SgPens.Cells[ 9,i]);
       Ini.WriteString(Section, 'Zcycle',   Form1.SgPens.Cells[10,i]);
       Ini.WriteString(Section, 'ATC',      Form1.SgPens.Cells[11,i]);
@@ -447,11 +507,16 @@ var my_ext: String;
     i:      integer;
 begin
   i:= 1;
-  while (i<=c_numOfFiles) and (SaveJobDialog.Filename='') do begin
-    if Trim(Form1.SgFiles.Cells[0,i]) <>'' then
-      SaveJobDialog.Filename:= ChangeFileExt(Form1.SgFiles.Cells[0,i],'job');
+  while (JobSettingsPath='') and
+        (i<=c_numOfFiles)    and
+        (SaveJobDialog.Filename='') do begin
+    if Trim(Form1.SgFiles.Cells[0,i]) <> '' then
+      JobSettingsPath:= ChangeFileExt(Form1.SgFiles.Cells[0,i],'.job');
     inc(i);
   end;
+
+  if SaveJobDialog.Filename='' then SaveJobDialog.Filename:= JobSettingsPath;
+
   if SaveJobDialog.Execute then begin
 //  Application.ProcessMessages;
     JobSettingsPath := SaveJobDialog.Filename;
@@ -684,7 +749,7 @@ begin
           InflateRect(Rect, -1, -1);
           TextRect(Rect, Rect.Left + 2, Rect.Top + 1, aStr);
         end;
-      1,2,3:
+      1,6,7:
         begin
           FrameRect(Rect);
           inc(Rect.Left);
@@ -812,33 +877,33 @@ begin
             DroppedDown := true;
           end;
         end;
-      2:
+      6:
         begin
-          if Cells[2, ARow] = '0°' then
-            Cells[2, ARow]:= '90°'
-          else if Cells[2, ARow] = '90°' then
-            Cells[2, ARow]:= '180°'
-          else if Cells[2, ARow] = '180°' then
-            Cells[2, ARow]:= '270°'
+          if Cells[6, ARow] = '0°' then
+            Cells[6, ARow]:= '90°'
+          else if Cells[6, ARow] = '90°' then
+            Cells[6, ARow]:= '180°'
+          else if Cells[6, ARow] = '180°' then
+            Cells[6, ARow]:= '270°'
           else
-            Cells[2, ARow]:= '0°';
+            Cells[6, ARow]:= '0°';
           Repaint;
           OpenFilesInGrid;
         end;
-      3:
+      7:
         begin
-          if Cells[3, ARow] = 'ON' then
-            Cells[3, ARow]:= 'OFF'
+          if Cells[7, ARow] = 'ON' then
+            Cells[7, ARow]:= 'OFF'
           else
-            Cells[3, ARow]:= 'ON';
+            Cells[7, ARow]:= 'ON';
           Repaint;
           OpenFilesInGrid;
         end;
-      4,5,6,7: SgEditorOn(SgFiles,ACol,Arow,true,true);
+      2,3,4,5: SgEditorOn(SgFiles,ACol,Arow,true,true);
       8:
         begin
           UnHilite;
-          Rows[ARow].DelimitedText:= '"",-1,0°,OFF,0,0,100,100,0,""';
+          Rows[ARow].DelimitedText:= '"",-1,100,100,0,0,0°,OFF,0,""';
           for i:= 0 to c_numOfPens do job.pens[i].used:= false;
           OpenFilesInGrid;
         end;
@@ -852,12 +917,12 @@ end;
 //#### MemoComment #############################################################
 procedure TForm1.MemoCommentClick(Sender: TObject);
 begin
-//  TouchKeyboardOn(MemoComment,0,0,false,false);
+  TouchKeyboardOn(MemoComment,false);
 end;
 
 procedure TForm1.MemoCommentExit(Sender: TObject);
 begin
-//  TouchKeyboardOff;
+  TouchKeyboardOff;
 end;
 
 

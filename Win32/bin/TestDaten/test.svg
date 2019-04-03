@@ -16,7 +16,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
-   sodipodi:docname="svg-test.svg">
+   sodipodi:docname="test.svg">
   <defs
      id="defs4">
     <linearGradient
@@ -35,16 +35,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.1637467"
-     inkscape:cx="415.47025"
-     inkscape:cy="289.07555"
+     inkscape:zoom="1.43"
+     inkscape:cx="249.92149"
+     inkscape:cy="252.31307"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1853"
      inkscape:window-height="998"
-     inkscape:window-x="2403"
-     inkscape:window-y="113"
+     inkscape:window-x="-2"
+     inkscape:window-y="21"
      inkscape:window-maximized="0" />
   <metadata
      id="metadata7">
@@ -62,10 +62,11 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
-    <path
-       style="fill:none;fill-rule:evenodd;stroke:#ffff00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
-       d="m 270,750 h 70 v -70 H 270 V 750"
-       id="path4155"
-       inkscape:connector-curvature="0" />
+    <circle
+       style="fill:none;stroke:#804000;stroke-width:2.07410359;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.354"
+       id="path4137"
+       cx="21.259842"
+       cy="1031.1024"
+       r="7.0866141" />
   </g>
 </svg>
