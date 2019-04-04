@@ -1,4 +1,9 @@
-﻿// #############################################################################
+﻿// Offen:
+// - SVG: Elypse: Mittelpunkte fehlen
+// - SVG: Rotate als Transformation
+// - SVG: Verzerren in X- bzw. Y-Richtung als Transformation
+
+// #############################################################################
 // HPGL Import
 // #############################################################################
 
@@ -37,7 +42,7 @@ begin
     result:= cmd_exit;
     exit;
   end;
-  if my_line[my_pos] in ['0'..'9', '-', '+'] then begin
+  if CharInSet(my_line[my_pos], ['0'..'9', '-', '+']) then begin
     result:= cmd_number;
     exit;
   end;
@@ -71,6 +76,11 @@ begin
     my_pos:= my_pos+2;
     exit;
   end;
+  if pos('AA',my_line) = my_pos then begin
+    result:= cmd_aa;
+    my_pos:= my_pos+2;
+    exit;
+  end;
   result:= cmd_exit;  // alle anderen Befehle ignorieren
 end;
 
@@ -82,7 +92,9 @@ var
   my_valid: boolean;
   my_pen: Integer;
   xx, yy: Double;
+  ca, res, dir, a, dx, dy, r: Double;
   dummy_str: String;
+  Pt: TIntPoint;
 
 begin
   my_pos:= 1;
@@ -91,7 +103,7 @@ begin
     if my_cmd = cmd_exit then
       exit;
     case my_cmd of
-      cmd_pa:
+      cmd_pa:                                         // Stift bewegen, absolute
         begin
           my_valid:= ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
@@ -99,15 +111,15 @@ begin
             LastPoint.x:= round(xx);
             LastPoint.y:= round(yy);
           end;
-          if LastAction >= mill then begin // war unten
-            append_point(fileID, CurrentBlockID, LastPoint);
+          if LastAction >= mill then begin                          // war unten
+            append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
             blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
             check_filebounds(FileID, LastPoint);
           end;
         end;
-      cmd_pu:
+      cmd_pu:                                                   // Stift anheben
         begin
-          my_valid:= ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
+          my_valid:=               ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
           if my_valid then begin
             LastPoint.x:= round(xx);
@@ -115,12 +127,12 @@ begin
           end;
           LastAction:= seek;
         end;
-      cmd_pd:
+      cmd_pd:                                                    // Stift senken
         begin
           if LastAction <= seek then begin
           // war oben, letzte Koordinaten sind erster Punkt im Block
             CurrentBlockID:= new_block(fileID);
-            append_point(fileID, CurrentBlockID, LastPoint);
+            append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
             blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
             check_filebounds(FileID, LastPoint);
           end;
@@ -131,17 +143,17 @@ begin
             LastPoint.x:= round(xx);
             LastPoint.y:= round(yy);
           end;
-          append_point(fileID, CurrentBlockID, LastPoint);
+          append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
           check_filebounds(FileID, LastPoint);
           LastAction:= mill;
         end;
-      cmd_in:
+      cmd_in:                                                 // Initialisierung
         begin
           ParseLine(my_pos, my_line, xx, dummy_str);
           ParseLine(my_pos, my_line, xx, dummy_str);
           LastAction:= lift;
         end;
-      cmd_sp:
+      cmd_sp:                                                 // Stift auswählen
         begin
           my_valid:= ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
           my_pen:= round(xx);
@@ -155,12 +167,53 @@ begin
             CurrentPen:= 0;
           LastAction:= lift;
         end;
+      cmd_aa:        // Kreisbogen absolute x,y,CentralAngel[°] [,Resolution[°]]
+        begin
+          my_valid:=               ParseLine(my_pos, my_line, xx, dummy_str) = p_number;
+          my_valid:= my_valid and (ParseLine(my_pos, my_line, yy, dummy_str) = p_number);
+          my_valid:= my_valid and (ParseLine(my_pos, my_line, ca, dummy_str) = p_number);
+          if not (ParseLine(my_pos, my_line, res, dummy_str) = p_number)
+            then res:= 5;
+          if my_valid then begin
+            ca:=  pi * ca / 180;                            // convert to radian
+            res:= pi * res/ 180;
+            dx:= LastPoint.x-xx; dy:= LastPoint.y-yy;
+            r:= sqrt( dx*dx + dy*dy );                       // calculate radius
+            a:= arccos( dx / r );   // angle to LastPoint, correct for Q1 und Q2
+            if dy < 0 then a:= 2*pi - a;                            // Q3 und Q4
+
+            if LastAction >= mill then begin                         // was down
+           // hilite the beginning, the center and (see below) the end of the arc
+              append_point(fileID, CurrentBlockID, LastPoint, [t_hilite]);
+              Pt.X:= round(xx); Pt.Y:= round(yy);
+              append_point(fileID, CurrentBlockID, Pt, [t_hilite]);
+              dir:= 1; if ca < 0 then begin dir:= -1; ca:= -ca; end;
+              while ca > 0 do begin                      // calculate new points
+                if res < ca then begin               // calc angle to next point
+                  a:= a + (res * dir);
+                  ca:= ca - res;
+                end else begin
+                  a:= a + (ca * dir);
+                  ca:= 0;
+                end;
+                LastPoint.x:= round(xx + r*cos(a));  // calculate next LastPoint
+                LastPoint.y:= round(yy + r*sin(a));
+                append_point(fileID, CurrentBlockID, LastPoint, [t_mill]);
+                blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
+                check_filebounds(FileID, LastPoint);
+              end;                                // point at the end of the arc
+              append_point(fileID, CurrentBlockID, LastPoint, [t_hilite]);
+            end else begin                                             // was up
+              LastPoint.x:= round(xx + r*sin(a+ca));  // calculate new LastPoint
+              LastPoint.y:= round(yy + r*cos(a+ca));
+            end;
+          end;
+        end;
     end;
   until false;
 end;
 
 // #############################################################################
-
 
 procedure hpgl_fileload(my_name:String; fileID, penOverride: Integer);
 // Liest File in FileBuffer und liefert Länge zurück
@@ -202,16 +255,190 @@ begin
   end;
   my_sl.free;
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, true); // auto close path
+  file_Rotate_Mirror_Scale_Offset(fileID, true); // auto close path
+  block_scale_file(fileID);
+end;
+
+// #############################################################################
+// Import Gerber-File mit Dimensionsdaten, contributed by Frank Kaiser
+// #############################################################################
+
+
+procedure dim_fileload(my_name:String; fileID, penOverride: Integer);
+var Scale  : double;                          // scale between file and internal
+    Xdec: integer;                          // decimal place for X/Y coordinates
+    Ydec: integer;
+
+  procedure dim_import_parameter(Line: String);
+  var i:     integer;
+      valid: boolean;
+      xx, yy: double;
+      dummy_str: String;
+  //MOMM: MO - Mode;
+  //      MM - [mm] (alternativ IN - inch)          Auswertung als Multiplikator
+  //FSLAX34Y34  FS - Data Block Format;
+  //            L  - führende 0en weglassen (T - nachfolgende 0en weglassen)
+  //            A  - absolute Koordinaten (I - inkrementelle Koordinaten)
+  //            X  - Format X-Koordinaten
+  //            Y  - Format Y-Koordinaten                Auswertung Zahlenformat
+  //LPD         LP - Data Block Format
+  //            D  - dark (C - clear)                                 ignorieren
+  //AMOC8       AM - Aperture Macro
+  //            OC - Name des Macros
+  //            8  - primitive (8 - Line                              ignorieren
+  //5,1,8,0,0,1.08239X$1,22.5                                         ignorieren
+  //ADD10C,0.254000       Blende 10: Kreis mit 0.254mm durchmesser    ignorieren
+  begin
+                                      // the following parameter will be ignored
+    if pos('LPD',Line)    = 1 then exit;                               // ignore
+    if pos('AMOC8',Line)  = 1 then exit;                               // ignore
+    if pos('ADD10C',Line) = 1 then exit;                               // ignore
+
+    if pos('MO',Line) = 1 then begin                                // unit mode
+       if pos('MM',Line) = 3 then begin Scale:= 1;      exit end;
+       if pos('IN',Line) = 3 then begin Scale:= 1/2.54; exit end;
+    end;
+
+    if pos('FSLA',Line) = 1                                // parameter format
+    then begin
+      i:= 5; valid:= true; xx:= 100; yy:= 100;
+      while (length(Line)>i) do
+      begin
+        if Line[i] = 'X' then begin
+           inc(i);
+           valid:= valid and (ParseLine(i, Line, xx, dummy_str) = p_number);
+           continue;
+        end;
+
+        if Line[i] = 'Y' then begin
+           inc(i);
+           valid:= valid and (ParseLine(i, Line, yy, dummy_str) = p_number);
+           continue;
+        end;
+        inc(i);
+      end;
+      if valid and (xx<>100) and (yy<>100) then exit;
+    end;
+
+    Form1.Memo1.lines.add('ERROR: Unbekannter Parameter in DIM-File: ' + Line);
+  end;
+
+  procedure dim_import_cmd(line: String; fileID, penOverride: Integer);
+  var i: Integer;
+      xx, yy, dd: double;
+      valid: boolean;
+      dummy_str: String;
+  // Actions: none, lift, seek, drill, mill
+  //G04 EAGLE Gerber RS-274X export*  Kommentar                           ignore
+  //G75*                  circular interpolation                          ignore
+  //G01*                  linear interpolation                            ignore
+  //D10*                  Blende 10 nutzen                                ignore
+  //X0Y0D02*              Bewege nach <X,Y>, Lampe aus
+  //X390400Y0D01*         Bewege nach <X,Y>, Linie
+  //M00                   end of Gerber description                       ignore
+  //M02                   end of Gerber description                       ignore
+  begin
+                                       // the following commands will be ignored
+    if pos('D10',Line)    = 1 then exit;                               // ignore
+    if pos('G04',Line)    = 1 then exit;                               // ignore
+    if pos('G75',Line)    = 1 then exit;                               // ignore
+    if pos('G01',Line)    = 1 then exit;                               // ignore
+    if pos('M00',Line)    = 1 then exit;                               // ignore
+    if pos('M02',Line)    = 1 then exit;                               // ignore
+
+    if Line[1]='X' then begin
+      i:= 2;
+      valid:=            ParseLine(i, Line, xx, dummy_str) = p_number;
+      valid:= valid and (Line[i]='Y'); inc(i);
+      valid:= valid and (ParseLine(i, Line, yy, dummy_str) = p_number);
+      valid:= valid and (Line[i]='D'); inc(i);
+      valid:= valid and (ParseLine(i, Line, dd, dummy_str) = p_number);
+
+      if valid then begin
+        xx:= 40 * Scale * xx / power(10,Xdec);               // scale to 0.025mm
+        yy:= 40 * Scale * yy / power(10,Ydec);
+
+        if (dd > 1.5) then begin                                      // tool up
+          LastPoint.x:= round(xx);
+          LastPoint.y:= round(yy);
+          LastAction:= seek;
+        end else begin                                              // tool down
+          if LastAction <= seek then begin
+          // war oben, letzte Koordinaten sind erster Punkt im Block
+            CurrentBlockID:= new_block(fileID);
+            append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
+            blockArrays[fileID, CurrentBlockID].pen:= CurrentPen;
+            check_filebounds(FileID, LastPoint);
+          end;
+          LastPoint.x:= round(xx);
+          LastPoint.y:= round(yy);
+          append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
+          check_filebounds(FileID, LastPoint);
+          LastAction:= mill;
+        end;
+        exit;
+      end;
+    end;
+    Form1.Memo1.lines.add('ERROR: Unbekanntes Kommando in DIM-File: ' + Line);
+  end;
+
+var
+  my_ReadFile: TextFile;
+  S: String;
+  c: char;
+  ParamMode: boolean;
+
+begin
+  if not FileExists(my_name) then begin
+    FileParamArray[fileID].valid := false;
+    exit;
+  end;
+
+  if (penOverride >= 0) and (penOverride < 10) then begin
+    CurrentPen:= penOverride;
+    job.pens[penOverride].used:= true;
+    job.pens[penOverride].enable:= true;
+  end else
+    CurrentPen:= 0;
+
+  LastAction:= lift;
+  LastPoint.x:= 0;
+  LastPoint.y:= 0;
+  ParamMode:= false;
+  Scale:= 1;                                  // scale between file and internal
+  Xdec:= 4; Ydec:= 4;                               // default: 4 decimal places
+
+  reset_filebounds(fileID);
+  S:='';
+
+  FileMode := fmOpenRead;
+  AssignFile(my_ReadFile, my_name);
+  Reset(my_ReadFile);
+  while not Eof(my_ReadFile) do begin
+    Read(my_ReadFile,c);
+    if (c >= #32) and (c<>'%') then S:= S + c;
+    if ParamMode then begin
+      if c = '%' then begin
+        dim_import_parameter(S);
+        S:= '';
+      end
+    end else begin
+      if c = '*' then begin
+        dim_import_cmd(S, fileID, penOverride);
+        S:='';
+      end;
+    end;
+    if (c='%') then ParamMode:= Not ParamMode;
+  end;
+  CloseFile(my_ReadFile);
+  FileParamArray[fileID].valid := true;
+  file_Rotate_Mirror_Scale_Offset(fileID, true); // auto close path
   block_scale_file(fileID);
 end;
 
 // #############################################################################
 // SVG Import, contributed by Frank Kaiser
 // #############################################################################
-
-// Offen: - Rotate als Transformation
-//        - Verzerren in X- bzw. Y-Richtung als Transformation
 
 type                                      // 2D-Punkt mit zusätzlichem Parameter
   TFloatPointP = record
@@ -240,7 +467,8 @@ type  // use of objects because type "string" can't part of a variant record
       penOverride       : integer;
       M                 : TMatrix33;
       filled            : boolean;                // Kreis ausgefüllt ==> Bohren
-      pen               : integer;                       // zu verwendendes Tool
+                        // pen[0]: Anzahl der Tools für Pfad, pen[x]: Toolnummer
+      pen               : array[0..c_numOfPens+1] of integer;
       Hmm               : double;                          // Seitenhöhe in [mm]
       Hpx               : double;                          // Seitenhöhe in [px]
       val               : double;
@@ -251,14 +479,14 @@ type  // use of objects because type "string" can't part of a variant record
       function  Analysis(const Line: string):boolean;                 virtual;
       function  Valid:boolean;                                        virtual;
       procedure Draw;                                                 virtual;
-      function GetPen:integer;
+      function  GetPen:integer;
       function  Find(const s0, s: string; var p: integer):boolean;
   end;
 
   TSvgGroup = class(TSvg)
     public
       function  Scale:double;                      // Skalierungsfaktor auf [mm]
-      procedure AddPoint(Pf: TFloatPoint);
+      procedure AddPoint(Pf: TFloatPoint; AType: TPtType);
       procedure EllypseAddMiddlePoint(P0, P                : TFloatPointP;
                                       rx, ry, cx, cy, x_rot: double);
       function  Analysis(const Line: string):boolean; override;
@@ -276,6 +504,8 @@ type  // use of objects because type "string" can't part of a variant record
       constructor Create(const Predecessor: TSvg);
       procedure HandleM();                                               // Move
       procedure HandleL();                                               // Line
+      procedure HandleH();                                   // horizontale Line
+      procedure HandleV();                                     // vertikale Line
       procedure HandleQ();                    // quadratische Bezierkurve Beginn
       procedure HandleC();                        // kubische Bezierkurve Beginn
       procedure HandleA();                                 // elliptischer Bogen
@@ -402,7 +632,7 @@ begin
   if Predecessor = nil then begin
     M:= TMatrix33.Create(1,0,0,  0,1,0,   0,0,1);       // Transformationsmatrix
     filled   := false;                                             // nur Kontur
-    pen      := 1;                      // Standardstift, falls keiner angegeben
+    pen[0]   := 0;                                   // noch kein Stift vergeben
     F        := MAXINT;                       // ID für Pfad muss gesetzt werden
     Hmm      := MAXDOUBLE;             // Seitenhöhe in [mm] muss gesetzt werden
     Hpx      := MAXDOUBLE;             // Seitenhöhe in [px] muss gesetzt werden
@@ -424,7 +654,10 @@ begin
   Create(Predecessor);
   F           := fid;
   penOverride := pid;
-  if (pid >= 0) then Pen := pid;
+  if (pid >= 0) then begin
+    Pen[0] := 1;
+    Pen[1] := pid;
+  end;
 end;
 
 destructor TSvg.Destroy;
@@ -465,7 +698,9 @@ end;
 function TSvg.Valid:boolean;
 begin
   if (state = incomplete) and
-     (pen <> MAXINT) and                            // Stift muss gesetzt werden
+       ((pen[0] > 0) or
+        (Self.ClassType = TSvgGroup) or
+        (Self.ClassType = TSvgGroup)) and                               // Stift muss gesetzt werden
      (Hmm <> MAXDOUBLE) and            // Seitenhöhe in [mm] muss gesetzt werden
      (Hpx <> MAXDOUBLE) then           // Seitenhöhe in [px] muss gesetzt werden
     state:= complete;
@@ -473,15 +708,17 @@ begin
 end;
 
 procedure TSvg.Draw;
-begin
-  job.pens[GetPen].used:= true;                                  // Stift setzen
-  job.pens[GetPen].enable:= true;
+begin                               // nur echte Elemente können werzeuge nutzen
+  if ((Self.ClassType <> TSvg) and (Self.ClassType <> TSvgGroup)) then begin
+    job.pens[GetPen].used:= true;                                // Stift setzen
+    job.pens[GetPen].enable:= true;
+  end;
 end;
 
 function TSvg.GetPen:integer;
 var P: integer;
-begin
-  P := pen;
+begin            // das blockarray wird erst mal nur für den ersten Pen angelegt
+  P := pen[1];   // und, wenn vollständig, für alle weiteren Pens kopiert
   if penOverride >= 0 then P := penOverride;
   if (P<0) or (P >=32) then P := 0;
   GetPen:= P;
@@ -491,7 +728,7 @@ function TSvg.Find(const s0, s: string; var p: integer):boolean;
 begin
   p := pos(s0, s);
   if ((p = 0) or      // nicht gefunden oder Bezeichner hat noch eine "Vorsilbe"
-      (p > 1) and (s[p-1] in ['0'..'9','A'..'z'])) then exit(false);
+      (p > 1) and CharInSet(s[p-1], ['0'..'9','A'..'z'])) then exit(false);
   p:= p + length(s0);
   state := error;    // neuen Parameter gefunden, unklar ob Einlesen erfolgreich
   Find:= true;
@@ -503,7 +740,7 @@ begin
   Scale := Hmm / Hpx;
 end;
 
-procedure TSvgGroup.AddPoint(Pf: TFloatPoint);
+procedure TSvgGroup.AddPoint(Pf: TFloatPoint; AType: TPtType);
 var Ph: TFloatPoint;
     Pi: TIntpoint;
 begin             // Matrixprodukt zur Transformation rekursiv über alle Gruppen
@@ -514,25 +751,28 @@ begin             // Matrixprodukt zur Transformation rekursiv über alle Gruppe
 
   Pi.x := round(Ph.X * c_hpgl_scale * Scale);        // Umrechnung Pixel in [mm]
   Pi.y := round(Ph.Y * c_hpgl_scale * Scale);        // & Skalierung auf 1/40mm
-  append_point(F, CurrentBlockID, Pi);
+  append_point(F, CurrentBlockID, Pi, AType);
   blockArrays[F, CurrentBlockID].pen:= GetPen;
   check_filebounds(F, Pi);
 end;
 
 procedure TSvgGroup.EllypseAddMiddlePoint(P0, P                : TFloatPointP;
                                           rx, ry, cx, cy, x_rot: double);
-var P1: TFloatPointP;
-begin
-// rx, ry, x_rot, cx, cy
-  P1.t := (P0.t + P.t) / 2;             // Parameter zum Mittelpunkt bestimmen
+var P1: TFloatPointP;                       // P0: start point
+begin                                       // P: end point
+                                            // rx: first radius
+                                            // ry: second radius
+                                            // cx, cy: coordinates of the center
+                                            // x_rot: rotation
+  P1.t := (P0.t + P.t) / 2;               // Parameter zum Mittelpunkt bestimmen
   Vector2Rotate(rx*cos(P1.t),ry*sin(P1.t),x_rot,P1.P.X,P1.P.Y);
-  P1.P.X := P1.P.X + cx;                          // Verschieben zum Nullpunkt
+  P1.P.X := P1.P.X + cx;                            // Verschieben zum Nullpunkt
   P1.P.Y := P1.P.Y + cy;
 
   if Vector2DistP(P0.P, P.P, P1.P) < 4
   then begin
-    AddPoint(P1.P);
-    AddPoint(P.P);
+    AddPoint(P1.P,[t_mill]);
+    AddPoint(P.P,[t_mill]);
   end else begin
     EllypseAddMiddlePoint(P0, P1, rx, ry, cx, cy, x_rot);
     EllypseAddMiddlePoint(P1,  P, rx, ry, cx, cy, x_rot);
@@ -540,46 +780,43 @@ begin
 end;
 
 function TSvgGroup.Analysis(const Line: string):boolean;
-var i, j            : integer;
-    s               : string;
-    NewPen          : integer;
+var i, j, n, p      : integer;
+    s, color        : string;
+    ch              : char;
     a, b, c, d, e, f: double;
-    M0              : TMatrix33;
 begin
   Analysis := false;                         // letzte Zeile noch nicht erreicht
   if state <> incomplete then exit;
 
 try
   if pos('style="',Line) > 0 then begin
-    state:= incomplete;
+    state  := incomplete;
     i:= pos('stroke:#', Line) + 8;                      // Linienfarbe ermitteln
     j:= pos('fill:#', Line) + 6;                           // Füllung? ermitteln
     if (i > 8) or (j > 6)  then
     begin
-      NewPen := MaxInt;
 
       if j > i then i := j;                          // nur fill wurde angegeben
       s := '';                                         // gültige Zeichen suchen
-      while (Line[i] in ['0'..'9','.','+','-','A'..'z']) and
+      while CharInSet(Line[i], ['0'..'9','.','+','-','A'..'z']) and
             (i<=length(Line)) do begin
-        s := s + Line[i];
+        s := s + upcase(Line[i]);
         inc(i);
       end;
 
-      if s = '000000' then NewPen := 0 else
-      if s = '804000' then NewPen := 1 else
-      if s = 'ff0000' then NewPen := 2 else
-      if s = 'ff8000' then NewPen := 3 else
-      if s = 'ffff00' then NewPen := 4 else
-      if s = '00ff00' then NewPen := 5 else
-      if s = '0080ff' then NewPen := 6 else
-      if s = 'ff00ff' then NewPen := 7 else
-      if s = '00ffff' then NewPen := 8;
+      n:=0;
+      for p:=0 to 9 do begin
+        color:= IntToHex(int64(job.pens[p].color),6);
+        ch:= color[1]; color[1]:= color[5]; color[5]:= ch;
+        ch:= color[2]; color[2]:= color[6]; color[6]:= ch;
+        if s = color then begin
+          inc(n);
+          pen[0]:= n;
+          pen[n]:= p;
+        end;
+      end;
     end;
 
-    if NewPen = MaxInt then exit;
-
-    Pen := NewPen;                                          // neue Farbe setzen
     filled := pos('fill:#',Line) <> 0;                // Objekt mit Hintergrund?
   end;
 
@@ -612,9 +849,9 @@ finally
     Form1.Memo1.lines.add('ERROR: Zeile nicht auswertbar: ' + Line);
     state:= corrupt;
   end;
-  i := pos('</g>',Line);
-  if i > 0 then
-     i:= i;
+//  i := pos('</g>',Line);
+//  if i > 0 then
+//     i:= i;
   Analysis := pos('</g>',Line) > 0
 end;
 
@@ -659,7 +896,7 @@ begin
   if CmdContinue
   then begin
     LastAction := mill;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
   end;
 
   if next_is_first_point or (LastAction = lift) then PS := P.P;
@@ -684,7 +921,47 @@ begin
     P.P.Y := P0.P.Y + P.P.Y
   end;
 
-  AddPoint(P.P);
+  AddPoint(P.P,[t_mill,t_hilite]);
+
+  LastAction:= mill;
+  next_is_first_point:= false;
+  P0 := P;
+end;
+
+procedure TSvgPath.HandleH;
+var s: string;
+begin
+  // Parameter einlesen
+  if not CmdContinue then                                   // Fehlermeldung!!!!
+    if ParseLine(pw, PLine, val, s) <> p_number then exit;
+  P.P.X := val;
+
+  P.P.Y := P0.P.Y;                                          // Y does not change
+
+  // relative zu absoluten Koordinaten konvertieren
+  if (cmd > 'Z') then P.P.X := P0.P.X + P.P.X;
+
+  AddPoint(P.P,[t_mill,t_hilite]);
+
+  LastAction:= mill;
+  next_is_first_point:= false;
+  P0 := P;
+end;
+
+procedure TSvgPath.HandleV;
+var s: string;
+begin
+  // Parameter einlesen
+  if not CmdContinue then                                   // Fehlermeldung!!!!
+    if ParseLine(pw, PLine, val, s) <> p_number then exit;
+  P.P.Y := val;
+
+  P.P.X := P0.P.X;                                          // Y does not change
+
+  // relative zu absoluten Koordinaten konvertieren
+  if (cmd > 'Z') then P.P.Y := P0.P.Y + P.P.Y;
+
+  AddPoint(P.P,[t_mill,t_hilite]);
 
   LastAction:= mill;
   next_is_first_point:= false;
@@ -700,15 +977,15 @@ var P1,P2   : TFloatPoint;       // Bezierparameter, gloable innerhalb C-Handler
   var P01, P12: TFloatPoint;
       PB      : TFloatPointP;
   begin
-    PB.t := (PB0.t+PB1.t)/2;
-    Vector2Scale(P0.P,P1,PB.t,P01);                  // P01: Mittelpunkt P0/P1
-    Vector2Scale(P1,P2,PB.t,P12);                    // P12: Mittelpunkt P1/P2
-    Vector2Scale(P01,P12,PB.t,PB.P);       // Zielpunkt: Mittelpunkt P012/P123
+    PB.t:= (PB0.t+PB1.t)/2;
+    Vector2Scale(P0.P,P1,PB.t,P01);                    // P01: Mittelpunkt P0/P1
+    Vector2Scale(P1,P2,PB.t,P12);                      // P12: Mittelpunkt P1/P2
+    Vector2Scale(P01,P12,PB.t,PB.P);         // Zielpunkt: Mittelpunkt P012/P123
 
     if Vector2DistP(PB0.P, PB1.P, PB.P) < 4
     then begin
-      AddPoint(PB.P);
-      AddPoint(PB1.P);
+      AddPoint(PB.P, [t_mill]);                  // additional calculated points
+      AddPoint(PB1.P,[t_mill]);                  // are for milling only
     end
     else begin
       Bezier2AddPoint(PB0, PB);
@@ -716,8 +993,7 @@ var P1,P2   : TFloatPoint;       // Bezierparameter, gloable innerhalb C-Handler
     end;
   end;
 
-begin
-                                                   // Parameter: x1 y1 x2 y2 x y
+begin                                              // Parameter: x1 y1 x2 y2 x y
   if not CmdContinue then                                             // read x1
     if ParseLine(pw, PLine, val, s) <> p_number then exit;
   P1.X := val;
@@ -739,6 +1015,8 @@ begin
     P2.X := P0.P.X + P2.X;
     P2.Y := P0.P.Y + P2.Y;
   end;
+
+  AddPoint(P2,[t_hilite]);                   // set end point of the path hilite
 
   // Berechnung der neuen Wegpunkte
   PB0.P := P0.P; PB0.t := 0;
@@ -770,8 +1048,8 @@ var P1, P2  : TFloatPoint;           // Hilfspunkte, gloable innerhalb C-Handler
 
     if Vector2DistP(PB0.P, PB1.P, PB.P) < 4
     then begin
-      AddPoint(PB.P);
-      AddPoint(PB1.P);
+      AddPoint(PB.P,[t_mill]);
+      AddPoint(PB1.P,[t_mill]);
     end
     else begin
       Bezier3AddPoint(PB0, PB);
@@ -806,6 +1084,8 @@ begin                                              // Parameter: x1 y1 x2 y2 x y
     P2.X  := P0.P.X + P2.X;  P2.Y  := P0.P.Y + P2.Y;
     P.P.X := P0.P.X + P.P.X; P.P.Y := P0.P.Y + P.P.Y
   end;
+
+  AddPoint(P2,[t_hilite]);
 
   // Berechnung der neuen Wegpunkte
   PB0.P := P0.P; PB0.t := 0;
@@ -856,7 +1136,8 @@ begin          // Parameter: rx ry x-axis-rotation large-arc-flag sweep-flag x y
   if (P0.P.X = P.P.X) and (P0.P.Y = P.P.Y) then exit;
 
   if (rx=0) or (ry=0) then begin
-    AddPoint(P.P);         // wenn rx=0 oder ry=0 ==> gerade Linie (ungetestet!)
+           // wenn rx=0 oder ry=0 ==> gerade Linie (ungetestet!)
+    AddPoint(P.P,[t_mill,t_hilite]);
   end else begin
 
     // Wandlung in die Zentraldarstellung (siehe Wikipedia: SVG-Pfade)
@@ -902,6 +1183,8 @@ begin          // Parameter: rx ry x-axis-rotation large-arc-flag sweep-flag x y
     EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, x_rot);
   end;
 
+  AddPoint(P.P,[t_hilite]);
+
   LastAction:= mill;
   next_is_first_point:= false;
   P0 := P;
@@ -940,26 +1223,28 @@ begin
     if ParseLine(pw, PLine, val, s) <> p_letters then CmdContinue := true
     else begin
       cmd:= s[1];                 // neues Kommando, ist immer nur ein Buchstabe
-      if cmd = 'z' then cmd := 'Z';
+      if cmd = 'z' then
+        cmd := 'Z';
       CmdContinue := false
     end;
 
     if ( (LastAction = lift) and
-         ( (CmdContinue) or not (cmd in ['Z', 'M', 'm']) ) ) then begin
+       ( (CmdContinue) or not CharInSet(cmd, ['Z', 'M', 'm']) ) ) then begin
       CurrentBlockID:= new_block(F);
-      AddPoint(PS);
+      AddPoint(PS,[t_mill,t_hilite]);
     end;
 
     case upcase(cmd) of
-      'M': HandleM;                                                 // Move
-      'L': HandleL;                                                // Linie
-      'Q': HandleQ;                      // quadratische Bezierkurve Beginn
-      'C': HandleC;                          // kubische Bezierkurve Beginn
-      'A': HandleA;                                   // elliptischer Bogen
+      'M': HandleM;                                                      // Move
+      'L': HandleL;                                                     // Linie
+      'H': HandleH;                                         // horizontale Linie
+      'V': HandleV;                                           // vertikale Linie
+      'Q': HandleQ;                           // quadratische Bezierkurve Beginn
+      'C': HandleC;                               // kubische Bezierkurve Beginn
+      'A': HandleA;                                        // elliptischer Bogen
       'Z': begin
              next_is_first_point:= true;
              LastAction:= lift;
-//             AddPoint(PS);
              blockArrays[F, CurrentBlockID].closed:= true;
            end;
       else exit;
@@ -1041,41 +1326,44 @@ begin
     if Ry = MAXDOUBLE then Ry := Rx;
     P.P.X := X + Rx;
     P.P.Y := Y;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
     P.P.X := P.P.X + Width - 2*Rx;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := 3*pi/2;
     P.P.X := P.P.X + Rx; P.P.Y := P.P.Y + Ry; P.t  := 2*pi;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P0.P.X, P.P.Y, 0);
+    AddPoint(P.P,[t_hilite]);
 
     P.P.Y := P.P.Y + Height - 2*Ry;
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := 0;
     P.P.X := P.P.X - Rx; P.P.Y := P.P.Y + Ry; P.t  := pi/2;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P.P.X, P0.P.Y, 0);
+    AddPoint(P.P,[t_hilite]);
 
     P.P.X := P.P.X - (Width - 2*Rx);
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := pi/2;
     P.P.X := P.P.X - Rx; P.P.Y := P.P.Y - Ry; P.t  := pi;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P0.P.X, P.P.Y, 0);
+    AddPoint(P.P,[t_hilite]);
 
     P.P.Y := P.P.Y - (Height - 2*Ry);
-    AddPoint(P.P);
+    AddPoint(P.P,[t_mill,t_hilite]);
 
     P0 := P;                                  P0.t := pi;
     P.P.X := P.P.X + Rx; P.P.Y := P.P.Y - Ry; P.t  := 3*pi/2;
     EllypseAddMiddlePoint(P0, P, Rx, Ry, P.P.X, P0.P.Y, 0);
   end
   else begin
-    P.P.X := X; P.P.Y := Y;  AddPoint(P.P);
-    P.P.Y := P.P.Y + Height; AddPoint(P.P);
-    P.P.X := P.P.X + Width;  AddPoint(P.P);
-    P.P.Y := P.P.Y - Height; AddPoint(P.P);
-    P.P.X := P.P.X - Width;  AddPoint(P.P);
+    P.P.X := X; P.P.Y := Y;  AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.Y := P.P.Y + Height; AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.X := P.P.X + Width;  AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.Y := P.P.Y - Height; AddPoint(P.P,[t_mill,t_hilite]);
+    P.P.X := P.P.X - Width;  AddPoint(P.P,[t_mill]);
   end;
   blockArrays[F, CurrentBlockID].closed:= true;
 end;
@@ -1144,18 +1432,22 @@ begin
   P0.P.X := cx + rx; P0.P.Y := cy;      P0.t := 0;
   P.P.X  := cx;      P.P.Y  := cy + ry; P.t  := pi/2;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   P0    := P;
   P.P.X := cx - rx;  P.P.Y := cy;       P.t  := pi;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   P0    := P;
   P.P.X := cx;       P.P.Y := cy - ry;  P.t  := 3*pi/2;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   P0    := P;
   P.P.X := cx + rx;  P.P.Y := cy;       P.t  := 2*pi;
   EllypseAddMiddlePoint(P0, P, rx, ry, cx, cy, 0);
+  AddPoint(P.P,[t_hilite]);
 
   blockArrays[F, CurrentBlockID].closed:= true;
 end;
@@ -1178,54 +1470,54 @@ begin
 
   Analysis := false;
   if state <> incomplete then exit;
-try
-  if Find('cx="', Line, i) then
-    if ParseLine(i, Line, cx, s) <> p_number then exit;     // Zentrum.x in [px]
 
-  if Find('cy="', Line, i) then
-    if ParseLine(i, Line, cy, s) <> p_number then exit;     // Zentrum.y in [px]
+  try
+    if Find('cx="', Line, i) then
+      if ParseLine(i, Line, cx, s) <> p_number then exit;   // Zentrum.x in [px]
 
-  if Find('r="', Line, i) then
-    if ParseLine(i, Line, r, s) <> p_number then exit;         // Radius in [px]
+    if Find('cy="', Line, i) then
+      if ParseLine(i, Line, cy, s) <> p_number then exit;   // Zentrum.y in [px]
 
-  state := incomplete;
+    if Find('r="', Line, i) then
+      if ParseLine(i, Line, r, s) <> p_number then exit;       // Radius in [px]
 
-finally
-  if state = error then begin
-    Form1.Memo1.lines.add('ERROR: Zeile nicht auswertbar: ' + Line);
-    state:= corrupt;
-  end;
+    state := incomplete;
 
-  result := pos('/>',Line) > 0;                        // Analyse ist abgeschlossen
-
-  if result and filled                               // Loch soll gebohrt werden
-  then begin
-    r := round(10 * r * Scale) / 10;   // r in mm umrechnen und auf 0,1mm runden
-
-    Tool:=11;
-    while (Tool <= c_numOfPens)              and
-          (Job.pens[Tool].used)              and
-          (Job.pens[Tool].shape = drillhole) and
-          (abs(Job.pens[Tool].diameter - 2*r) > 0.1) do Tool:=Tool+1;
-
-    if Tool > c_numOfPens then begin                 // ==> kein Platz mehr frei
+  finally
+    if state = error then begin
+      Form1.Memo1.lines.add('ERROR: Zeile nicht auswertbar: ' + Line);
       state:= corrupt;
-      Form1.Memo1.lines.add('ERROR: Zu wenige Tools!');
-    end else begin
-      pen:= Tool;                   // Werkzeug neu setzen, Farbe wird ignoriert
+    end;
 
-      if (not Job.pens[Tool].used)            // Bohrer muss neu angelegt werden
-      then begin
-        job.pens[Tool].diameter:= 2*r;          // Attribute für Werkzeug setzen
-        job.pens[Tool].tipdia:= 2*r;
-        job.pens[Tool].used:= true;
-        job.pens[Tool].shape:= drillhole;
+    result := pos('/>',Line) > 0;                   // Analyse ist abgeschlossen
+
+    if result and filled                             // Loch soll gebohrt werden
+    then begin
+      r := round(10 * r * Scale) / 10; // r in mm umrechnen und auf 0,1mm runden
+
+      Tool:=10;
+      while (Tool <= c_numOfPens)              and
+            (Job.pens[Tool].used)              and
+            (Job.pens[Tool].shape = drillhole) and
+            (abs(Job.pens[Tool].diameter - 2*r) > 0.1) do Tool:=Tool+1;
+
+      if Tool > c_numOfPens then begin               // ==> kein Platz mehr frei
+        state:= corrupt;
+        Form1.Memo1.lines.add('ERROR: Zu wenige Tools!');
+      end else begin
+        pen[0]:= 1;
+        pen[pen[0]]:= Tool;         // Werkzeug neu setzen, Farbe wird ignoriert
+
+        if (not Job.pens[Tool].used)          // Bohrer muss neu angelegt werden
+        then begin
+          job.pens[Tool].diameter:= 2*r;        // Attribute für Werkzeug setzen
+          job.pens[Tool].tipdia:= 2*r;
+          job.pens[Tool].used:= true;
+          job.pens[Tool].shape:= drillhole;
+        end;
       end;
     end;
   end;
-
-end;
-
 end;
 
 function TSvgCircle.Valid:boolean;
@@ -1246,11 +1538,11 @@ begin
 
   if filled
   then begin
-    CurrentBlockID:= MAXINT;                   // wird der Bohrer schon genutzt?
+    CurrentBlockID:= MAXINT;   // wird der Bohrer schon genutzt? Block ermitteln
     if length(blockArrays[F]) > 0 then
       for i:= 0 to length(blockArrays[F])-1 do
-        if (blockArrays[F, i].pen = pen) and
-           (job.pens[pen].shape = drillhole)
+        if (blockArrays[F, i].pen = pen[1]) and
+           (job.pens[pen[1]].shape = drillhole)
         then begin
           CurrentBlockID := i;
           break;
@@ -1260,24 +1552,30 @@ begin
 
     P.P.X:= cx;
     P.P.Y:= cy;
-    AddPoint(P.P);                                         //    Punkt eintragen
+    AddPoint(P.P,[t_mill,t_hilite]);                          // Punkt eintragen
   end else begin
     CurrentBlockID:= new_block(F);
 
     P0.P.X := cx + r; P0.P.Y := cy;     P0.t := 0;
-    P.P.X  := cx;     P.P.Y  := cy + r; P.t  := pi/2;
+    P.P.X  := cx;     P.P.Y  := cy + r; P.t  := pi/2;
+    AddPoint(P.P,[t_hilite]);                                   // hilite Norden
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     P0    := P;
     P.P.X := cx - r;  P.P.Y := cy;      P.t  := pi;
+    AddPoint(P.P,[t_hilite]);                                   // hilite Westen
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     P0    := P;
     P.P.X := cx;      P.P.Y := cy - r;  P.t  := 3*pi/2;
+    AddPoint(P.P,[t_hilite]);                                    // hilite Süden
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     P0    := P;
-    P.P.X := cx + r;  P.P.Y := cy;      P.t  := 2*pi;
+                      P.P.Y := cy;      P.t  := 2*pi;
+    AddPoint(P.P,[t_hilite]);                              // hilite Mittelpunkt
+    P.P.X := cx + r;
+    AddPoint(P.P,[t_hilite]);                                    // hilite Osten
     EllypseAddMiddlePoint(P0, P, r, r, cx, cy, 0);
 
     blockArrays[F, CurrentBlockID].closed:= true;
@@ -1291,7 +1589,7 @@ var
   my_ReadFile : TextFile;
   s           : string;
   SVG, SVGtemp: TSvg;
-  z           : integer;
+  z, i, j, n  : integer;
 begin
   if not FileExists(my_name) then begin
     FileParamArray[fileID].valid := false;
@@ -1353,16 +1651,24 @@ begin
              exit;
           end;
 
-
     if SVG <> nil then begin
       if SVG.Analysis(s) then begin
-        if SVG.valid
-          then SVG.Draw
-          else Form1.Memo1.lines.add('ERROR (Zeile ' + inttostr(z) + '): Element nicht korrekt!');
+        if not SVG.valid then Form1.Memo1.lines.add('ERROR (Zeile ' + inttostr(z) + '): Element nicht korrekt!')
+        else begin
+          n:= SVG.pen[0];
+          for i:=1 to n do begin
+            SVG.Draw;                                          // draw first pen
+            if n > 1 then begin                                   // rotate pens
+              for j:=n downto 1 do
+                SVG.pen[j+1]:= SVG.pen[j];
+              SVG.pen[1]:=SVG.pen[n+1];
+            end;
+          end;
+        end;
         if SVG.Pred <> nil then begin
           SVGtemp := SVG.Pred;
           SVG.Destroy;
-          SVG := SVGtemp;
+          SVG:= SVGtemp;
         end;
       end;
     end;
@@ -1377,9 +1683,7 @@ begin
   LastPoint.x:= 0;
   LastPoint.y:= 0;
   FileParamArray[fileID].valid := true;
-//
-//  blockArrays[fileID, CurrentBlockID].closed:= false;
-  file_rotate_mirror(fileID, true);                               // Auto-close!
+  file_Rotate_Mirror_Scale_Offset(fileID, true);                  // Auto-close!
   block_scale_file(fileID);
 end;
 
@@ -1468,7 +1772,7 @@ begin
   until my_pos > my_len;
   if got_new_xy and (my_action = mill)
   and (CurrentBlockID < length(blockArrays[fileID])) then begin
-    append_point(fileID, CurrentBlockID, LastPoint);
+    append_point(fileID, CurrentBlockID, LastPoint, [t_mill,t_hilite]);
     check_filebounds(FileID, LastPoint);
   end;
 
@@ -1501,7 +1805,7 @@ begin
   end;
   my_sl.free;
   FileParamArray[fileID].valid := true;
-  file_rotate_mirror(fileID, true); // auto close path
+  file_Rotate_Mirror_Scale_Offset(fileID, true);              // auto close path
   block_scale_file(fileID);
 end;
 

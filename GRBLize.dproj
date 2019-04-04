@@ -3,7 +3,7 @@
         <ProjectGuid>{D019AC6E-5289-4121-AF90-0E7604D6786D}</ProjectGuid>
         <MainSource>GRBLize.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
@@ -78,6 +78,8 @@
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+        <DCC_DebugInformation>2</DCC_DebugInformation>
+        <DCC_UnitSearchPath>d:\Daten\CNC\Software\GLScene\Source\Shaders\;d:\Daten\CNC\Software\GLScene\Source\FileFormats\;d:\Daten\CNC\Software\GLScene\Source;d:\Daten\CNC\Software\GLScene\Source\Basis\;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\bin</DCC_ExeOutput>
@@ -91,15 +93,16 @@
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DCC_UnitSearchPath>d:\Daten\CNC\Software\GLScene\Source\Shaders\;d:\Daten\CNC\Software\GLScene\Source\FileFormats\;d:\Daten\CNC\Software\GLScene\Source;d:\Daten\CNC\Software\GLScene\Source\Basis\;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_DebugDCUs>true</DCC_DebugDCUs>
+        <DCC_DebugInformation>2</DCC_DebugInformation>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
-        <Manifest_File>None</Manifest_File>
+        <Manifest_File>(Ohne)</Manifest_File>
+        <DCC_UnitSearchPath>d:\Daten\CNC\Software\GLScene\Source\Shaders\;d:\Daten\CNC\Software\GLScene\Source\FileFormats\;d:\Daten\CNC\Software\GLScene\Source;d:\Daten\CNC\Software\GLScene\Source\Basis\;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\bin</DCC_ExeOutput>
         <VerInfo_Keys>CompanyName=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(ModuleName);FileDescription=$(ModuleName);ProductName=$(ModuleName)</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <DCC_RemoteDebug>false</DCC_RemoteDebug>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -122,9 +125,6 @@
         <DCCReference Include="drawing_window.pas">
             <Form>Form2</Form>
         </DCCReference>
-        <DCCReference Include="cam_view.pas">
-            <Form>Form3</Form>
-        </DCCReference>
         <DCCReference Include="glscene_view.pas">
             <Form>Form4</Form>
         </DCCReference>
@@ -143,6 +143,11 @@
         </DCCReference>
         <DCCReference Include="import_files.pas"/>
         <DCCReference Include="app_Defaults.pas"/>
+        <DCCReference Include="ParamAssist.pas">
+            <Form>FormParamAssist</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="TouchButton.pas"/>
         <None Include="drill_import.inc">
             <ContainerId>File</ContainerId>
         </None>
@@ -161,12 +166,12 @@
         <None Include="decodestatus_09.inc"/>
         <None Include="joypad.inc"/>
         <None Include="joypad_handling.inc"/>
-        <None Include="E:\GLScene\Source\GLScene.inc"/>
         <None Include="ModelSupport_GRBLize\grbl_com\default.txvpck"/>
         <None Include="ModelSupport_GRBLize\grbl_com\default.txaPackage"/>
         <None Include="ModelSupport_GRBLize\GRBLize\default.txvpck"/>
         <None Include="ModelSupport_GRBLize\app_defaults\default.txvpck"/>
         <None Include="ModelSupport_GRBLize\grbl_player_main\default.txvpck"/>
+        <None Include="page_pos.inc"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

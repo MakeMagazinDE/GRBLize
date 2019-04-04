@@ -44,13 +44,17 @@ begin
         Cells[0,my_row]:= IntToStr(my_row);
         Cells[1,my_row]:= IntToStr(final_array[i].pen);
         my_bounds:= final_array[i].bounds;
+
         my_offset:= job.pens[final_array[i].pen].offset;
-        my_bounds.min.x:= my_bounds.min.x + my_offset.x;
-        my_bounds.min.y:= my_bounds.min.y + my_offset.y;
-        my_bounds.max.x:= my_bounds.max.x + my_offset.x;
-        my_bounds.max.y:= my_bounds.max.y + my_offset.y;
-        my_bounds.mid.x:= my_bounds.mid.x + my_offset.x;
-        my_bounds.mid.y:= my_bounds.mid.y + my_offset.y;
+        my_offset.x:= my_offset.x + job.global_offset.x;
+        my_offset.y:= my_offset.y + job.global_offset.y;
+
+//test        my_bounds.min.x:= my_bounds.min.x + my_offset.x;
+//        my_bounds.min.y:= my_bounds.min.y + my_offset.y;
+//        my_bounds.max.x:= my_bounds.max.x + my_offset.x;
+//        my_bounds.max.y:= my_bounds.max.y + my_offset.y;
+//        my_bounds.mid.x:= my_bounds.mid.x + my_offset.x;
+//        my_bounds.mid.y:= my_bounds.mid.y + my_offset.y;
         if my_bounds.min.x < final_bounds.min.x then
           final_bounds.min.x:= my_bounds.min.x;
         if my_bounds.min.y < final_bounds.min.y then
@@ -80,7 +84,7 @@ begin
           result:= true;
         end;
         Cells[3,my_row]:= FormatFloat('0.0', job.pens[final_array[i].pen].diameter);
-        Cells[4,my_row]:= ShapeArray[ord(final_array[i].shape)];
+        Cells[4,my_row]:= string(ShapeArray[ord(final_array[i].shape)]);
         // Enable-Flag für einzelne Pfade setzen
         my_millingcount:= length(final_array[i].millings);
         my_str:='';
@@ -113,7 +117,9 @@ begin
       Form1.Memo1.lines.add('WARNING: Tool paths outside work area disabled');
     end;
     AutoAssignATCtoolsToJob;
-    if Form1.CheckUseATC2.checked then
+    if job.toolchange_pause and
+       job.use_fixed_probe  and
+       job.atc_enabled then
       Form1.LabelATCmsg.Caption:= 'ATC placement'
     else
       Form1.LabelATCmsg.Caption:= 'Tools used';
@@ -139,7 +145,7 @@ var
   aRect: TRect;
   aStr: String;
 begin
-  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
+//  Rect.Left:= Rect.Left-4; // Workaround für XE8-Darstellung
   with SgBlocks,Canvas do begin
     aStr:= Cells[ACol, ARow];
     if (aRow = 0) or (aCol = 0) then begin
@@ -179,7 +185,7 @@ begin
             aRect := Rect;
             if aCol = 4 then begin
               i:= ord(final_array[aRow-1].shape);
-              aStr:= ShapeArray[i];
+              aStr:= string(ShapeArray[i]);
               Font.Color:= ShapeColorArray[i];
               if (not final_array[aRow-1].closed)
               and (final_array[aRow-1].shape in [inside, pocket]) then
@@ -211,9 +217,9 @@ var
   my_shape: Tshape;
   my_row, my_col, my_top: integer;
 begin
+  if final_array = nil then exit;
   SgBlocks.MouseToCell( X,Y, my_col, my_row );
-  if (my_row < 1) or (my_col < 1) then
-    exit;
+  if (my_row < 1) or (my_col < 1) then exit;
   SgBlocks.Col := my_col;
   SgBlocks.Row := my_row;
   with SgBlocks do begin

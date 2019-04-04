@@ -1,42 +1,55 @@
-ï»¿unit gerber_import;
+unit gerber_import;
+
+{ Verarbeitete Formate für Gerber-Daten:
+  "xxx_front" / "xxx_back"
+  "xxx_top" / "xxx_bottom"
+  Die Bottom-Daten werden durch GRBLize gespiegelt. Bei Eagle führt das zu
+  Abweichungen zwischen den Gerber- und den Bohr bzw- Dimensionsdaten.
+
+  "xxx_01" / "xxx_16"
+  Das Spiegeln der Unterseite erfolgt bei der Generierung der Gerberdaten, nicht
+  durch GRBLize!
+}
 
 interface
 
 uses ShellApi, Winapi.Windows, MMsystem, System.SysUtils, System.Classes,
   Vcl.Graphics, Vcl.Forms,
   Vcl.Controls, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls, Vcl.Dialogs,
-  import_files, grbl_com;
+  import_files, grbl_com, Vcl.ComCtrls;
 
-function CallPcb2Gcode(my_source_path: String;
-                       FrontSide:      boolean;
-                       my_offset:      Double;
-                       Dpi:            String):String;
+function CallPcb2Gcode(source_path: String;
+                       Mirrored:    boolean;
+                       my_offset:   Double;
+                       Dpi:         String):String;
 
 type
   TFormGerber = class(TForm)
     OKBtn: TButton;
     CancelBtn: TButton;
     EditInflate: TEdit;
-    Label29: TLabel;
-    RadioButtonBack: TRadioButton;
-    RadioButtonFront: TRadioButton;
-    RadioGroup1: TRadioGroup;
-    BtnGerberConvert: TButton;
     Memo2: TMemo;
     PaintBox1: TPaintBox;
-    Label30: TLabel;
     OpenFileDialog: TOpenDialog;
-    BtnOpenGerber: TButton;
-    EditDPI: TEdit;
+    InflateBar: TTrackBar;
+    InflateGroup: TGroupBox;
+    CheckMirror: TCheckBox;
+    PCBBox: TGroupBox;
+    ComboThickness: TComboBox;
     Label1: TLabel;
-    procedure BtnGerberConvertClick(Sender: TObject);
+    TimerInflateBar: TTimer;
     procedure OKBtnClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CancelBtnClick(Sender: TObject);
-    procedure BtnOpenGerberClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormPaint(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure InflateBarChange(Sender: TObject);
+    procedure EditInflateKeyPress(Sender: TObject; var Key: Char);
+    procedure InflateEditExit(Sender: TObject);
+    procedure InflateChange;
+    procedure CheckMirrorClick(Sender: TObject);
+    procedure InflateBarTimer(Sender: TObject);
   private
     { Private-Deklarationen }
   public
@@ -56,6 +69,49 @@ implementation
 {$R *.dfm}
 
 uses grbl_player_main;
+
+procedure ExecuteFile(const AFilename: String;
+              AParameter, ACurrentDir: String;
+                         AWait, AHide: Boolean);
+var
+  si: TStartupInfo;
+  pi: TProcessInformation;
+
+begin
+  if Length(ACurrentDir) = 0 then
+    ACurrentDir := ExtractFilePath(AFilename)
+  else if AnsiLastChar(ACurrentDir) = '\' then
+    Delete(ACurrentDir, Length(ACurrentDir), 1);
+
+  FillChar(si, SizeOf(si), 0);
+  with si do begin
+    cb := SizeOf(si);
+    dwFlags := STARTF_USESHOWWINDOW;
+    if AHide then
+      wShowWindow := SW_HIDE
+    else
+      wShowWindow := SW_NORMAL;
+  end;
+  FillChar(pi, SizeOf(pi), 0);
+  AParameter := Format('"%s" %s', [AFilename, TrimRight(AParameter)]);
+
+{  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, False,
+                   CREATE_DEFAULT_ERROR_MODE or CREATE_NEW_CONSOLE or
+                   NORMAL_PRIORITY_CLASS, Nil, PChar(ACurrentDir), si, pi) then
+}
+  if CreateProcess(Nil, PChar(AParameter), Nil, Nil, false, 0, Nil, PChar(ACurrentDir), si, pi) then
+  try
+    if AWait then
+      while WaitForSingleObject(pi.hProcess, 50) <> Wait_Object_0 do begin
+
+
+      end;
+    TerminateProcess(pi.hProcess, Cardinal(-1));
+  finally
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  end;
+end;
 
 function CopyFileEx(const ASource, ADest: string; ARenameCheck: boolean = false): boolean;
 var
@@ -223,57 +279,57 @@ begin { Mirror }
   end; { Assigned(Picture.Graphic) }
 end; { Mirror }
 
-function CallPcb2Gcode(my_source_path: String;
-                       FrontSide:      boolean;
-                       my_offset:      Double;
-                       Dpi:            String):String;
+function CallPcb2Gcode(source_path: String;
+                       Mirrored:    boolean;
+                       my_offset:   Double;
+                       Dpi:         String):String;
 var my_converter_path, my_side, my_arg: String;
+    target_ext, S: string;
 begin
   Result := '';                           // Leerstring entspricht Fehlermeldung
   my_converter_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\pcb2gcode.exe';
-  if not FileExists(my_converter_path) then
+  if not FileExists(my_converter_path) then          // Konverter nicht gefunden
     exit;
 
-  if FrontSide then
-    my_side:= '--front'
-  else
-    my_side:= '--back';
+  target_ext:= '.ncb';
+  S:= ansiuppercase(ExtractFileName(source_path));
+  if (pos(  'TOP',S) > 0) or
+     (pos('FRONT',S) > 0) or
+     (pos(  '_01',S) > 0) then target_ext:= '.ncf';
 
-  ConvertedFileName:= ChangeFileExt(my_source_path, '.nc' + my_side[3]);
+  my_side:= '--front'; if Mirrored then my_side:= '--back';
 
-  my_arg:= my_side + #32 + my_source_path
+  ConvertedFileName:= ChangeFileExt(source_path, target_ext);
+
+  my_arg:= my_side + #32 + source_path
     + ' --nog81 --dpi ' + Dpi
     + ' --zsafe 1 --zchange 30 --zwork -0.2'
     + ' --offset ' + FloatToStrDot(my_offset)
     + ' --mill-feed 200'
-    + ' --optimise=1 --mill-speed 6000 --metric=1 --metricoutput=1 '
+    + ' --optimise=1 --mill-speed 3000 --metric=1 --metricoutput=1 '
     + my_side + '-output ' + ConvertedFileName;
   ExecuteFile(my_converter_path, my_arg, ExtractFilePath(my_converter_path), true, true);
   Result := my_arg;
 end;
 
-procedure TFormGerber.BtnGerberConvertClick(Sender: TObject);
+procedure TFormGerber.InflateChange;
 var CmdStr, my_png_path: String;
 begin
   Paintbox1.canvas.Brush.Color:= clsilver;
   Paintbox1.canvas.FillRect(rect(0,0,PaintBox1.Width,PaintBox1.Height));
-  Label30.Caption:= ExtractFileName(GerberFileName);
+  Caption:= 'Convert Gerber to GCode: ' + ExtractFileName(GerberFileName);
 
   my_png_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
-  if FileExists(my_png_path) then
-    DeleteFile(my_png_path);
+  if FileExists(my_png_path) then DeleteFile(my_png_path);
 
   Memo2.Lines.Add('Converted file will be imported as #' + IntToStr(GerberFileNumber));
   Memo2.Lines.Add('Please wait...');
   Application.ProcessMessages;
   Screen.Cursor:= crHourglass;
 
-  FileParamArray[GerberFileNumber-1].user1:= StrToFloatDef(EditInflate.Text, 0.1);
-  Form1.SgFiles.Cells[7, GerberFileNumber]:= EditInflate.Text;
-
   CmdStr := CallPcb2Gcode(GerberFileName,
-                          RadioButtonFront.Checked,
-                          FileParamArray[GerberFileNumber-1].user1,
+                          CheckMirror.Checked,
+                          FileParamArray[GerberFileNumber-1].gbr_inflate,
                           '500');
 
   if CmdStr = '' then begin
@@ -285,73 +341,80 @@ begin
 
   FormGerber.BringToFront;
   Screen.Cursor:= crDefault;
-  Application.ProcessMessages;
+//  Application.ProcessMessages;
   if FileExists(ConvertedFileName) then begin
     Memo2.lines.add('Converted file written to ');
     Memo2.lines.add(ConvertedFileName);
-    Label30.Caption:= ExtractFileName(ConvertedFileName);
+    Caption:= 'Convert Gerber to GCode: ' + ExtractFileName(ConvertedFileName);
   end;
-//  mdelay(500);
   my_png_path:= ExtractFilePath(Application.ExeName) + 'pcb2gcode\outp1_traced.png';
   if FileExists(my_png_path) then begin
-    BtnGerberConvert.Enabled:= true;
     OKbtn.Enabled:= true;
     Memo2.lines.add('Loading preview...');
-    Application.ProcessMessages;
+//    Application.ProcessMessages;
     img.Picture.LoadFromFile(my_png_path);
     image_loaded:= true;
-    // Image ist idR sehr groÃŸ, muss skaliert werden
-    if RadioButtonBack.Checked then
-      Mirror(img.picture);
-    Application.ProcessMessages;
+    // Image ist idR sehr groß, muss skaliert werden
+    if CheckMirror.Checked then Mirror(img.picture);
+//    Application.ProcessMessages;
     paint;
   end else begin
     Memo2.lines.add('pcb2gcode failed: No layout image found.');
-    BtnGerberConvert.Enabled:= false;
     OKbtn.Enabled:= false;
     image_loaded:= false;
   end;
   Memo2.lines.add('Done.');
 end;
 
+procedure TFormGerber.InflateBarChange(Sender: TObject);
+begin
+                 // first end the windows event handling before serve the change
+                 // handle only after MouseUp
+  if GetAsyncKeyState(VK_LBUTTON) = 0 then TimerInflateBar.Enabled:= true;
+end;
+
+procedure TFormGerber.CheckMirrorClick(Sender: TObject);
+begin
+  InflateChange;
+end;
+
+procedure TFormGerber.EditInflateKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then InflateEditExit(Sender);
+end;
+
+procedure TFormGerber.InflateEditExit(Sender: TObject);
+var v, v0: double;
+begin
+  v0:= -1;                                // limit value to limits of InflateBar
+  v:= 10*StrToFloatDef(EditInflate.Text, 0.1);
+  if v < InflateBar.Min then v0:= InflateBar.Min;
+  if v > InflateBar.Max then v0:= InflateBar.Max;
+  if v0 <> -1 then EditInflate.Text:= FloatToStr(v/10);
+  if abs(InflateBar.Position - v) > 0.9 then InflateBar.Position:= round(v);
+  InflateChange;
+end;
+
 procedure blank_warning;
 begin
-  FormGerber.Label30.Caption:= 'FILE PATH INVALID';
+  FormGerber.Caption:= 'Convert Gerber to GCode: ' + 'FILE PATH INVALID';
   FormGerber.Memo2.Lines.Add('ERROR: File path may not contain spaces!');
   FormGerber.Memo2.Lines.Add('PCB2GCODE converter will fail otherwise.');
   PlaySound('SYSTEMHAND', 0, SND_ASYNC);
 end;
 
-procedure set_top_bottom;
+procedure set_mirrored;
 var my_filename: String;
 begin
   my_filename:= ansiuppercase(ExtractFileName(GerberFileName));
-  if (pos('TOP',my_filename) > 0) or (pos('FRONT',my_filename) > 0) then begin
-    FormGerber.RadioButtonFront.checked:= true;
-    FormGerber.Memo2.Lines.Add('PCB top side set according to file name.');
-  end;
-  if (pos('BTM',my_filename) > 0) or (pos('BACK',my_filename) > 0) or (pos('BOTTOM',my_filename) > 0) then begin
-    FormGerber.RadioButtonBack.checked:= true;
-    FormGerber.Memo2.Lines.Add('PCB bottom side set according to file name.');
-  end;
-end;
-
-procedure TFormGerber.BtnOpenGerberClick(Sender: TObject);
-begin
-  OpenFileDialog.FilterIndex:= 4;
-  if OpenFileDialog.Execute then begin
-    image_loaded:= false;
-    GerberFileName:= OpenFileDialog.Filename;
-    GerberFileName:= RenameFileBlanks(GerberFileName);
-    if pos(#32,GerberFileName) > 0 then
-      blank_warning
-    else begin
-      set_top_bottom;
-      Label30.Caption:= ExtractFileName(GerberFileName);
-      OKbtn.Enabled:= false;
-      image_loaded:= false;
-      BtnGerberConvertClick(Sender);
-    end;
+  if (pos(  'TOP',my_filename) > 0) or
+     (pos('FRONT',my_filename) > 0) or
+     (pos(  '_01',my_filename) > 0) or
+     (pos(  '_16',my_filename) > 0) then begin
+    FormGerber.CheckMirror.checked:= false;
+  end else begin;
+    FormGerber.Memo2.Lines.Add('Assume PCB should be mirrored.');
+    FormGerber.CheckMirror.checked:= true;
   end;
 end;
 
@@ -372,19 +435,16 @@ begin
   image_loaded:= false;
   if FileExists(GerberFileName) then begin
     GerberFileName:= RenameFileBlanks(GerberFileName);
-
     if pos(#32,GerberFileName) > 0 then
       blank_warning
     else begin
-      set_top_bottom;
-      BtnGerberConvert.Enabled:= true;
-      Label30.Caption:= ExtractFileName(GerberFileName);
-      BtnGerberConvertClick(Sender);
+      set_mirrored;
+      Caption:= 'Convert Gerber to GCode: ' + ExtractFileName(GerberFileName);
+      InflateEditExit(Sender);
     end;
   end else begin
-    BtnGerberConvert.Enabled:= false;
     Memo2.Lines.Add('Please open a Gerber File.');
-    Label30.Caption:= 'FILE NOT SELECTED';
+    Caption:= 'Convert Gerber to GCode: ' + 'FILE NOT SELECTED';
   end;
 end;
 
@@ -400,13 +460,12 @@ begin
   image_loaded:= false;
 end;
 
-
 procedure TFormGerber.FormPaint(Sender: TObject);
 var
   img_height_f, img_width_f: Double;
   height_fac, width_fac, size_fac: Double;
 begin
-// Image ist idR sehr groÃŸ, muss skaliert werden
+// Image ist idR sehr groß, muss skaliert werden
   if image_loaded then begin
     img_height_f:= img.picture.Graphic.Height;
     img_width_f:= img.picture.Graphic.Width;
@@ -427,14 +486,31 @@ end;
 procedure TFormGerber.OKBtnClick(Sender: TObject);
 begin
   if image_loaded and FileExists(ConvertedFileName) then begin
+
     Form1.sgFiles.Cells[0, GerberFileNumber]:= ConvertedFileName;
     Form1.sgFiles.Cells[1, GerberFileNumber]:= '9';
-    job.fileDelimStrings[GerberFileNumber-1]:= Form1.sgFiles.Rows[GerberFileNumber].DelimitedText;
+    job.fileDelimStrings[GerberFileNumber-1]:=
+      ShortString(Form1.sgFiles.Rows[GerberFileNumber].DelimitedText);
+
+    Form1.SgJobDefaults.Cells[1, 3]:= ComboThickness.Text;
+    job.partsize_z:= StrToFloatDef(ComboThickness.Text, 1.6);
+
+    FileParamArray[GerberFileNumber].gbr_name:=    GerberFileName;
+    FileParamArray[GerberFileNumber].gbr_mirror:=  CheckMirror.Checked;
+    FileParamArray[GerberFileNumber].gbr_inflate:= StrToFloatDef(EditInflate.Text, 0.1);
+
     Memo2.Lines.Add('Added file '+ ConvertedFileName);
     OpenFilesInGrid;
   end else
     Memo2.Lines.Add('Error: File not Found!');
   close;
+end;
+
+procedure TFormGerber.InflateBarTimer(Sender: TObject);
+begin
+  TimerInflateBar.Enabled:= false;                              // disable timer
+  EditInflate.Text:= FloatToStr(InflateBar.Position/10);
+  InflateEditExit(Sender);
 end;
 
 end.

@@ -15,7 +15,7 @@ begin
   while grbl_str[start_idx] < #33 do
     inc(start_idx);
   for i:= start_idx to length(grbl_str) do begin
-    if grbl_str[i] in ['0'..'9', '+', '-', ',', '.'] then
+    if CharInSet(grbl_str[i], ['0'..'9', '+', '-', ',', '.']) then
       my_str:= my_str + grbl_str[i]
     else
       break;
@@ -36,7 +36,7 @@ begin
   while grbl_str[start_idx] < #33 do
     inc(start_idx);
   for i:= start_idx to length(grbl_str) do begin
-    if grbl_str[i] in ['0'..'9', '+', '-'] then
+    if CharInSet(grbl_str[i], ['0'..'9', '+', '-']) then
       my_str:= my_str + grbl_str[i]
     else
       break;
@@ -57,7 +57,7 @@ begin
   if job.pens[pen].shape = drillhole then
     my_tooltip:= 6;
   my_str:= 'Tool #' + IntToStr(pen)+ ': ' + FormatFloat('0.00',job.pens[pen].diameter) + ' mm'
-    + #32 + ToolTipArray[my_tooltip];
+    + #32 + string(ToolTipArray[my_tooltip]);
   result:= my_str;
 end;
 
@@ -143,8 +143,7 @@ end;
 
 function probe_z: double;
 var my_zval1, my_zval2, TargetZ: Double;
-  pos_changed: Boolean;
-  my_cmd, my_response: String;
+    my_cmd, my_response: String;
 begin
 // von aktueller Position ausgehend Z nach unten fahren.
 // Stoppt wenn Kontakt erreicht.
@@ -152,12 +151,10 @@ begin
 // verhindert, dass das Werkzeug in den Tisch rammt
 // nach Stopp durch Kontakt steht Maschinenposition in grbl_mpos.Z
 // wird in result übernommen, Z kehrt danach auf 0 zurück
-  Form1.Memo1.lines.add('Probing Z (20 mm max.), wait for contact');
+  Form1.Memo1.lines.add('Probing Z (25 mm max.), wait for contact');
   result:= 0;
   if isGrblActive then
     try
-      my_zval1:= grbl_mpos.Z;
-      my_zval2:= grbl_mpos.Z;
       result:= 0;
       if (MachineState = alarm) then
         exit;
@@ -165,15 +162,18 @@ begin
       grbl_wait_for_timeout(25);
       DisableStatus;
 
-      // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
+      WorkZeroZDone:= false;                                 // reset part ZeroZ
+      grbl_sendStr('G92 Z'+FloatToStrDot(grbl_mpos.z) + #13, true);
+
+      my_zval1:= grbl_mpos.Z;
 
       TargetZ := my_zval1 - 25;                          // auf max. Z begrenzen
       if -job.table_z > TargetZ then
-        TargetZ := -job.table_z;
+        TargetZ := -job.table_z + 1;
       my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F200';
-
-
+                     // wartet auf Probe-Meldung, z.B. [PRB:0.000,0.000,1.492:1]
       my_response:= SendReceive(my_cmd, 0);
+
       grbl_receiveStr(25); // 'ok'
       if pos('ALARM', ansiuppercase(my_response)) = 0 then
         my_zval1:= extract_probe_pos(my_response)
@@ -181,7 +181,6 @@ begin
         MachineState:= alarm;
         exit;
       end;
-
 
       // 2 mm abheben (falls möglich) und nochmal langsam
       if (my_zval1 + 2) > 0 then
@@ -193,7 +192,7 @@ begin
 
       TargetZ := my_zval1 - 1;                          // auf max. Z begrenzen
       if -job.table_z > TargetZ then
-        TargetZ := -job.table_z;
+        TargetZ := -job.table_z + 1;
       my_cmd:= 'G38.2 Z' + FloatToStrDot(TargetZ) + ' F50';
 
       my_response:= SendReceive(my_cmd, 0);
@@ -300,7 +299,7 @@ begin
   if (MachineState = alarm) then
     exit;
   result:= true;
-  if not Form1.CheckTLCprobe.Checked then
+  if not (job.toolchange_pause and job.use_fixed_probe) then
     exit;
   if confirm then
     my_dlg_result:= MessageDlg('Please clear machine to probe Tool Length Offset/Reference (TLC).',
@@ -353,7 +352,8 @@ function isToolDifferent(pen1, pen2: Integer): Boolean;
 begin
   result:= pen1 <> pen2;
   if (CompareValue(job.pens[pen1].diameter, job.pens[pen2].diameter, 0.05) = 0)
-    and (job.pens[pen1].tooltip = job.pens[pen2].tooltip) then
+    and (job.pens[pen1].tooltip = job.pens[pen2].tooltip)
+    and (job.pens[pen1].blades  = job.pens[pen2].blades)  then
       result:= false;
 end;
 
@@ -402,9 +402,9 @@ begin
         Memo1.lines.add('=========================================');
         grbl_sendlist.add(BitChangeStr(my_entry));
         if my_entry.shape = drillhole then
-          grbl_drillpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset)
+          grbl_drillpath(my_entry.millings[p], my_entry.pen)
         else
-          grbl_millpath(my_entry.millings[p], my_entry.pen, job.pens[my_entry.pen].offset, my_entry.closed);
+          grbl_millpath(my_entry.millings[p], my_entry.pen, my_entry.closed);
         SendListToGrbl;
       end;
     end;
@@ -482,8 +482,7 @@ begin
   finally
     ExitJobMsg(true);
   end;
-  if sgATC.Row < c_numATCslots then          // auf nächstes Tool weiterschalten
-    sgATC.Row:= sgATC.Row + 1;
+  SetToolInSpindle(ToolInSpindle + 1);       // auf nächstes Tool weiterschalten
 end;
 
 procedure TForm1.BtnRunJobClick(Sender: TObject);
@@ -571,7 +570,9 @@ begin
         spindle_on_off(false);
         SendSingleCommandStr('G0 G53 Z-1'); // move Z up
         GLSclearPathNodes;
-        if CheckUseATC2.checked then begin
+        if job.toolchange_pause and
+           job.use_fixed_probe  and
+           job.atc_enabled then begin
 // automatischer Werkzeugwechsel, zum Ende erstes Werkzeug wiederaufnehmen
           if atc_idx >= my_used_tools_count then
             ChangeATCtool(atc_idx, 1, true) // zurück zum ersten Tool
@@ -598,12 +599,9 @@ begin
     SendSingleCommandStr('G0 G53 Z-1'); // move Z up
     spindle_on_off(false);
 
-    if CheckEndPark.Checked then
-      MoveToPos('park', job.park_x, job.park_y, job.park_z, false, false)
-//      BtnMoveParkClick(nil)
-    else begin
-      SendSingleCommandStr('G0 X0 Y0'); // Work Zero
-    end;
+    if CheckEndPark.Checked
+      then MoveToPos('park', job.park_x, job.park_y, job.park_z, false, fCamActivated)
+      else SendSingleCommandStr('G0 X0 Y0'); // Work Zero
   finally
     SgATC.enabled:= true;
     ExitJobMsg(true);
@@ -678,4 +676,53 @@ begin
   end;
 end;
 
+procedure TForm1.BtnMoveToolChangeClick(Sender: TObject);
+begin
+  if machine_busy_msg then
+    exit;
+  spindle_on_off(false);
+  grbl_moveZ(0, true);  // Z ganz oben, absolut!
+  Form1.Memo1.lines.add('Move to manual tool change position');
+  grbl_moveXY(job.toolchange_x, job.toolchange_y, true);
+  grbl_moveZ(job.toolchange_z, true);
+// manuelle Wechselposition
+  SendListToGrbl;
 
+// vorerst nicht nötig, da erstes Tool ohnehin immer TLC'd wird:
+{
+  if job.toolchange_pause and job.use_fixed_probe then begin
+    if MessageDlg('Manual Tool Change'
+    + #13 + 'For this job, load spindle with:'
+    + #13 + #13 + pen_description(atcArray[FirstToolUsed].pen)
+    + #13 + #13 + 'Click OK when tool has been changed'
+    + #13 + 'to proceed with TLC probing. If using ATC,'
+    + #13 + 'first slot (#1) must be empty.',
+    mtConfirmation, mbOKCancel, 0) = mrCancel then
+      exit;
+    if DoTLCandConfirm(false, 1) then
+      Form1.Memo1.lines.add('Tool changed, new Tool Delta Z applied');
+  end else
+}
+    if MessageDlg('Manual Tool Change'
+    + #13 + 'For this job, load spindle with:'
+    + #13 + #13 + pen_description(atcArray[ToolInSpindle].pen)
+    + #13 + #13 + 'Click OK when tool has been changed.',
+    mtConfirmation, mbOKCancel, 0) = mrCancel then
+      exit;
+  if Form1.Show3DPreview1.checked then
+    GLSupdateATC;
+  InvalidateTLCs;
+  CancelG43offset;
+  WorkZeroZdone:= false;
+end;
+
+procedure TForm1.BtnProbeZAssistentClick(Sender: TObject);
+begin
+  if machine_busy_msg or
+     (MessageDlg('Calibrate tool length at last position?', mtConfirmation, mbOKCancel, 0) = mrCancel) then
+    exit;
+
+  MoveToPos('Z-Probe position', PosProbeZ.X, PosProbeZ.y, 0, false, false);
+
+  BtnZcontactClick(Sender);
+end;

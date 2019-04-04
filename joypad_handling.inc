@@ -41,7 +41,7 @@ begin
     grbl_sendRealTimeCmd(#$85); // Jog Cancel
   end;
 
-  btn_idx := get_AppDefaults_int(41); // ZeroAll Button
+  btn_idx := get_AppDefaults_int(defJoypadZeroAllButton);      // ZeroAll Button
   if JoyPad.Buttons[btn_idx] then
   begin
     // Taste 1, Nullpunkt soll gesetzt werden
@@ -49,21 +49,21 @@ begin
     joy_wait_btn_release(btn_idx);
   end;
 
-  btn_idx := get_AppDefaults_int(42); // FloodToggle Button
+  btn_idx := get_AppDefaults_int(defJoypadFloodToggle);    // FloodToggle Button
   if JoyPad.Buttons[btn_idx] then
   begin
     grbl_sendRealTimeCmd(#$A0); // Coolant Toggle
     joy_wait_btn_release(btn_idx);
   end;
 
-  btn_idx := get_AppDefaults_int(43); // SpindleToggle Button
+  btn_idx := get_AppDefaults_int(defJoypadSpindleToggle);// SpindleToggle Button
   if JoyPad.Buttons[btn_idx] then
   begin
     grbl_sendRealTimeCmd(#$9E);
     joy_wait_btn_release(btn_idx);
   end;
 
-  btn_idx := get_AppDefaults_int(44); // FeedHold Button
+  btn_idx := get_AppDefaults_int(defJoypadFeedHold);          // FeedHold Button
   if JoyPad.Buttons[btn_idx] then
   begin
     grbl_sendRealTimeCmd(#$85); // Jog Cancel!
@@ -77,12 +77,12 @@ begin
   if JoyPad.IsAnalogActive then
   begin
     LabelJoySend.Caption := 'Active Jog';
-    btn_idx := get_AppDefaults_int(40); // FastJog Button
+    btn_idx := get_AppDefaults_int(defJoypadFastJogButton);    // FastJog Button
     fast_jog := JoyPad.Buttons[btn_idx];
     if fast_jog then
-      feed_str := 'F' + get_AppDefaults_str(37)
+      feed_str := 'F' + get_AppDefaults_str(defJoypadFeedFast)
     else
-      feed_str := 'F' + get_AppDefaults_str(38);
+      feed_str := 'F' + get_AppDefaults_str(defJoypadFeedSlow);
 
     jog_sent := false;
     feed_old := 15;
@@ -96,7 +96,7 @@ begin
       begin
         grbl_sendRealTimeCmd(Char(feed + $F0)); // Feed Override DIRECT
         mdelay(1);
-        if get_AppDefaults_bool(45) then begin
+        if get_AppDefaults_bool(defPositivMachineSpace) then begin
           // Positive Machine Space (XY)
           if JoyPad.X > 0 then
             my_str := '$J=G53X' + FloatToSTrDot(job.table_x-1) + feed_str;
@@ -135,7 +135,7 @@ begin
       begin
         grbl_sendRealTimeCmd(Char(feed + $F0)); // Feed Override DIRECT
         mdelay(1);
-        if get_AppDefaults_bool(45) then begin
+        if get_AppDefaults_bool(defPositivMachineSpace) then begin
           // Positive Machine Space (XY)
            if JoyPad.Y > 0 then // Joystick nach oben ist Minus!
             my_str := '$J=G53Y1' + feed_str; // Richtung Maschinen-Nullpunkt
@@ -162,7 +162,6 @@ begin
     end;
 
     jog_sent := false;
-    feed_old := 0;
     z_temp := joy_get_swapped_z;
     while (z_temp <> 0) and (fast_jog = JoyPad.Buttons[btn_idx]) do
     begin
@@ -186,13 +185,11 @@ begin
         // Richtung Maschinen-Nullpunkt (oben)
         grbl_SendWithShortTimeout(my_str);
         JoyPad.update;
-        z_temp := joy_get_swapped_z;
         LabelJoyInfo.Caption := my_str + ' OVR:' + IntToStr(feed) + #32
           + feed_str;
       end
       else if feed <> feed_old then
         grbl_sendRealTimeCmd(Char(feed + $F0)); // Feed Override DIRECT
-      feed_old := feed;
       jog_sent := true;
       JoyPad.update;
       z_temp := joy_get_swapped_z;

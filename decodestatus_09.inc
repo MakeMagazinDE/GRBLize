@@ -18,6 +18,7 @@ var
   my_response: String;
 
   begin
+    sl_values:= TStringList.Create;
   try
     my_response:= grbl_statusStr; // anfordern
     result:= false;
@@ -37,7 +38,6 @@ var
       exit;
     end;
     is_valid:= false;
-    sl_values:= TStringList.Create;
     with Form1 do begin
       sl_values.clear;
       sl_values.CommaText:= my_response;
@@ -108,14 +108,17 @@ var
         if my_Str = 'JogX' then begin
           grbl_wpos.x:= StrDotToFloat(sl_values[1]);
           PosX.Caption:= FormatFloat('000.00', grbl_wpos.x);
+          PosX_2.Caption:= PosX.Caption;
         end;
         if my_Str = 'JogY' then begin
           grbl_wpos.y:= StrDotToFloat(sl_values[1]);
           PosY.Caption:= FormatFloat('000.00', grbl_wpos.y);
+          PosY_2.Caption:= PosY.Caption;
         end;
         if my_Str = 'JogZ' then begin
           grbl_wpos.z:= StrDotToFloat(sl_values[1]);
           PosZ.Caption:= FormatFloat('000.00', grbl_wpos.z);
+          PosZ_2.Caption:= PosZ.Caption;
         end;
       end else begin
         my_start_idx:= sl_values.IndexOf('MPos');

@@ -1,0 +1,36 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{261D2953-4BC1-4FCA-863A-B99B7D1F33F3}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="GRBLize.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="GRBLize">
+        <MSBuild Projects="GRBLize.dproj"/>
+    </Target>
+    <Target Name="GRBLize:Clean">
+        <MSBuild Projects="GRBLize.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GRBLize:Make">
+        <MSBuild Projects="GRBLize.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="GRBLize"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="GRBLize:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="GRBLize:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

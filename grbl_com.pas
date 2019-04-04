@@ -14,6 +14,8 @@ type
   TFileBuffer = Array of byte;
    t_alivestates = (s_alive_responded, s_alive_wait_indef, s_alive_wait_timeout);
 
+  procedure WriteGrblComm(serial:string; out:boolean);
+
   procedure ExtractMessage(var my_str: String); // GRBL-Message in [] aufbereiten
 
   // holt und dekodiert "?"-Status
@@ -97,10 +99,10 @@ type
   procedure grbl_millXYZ(x, y, z: Double);
 
   // kompletten einzelnen Pfad fräsen, zurück bis Anfang wenn Closed
-  procedure grbl_millpath(millpath: TPath; millpen: Integer; offset: TIntPoint; is_closedpoly: Boolean);
+  procedure grbl_millpath(millpath: TPath; millpen: Integer; is_closedpoly: Boolean);
 
   // kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
-  procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
+  procedure grbl_drillpath(millpath: TPath; millpen: Integer);
 
   procedure grbl_checkXY(var x,y: Double);
   procedure grbl_checkZ(var z: Double);
@@ -141,7 +143,6 @@ var
   grbl_oldx, grbl_oldy, grbl_oldz: Double;
   grbl_oldf: Integer;
   grbl_sendlist: TSTringList;
-  grbl_checksema: boolean;
   grbl_delay_short, grbl_delay_long: Word;
   ComFile: THandle;
   AliveIndicatorDirection: Boolean;
@@ -149,10 +150,65 @@ var
   LastAliveState: t_alivestates;
   grbl_is_connected: boolean;
 
+  GrblComm: TextFile;
+  DebugName: string = 'c:\temp\serial.txt';
+//  DebugName: string = '';
 
 implementation
 
 uses grbl_player_main, glscene_view, drawing_window, Graphics;
+
+var ms0: int64;
+
+procedure WriteGrblComm(serial:string; out:boolean);
+var i:       integer;
+    s, d:   string;
+    ms, ms1: int64;
+begin
+  if DebugName <> '' then begin
+    d:=DateTimeToStr(Now);                                    // time in seconds
+
+    s:=IntToStr(MilliSecondOf(Now)); // milliseconds of the second with 3 digits
+    if length(s) = 1 then s:= '00' + s else
+    if length(s) = 2 then s:=  '0' + s;
+    d:= d + '.' + s;
+
+    ms1:= MilliSecondOfTheYear(Now);
+    ms:= ms1-ms0;                                     // delay to the last event
+    if ms >=10000 then s:= 'longer'                   // display max. 10s delays
+    else begin
+      s:=IntToStr(ms);
+      if length(s) = 1 then s:= '   ' + s else
+      if length(s) = 2 then s:=  '  ' + s else
+      if length(s) = 3 then s:=   ' ' + s;
+      s:= '(' + s + ')';
+    end;
+    d:= d + ' ' + s + ' ';
+
+    ms0:=ms1;                                             // remember last event
+
+    if out then d:=d+'>>> ' else d:=d+'<<< ';               // include direction
+
+    for i:=1 to length(serial) do
+    begin
+      if (serial[i] >= #32) and (serial[i] <= #127) then s:=serial[i] else
+      if (serial[i] =   #8) then s:='<BS>' else
+      if (serial[i] =  #10) then s:='<LF>' else
+      if (serial[i] =  #13) then s:='<CR>' else
+      if (serial[i] =  #24) then s:='<CAN>' else                         // ^X
+      if (serial[i] = #$84) then s:='<SafetyDoor>' else
+      if (serial[i] = #$85) then s:='<JogCancel>'  else
+      if (serial[i] = #$90) then s:='<Feed 100%>'  else
+      if (serial[i] = #$91) then s:='<Feed +10%>'  else
+      if (serial[i] = #$92) then s:='<Feed -10%>'  else
+      if (serial[i] = #$93) then s:='<Feed +1%>'   else
+      if (serial[i] = #$94) then s:='<Feed -1%>'   else
+         s:='#'+inttostr(ord(serial[i]));
+      d:=d+s;
+    end;
+    writeln(GrblComm, d);
+  end;
+end;
 
 {$I decodestatus_11.inc}
 {$I decodestatus_09.inc}
@@ -195,7 +251,8 @@ begin
       WorkZero.Z:= grbl_mpos.Z - job.z_gauge;
       Jog.Z:= WorkZero.Z;
       MposOnPartGauge:= grbl_mpos.Z;
-      WorkZero.Z:= MposOnPartGauge - job.z_gauge;
+// die folgende Zeile scheint überflüssig zu sein
+//      WorkZero.Z:= MposOnPartGauge - job.z_gauge;
       Form1.Memo1.lines.add('Cancel Tool Length Offset (TLO)');
       my_str:= 'G49';  // cancel tool offset
       my_response:= uppercase(grbl_SendWithShortTimeout(my_str));
@@ -340,7 +397,7 @@ var
 begin
   FirstTickCount := GetTickCount;
   while ((GetTickCount - FirstTickCount) < Milliseconds) do begin
-    if StartupDone then
+//    if StartupDone then
       Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
     sleep(0);
   end;
@@ -406,14 +463,17 @@ end;
 function COMOpen(com_name: String): Boolean;
 var
   DeviceName: array[0..15] of Char;
-  my_Name: AnsiString;
+//  my_Name: AnsiString;
+  my_Name: String;
 begin
 // Wir versuchen, COM1 zu öffnen.
 // Sollte dies fehlschlagen, gibt die Funktion false zurück.
   if length(com_name) > 4 then
-    my_name:= AnsiString('\\.\'+com_name)  // COM10 und darüber
+//    my_name:= AnsiString('\\.\'+com_name)  // COM10 und darüber
+    my_name:= '\\.\'+com_name  // COM10 und darüber
   else
-    my_name:= AnsiString(com_name); // in AnsiSTring kopieren
+//    my_name:= AnsiString(com_name); // in AnsiSTring kopieren
+    my_name:= com_name; // in AnsiSTring kopieren
 
   StrPCopy(DeviceName, my_name);
   ComFile := CreateFile(DeviceName, GENERIC_READ or GENERIC_WRITE,
@@ -450,7 +510,6 @@ end;
 procedure COMRxClear;
 // evt. im Buffer stehende Daten löschen
 begin
-//  PurgeComm(ComFile,PURGE_TXCLEAR);
   PurgeComm(ComFile,PURGE_RXCLEAR);
 end;
 
@@ -460,7 +519,8 @@ const
   TxBufferSize = 256;
 var
   DCB: TDCB;
-  Config: AnsiString;
+//  Config: AnsiString;
+  Config: String;
   CommTimeouts: TCommTimeouts;
 begin
 // wir gehen davon aus das das Einstellen des COM Ports funktioniert.
@@ -471,7 +531,7 @@ begin
   if not GetCommState(ComFile, DCB) then
     Result := False;
   // hier die Baudrate, Parität usw. konfigurieren
-  Config := 'baud' + baud_str + 'parity=n data=8 stop=1';
+  Config := 'baud=' + baud_str + ' parity=n data=8 stop=1';
   if not BuildCommDCB(@Config[1], DCB) then
     Result := False;
   if not SetCommState(ComFile, DCB) then
@@ -516,7 +576,8 @@ end;
 function COMReceiveStr(timeout: DWORD): string;
 // wartet unendlich, wenn timeout = 0
 var
-  my_str: AnsiString;
+//  my_str: AnsiString;
+  my_str: String;
   i: Integer;
   my_char: Char;
   target_time, current_time: TLargeInteger;
@@ -537,7 +598,7 @@ begin
       if my_char >= #32 then
         my_str:= my_str + my_char;
     end else begin
-      if StartupDone then
+//      if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
     end;
@@ -549,6 +610,7 @@ begin
     end;
   end;
   Result:= my_str;
+  WriteGrblComm(my_str,false);
 end;
 
 function COMsendStr(sendStr: String; my_getok: boolean): String;
@@ -559,11 +621,10 @@ var
   BytesWritten: DWORD;
   my_str: AnsiString;
 begin
+  WriteGrblComm(sendStr,true);
   my_str := AnsiString(sendStr);
   WriteFile(ComFile, my_str[1], Length(my_str), BytesWritten, nil);
-  if my_getok then begin
-    Result:= COMReceiveStr(0);
-  end;
+  if my_getok then Result:= COMReceiveStr(0);
 end;
 
 // #############################################################################
@@ -586,9 +647,11 @@ end;
 function FTDIreceiveStr(timeout: Integer): string;
 // wartet unendlich, wenn timeout = 0
 var
-  my_str: AnsiString;
+//  my_str: AnsiString;
+  my_str: String;
   i: Integer;
-  my_char: AnsiChar;
+//  my_char: AnsiChar;
+  my_char: Char;
   target_time, current_time: TLargeInteger;
   has_timeout: Boolean;
 
@@ -605,7 +668,7 @@ begin
       if my_char >= #32 then
         my_str:= my_str + my_char;
     end else begin
-      if StartupDone then
+//      if StartupDone then
         Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
       sleep(0);
     end;
@@ -617,6 +680,7 @@ begin
     end;
   end;
   Result:= my_str;
+  WriteGrblComm(my_str,false);
 end;
 
 function FTDIsendStr(sendStr: String; my_getok: boolean): String;
@@ -627,6 +691,7 @@ var
   i: longint;
   my_str: AnsiString;
 begin
+  WriteGrblComm(sendStr,true);
   my_str:= AnsiString(sendStr);
   Result:= '';
   ftdi.write(@my_str[1], length(my_str), i);
@@ -682,7 +747,7 @@ function grbl_sendStr(sendStr: String; my_getok: boolean): String;
 // String sollte mit #13 abgeschlossen sein, kann aber auch einzelnes
 // GRBL-Steuerzeichen sein (?,!,~,CTRL-X)
 begin
-  result:= '';
+  result:= '';      // no other user should send something during waiting for OK
   repeat
     if ftdi_isopen then
       result:= FTDIsendStr(sendStr, my_getok);
@@ -690,7 +755,6 @@ begin
       result:= COMsendStr(sendStr, my_getok);
   until not CheckForPushmessage(result);
 end;
-
 
 function grbl_SendWithShortTimeout(my_cmd: String): String;
 // bei abgeschaltetem Status senden und empfangen
@@ -717,12 +781,11 @@ end;
 // #############################################################################
 
 procedure grbl_wait_for_timeout(timeout: Integer);
-var my_str: String;
+var my_str:   String;
 begin
   if isGrblActive then
     repeat
-      if StartupDone then
-        Application.ProcessMessages;   // funktioniert bei CreateForm nicht!
+      Application.ProcessMessages;         // funktioniert bei CreateForm nicht!
       sleep(0);
       my_str:= grbl_receiveStr(timeout);
       CheckForPushmessage(my_str);
@@ -739,10 +802,10 @@ begin
 end;
 
 function grbl_checkResponse: Boolean;
-var my_str1, my_str2: String;
-  i, my_btn: Integer;
-  sl_options: TSTringList;
-  realtime_request_ok: Boolean;
+var my_str1, my_str2, my_str3: String;
+    i:                         Integer;
+    sl_options:                TSTringList;
+    realtime_request_ok:       Boolean;
 
 begin
   ShowAliveState(s_alive_wait_timeout);
@@ -757,17 +820,17 @@ begin
     Form1.Memo1.lines.add('');
     Form1.Memo1.lines.add('Startup Message and Version Info:');
     repeat
-      my_str1:= grbl_receiveStr_noCheck(500);
+      my_str1:= grbl_receiveStr_noCheck(200);
       CheckForPushmessage(my_str1);
     until my_Str1 = '[Timeout]';
+
     my_str1:= grbl_statusStr;
     realtime_request_ok:= AnsiContainsStr(my_str1, '>');
     if realtime_request_ok then begin
-//      grbl_SendRealTimeCmd(#$D0);  // Enable device #0
       grbl_SendStr('$I' + #13, false);
-      my_str1:= grbl_receiveStr_noCheck(100);
-      my_str2:= grbl_receiveStr_noCheck(100);
-      grbl_wait_for_timeout(50);
+      my_str1:= grbl_receiveStr_noCheck(100);                      // [VER: ...]
+      my_str2:= grbl_receiveStr_noCheck(100);                      // [OPT: ...]
+      my_str3:= grbl_receiveStr_noCheck(100);                      // OK
       if CheckForPushmessage(my_str1) then begin
         // get version info
         if AnsiContainsStr(my_str1, 'VER:1') then
@@ -807,7 +870,7 @@ begin
       sl_options.Free;
     end;
 
-    if MachineOptions.HomingOrigin <> get_AppDefaults_bool(45) then begin
+    if MachineOptions.HomingOrigin <> get_AppDefaults_bool(defPositivMachineSpace) then begin
     // Positive Maschinenrichtung?
       PlaySound('SYSTEMHAND', 0, SND_ASYNC);
       Form1.Memo1.lines.add('');
@@ -815,12 +878,12 @@ begin
       Form1.Memo1.lines.add('Please set positive machine space in App Defaults,');
       Form1.Memo1.lines.add('otherwise jog functions will not work properly.');
     end;
-    MachineOptions.PositiveSpace:= get_AppDefaults_bool(45);
+    MachineOptions.PositiveSpace:= get_AppDefaults_bool(defPositivMachineSpace);
     HomingPerformed:= false;
     MachineState:= none;
-    grbl_wait_for_timeout(50);
+    sleep(50);                   // grbl_wait_for_timeout(50) does not work here
     GetStatus;
-    grbl_wait_for_timeout(50);
+    sleep(50);                   // grbl_wait_for_timeout(50) does not work here
 
     case MachineState of
       alarm:
@@ -844,7 +907,7 @@ begin
       idle:
         begin
           grbl_SendRealTimeCmd(#13);
-          my_str1:= ansiuppercase(grbl_receiveStr_noCheck(20));
+          my_str1:= ansiuppercase(grbl_receiveStr_noCheck(40));
           if (pos('OK',my_str1) > 0) then begin
             result:= true;
             HomingPerformed:= true;
@@ -876,13 +939,10 @@ end;
 // Highlevel-Funktionen
 // #############################################################################
 
-
 function GetStatus: Boolean;
 begin
-  if MachineOptions.NewGrblVersion then
-    result:= GetStatus11
-  else
-    result:= GetStatus09;
+  if MachineOptions.NewGrblVersion then result:= GetStatus11
+                                   else result:= GetStatus09;
 end;
 
 procedure grbl_checkZ(var z: Double);
@@ -1060,7 +1120,7 @@ begin
   grbl_oldz:= z;
 end;
 
-procedure grbl_drillpath(millpath: TPath; millpen: Integer; offset: TIntPoint);
+procedure grbl_drillpath(millpath: TPath; millpen: Integer);
 // kompletten Pfad bohren, ggf. wiederholen bis z_end erreicht
 var i, my_len, my_z_feed: Integer;
   x, y: Double;
@@ -1072,15 +1132,15 @@ var i, my_len, my_z_feed: Integer;
     exit;
 
   // Tool ist noch oben
-  x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-  y:= (millpath[0].y + offset.y) / c_hpgl_scale;
+  x:= (millpath[0].x) / c_hpgl_scale;
+  y:= (millpath[0].y) / c_hpgl_scale;
   grbl_moveXY(x,y, false);
 
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
   for i:= 0 to my_len - 1 do begin
     grbl_moveZ(job.z_penup, false);
-    x:= (millpath[i].x + offset.x) / c_hpgl_scale;
-    y:= (millpath[i].y + offset.y) / c_hpgl_scale;
+    x:= (millpath[i].x) / c_hpgl_scale;
+    y:= (millpath[i].y) / c_hpgl_scale;
     grbl_moveXY(x,y,false);
     z:= 0;
     my_z_feed:= job.pens[millpen].speed; // Feed des gewählten Pens
@@ -1102,55 +1162,51 @@ var i, my_len, my_z_feed: Integer;
 end;
 
 
-procedure grbl_millpath(millpath: TPath; millpen: Integer; offset: TIntPoint; is_closedpoly: Boolean);
+procedure grbl_millpath(millpath: TPath; millpen: Integer; is_closedpoly: Boolean);
 // kompletten Pfad fräsen, ggf. wiederholen bis z_end erreicht
-var i, my_len, my_z_feed: Integer;
-  x, y: Double;
-  z, my_z_limit, my_z_end: Double;
+var i, my_len, my_z_feed:    Integer;
+    z, my_z_limit, my_z_end: Double;
 
 begin
   my_len:= length(millpath);
-  if my_len < 1 then
-    exit;
-  // Tool ist noch oben
-  x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-  y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-  grbl_moveXY(x,y, false);
+  if my_len < 1 then exit;
+              // Tool ist noch oben, if not done here too, in case of not closed
+              // pathed the tool will be moved to the first point in low heigth
+  grbl_moveXY(millpath[0].x/c_hpgl_scale, millpath[0].y/c_hpgl_scale, false);
 
-  my_z_limit:= 0;
+  my_z_limit:= 0; z:= 0;             // z_limit and z corresponse to the surface
   my_z_end:= -job.pens[millpen].z_end; // Endtiefe
-  repeat
-    my_z_limit:= my_z_limit - job.pens[millpen].z_inc;
-    z:= -job.pens[millpen].z_end;
-    if z < my_z_limit then
-      z:= my_z_limit;
-    grbl_moveZ(job.z_penup, false);
-    x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-    y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-    grbl_moveXY(x,y, false);
-    grbl_moveZ(0.5, false); // annähern auf 0,5 mm über Oberfläche
+  repeat                                    // tool up if the path is not closed
+    if not is_closedpoly then grbl_moveZ(job.z_penup, false);
+                                                       // move to start position
+    grbl_moveXY(millpath[0].x/c_hpgl_scale,millpath[0].y/c_hpgl_scale, false);
 
-    my_z_feed:= job.pens[millpen].speed;
-    if my_z_feed > job.z_feed then
-      my_z_feed:= job.z_feed;
-    grbl_millZF(z, my_z_feed); // langsam eintauchen
-    for i:= 1 to my_len - 1 do begin
-      x:= (millpath[i].x + offset.x) / c_hpgl_scale;
-      y:= (millpath[i].y + offset.y) / c_hpgl_scale;
-      grbl_millXYF(x,y, job.pens[millpen].speed);
+    grbl_moveZ(z+0.5, false);   // annähern auf 0,5 mm über aktueller Oberfläche
+
+    my_z_limit:= my_z_limit - job.pens[millpen].z_inc; // calculate next z level
+    z:= -job.pens[millpen].z_end;
+    if z < my_z_limit then z:= my_z_limit;
+
+    my_z_feed:= job.pens[millpen].speed;                   // langsam eintauchen
+    if my_z_feed > job.z_feed then my_z_feed:= job.z_feed;
+    grbl_millZF(z, my_z_feed);
+
+    for i:= 1 to my_len - 1 do begin                                // mill path
+      grbl_millXYF(millpath[i].x / c_hpgl_scale,
+                   millpath[i].y / c_hpgl_scale,
+                   job.pens[millpen].speed);
       if isCancelled then
         break;
     end;
-    if is_closedpoly and (not isCancelled) then begin
-      x:= (millpath[0].x + offset.x) / c_hpgl_scale;
-      y:= (millpath[0].y + offset.y) / c_hpgl_scale;
-      grbl_millXYF(x,y, job.pens[millpen].speed);
-    end;
+
+    if is_closedpoly and (not isCancelled) then       // close path if necessary
+      grbl_millXYF(millpath[0].x / c_hpgl_scale,
+                   millpath[0].y / c_hpgl_scale,
+                   job.pens[millpen].speed);
 
   until (my_z_limit <= my_z_end) or isCancelled;
   grbl_moveZ(job.z_penup, false);
 end;
-
 
 // #############################################################################
 // #############################################################################
@@ -1255,5 +1311,19 @@ begin
       result:= 'Reset error';
   end;
 end;
+
+//begin
+initialization
+  if DebugName <> '' then begin
+    AssignFile(GrblComm, DebugName);
+{$i-}    rewrite(GrblComm);   {$i+}
+    if IOResult <> 0 then
+      DebugName:= '';
+  end;
+
+  ms0:= MilliSecondOfTheYear(Now);
+
+finalization
+  if DebugName <> '' then CloseFile(GrblComm);
 
 end.

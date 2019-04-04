@@ -1,133 +1,462 @@
-#Files
-E:\Dropbox\GRBLize\Win32\bin\TestDaten\lab.plt,-1,0°,OFF,0,0,100," ",Plot,1246140615
-" ",-1,0°,OFF,0,0,100," "," "," "
-" ",-1,0°,OFF,"4,2",0,100," "," "," "
-" ",-1,0°,OFF,0,0,100," "," "," "
-" ",-1,0°,OFF,0,0,100," "," "," "
-" ",-1,0°,OFF,0,0,100," "," "," "
-" ",-1,0°,OFF,0,0,100," "," "," "
-#Pens
-P0,0,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P1,16512,OFF,"2,00","2,0",2000,"00,0","00,0","50,0",0,"1,0",1,0
-P2,255,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P3,33023,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P4,65535,ON,"2,00","1,0",400,"00,0","00,0","100,0",0,"1,0",1,0
-P5,65280,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P6,16744448,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P7,16711935,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P8,10673314,OFF,"2,00","2,0",400,"00,0","00,0","100,0",0,"1,0",0,0
-P9,14459554,OFF,"3,17","0,2",500,"00,0","00,0","100,0",0,"1,0",1,1
-D10,12632256,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D11,11254230,OFF,"0,79","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D12,11579647,OFF,"0,81","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D13,10801663,OFF,"0,89","2,5",1000,"00,0","00,0","100,0",4,"3,0",2,6
-D14,9367540,OFF,"0,94","2,5",1000,"00,0","00,0","100,0",4,"3,0",3,6
-D15,10485663,OFF,"0,94","2,5",1000,"00,0","00,0","100,0",4,"3,0",4,6
-D16,15913395,OFF,"0,94","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D17,16755455,OFF,"2,49","2,5",1000,"00,0","00,0","100,0",4,"3,0",5,6
-D18,12632256,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D19,15987699,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D20,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D21,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D22,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D23,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D24,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D25,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D26,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D27,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D28,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D29,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-D30,8421504,OFF,"1,00","2,5",400,"00,0","00,0","100,0",4,"3,0",0,6
-#Defaults
-"Part Size X",250
-"Part Size Y",150
-"Part Size Z",5
-"Z Feed for Milling",100
-"Z Lift above Part",10
-"Z Up above Part",2
-"Z Gauge Height",10
-"Optimize Drill Path",ON
-"Use Excellon Drill Diameters",ON
-#Blocks
-1,4,ON,"2,0",Contour,"[11] "
-2,4,ON,"2,0",Contour,"[15] "
-3,4,ON,"2,0",Contour,"[11] "
-4,4,ON,"2,0",Contour,"[4] "
-5,4,ON,"2,0",Contour,"[15] "
-6,4,ON,"2,0",Contour,"[16] "
-7,4,ON,"2,0",Contour,"[11] "
-8,4,ON,"2,0",Contour,"[7] "
-9,4,ON,"2,0",Contour,"[7] "
-10,4,ON,"2,0",Contour,"[11] "
-11,4,ON,"2,0",Contour,"[4] "
-12,4,ON,"2,0",Contour,"[16] "
-13,4,ON,"2,0",Contour,"[15] "
-14,4,ON,"2,0",Contour,"[26] "
-15,4,ON,"2,0",Contour,"[16] "
-16,4,ON,"2,0",Contour,"[15] "
-17,4,ON,"2,0",Contour,"[16] "
-18,4,ON,"2,0",Contour,"[15] "
-19,4,ON,"2,0",Contour,"[16] "
-20,4,ON,"2,0",Contour,"[22] "
-21,4,ON,"2,0",Contour,"[26] "
-22,4,ON,"2,0",Contour,"[17] "
-23,4,ON,"2,0",Contour,"[9] "
-24,4,ON,"2,0",Contour,"[11] "
-25,4,ON,"2,0",Contour,"[4] "
-26,4,ON,"2,0",Contour,"[20] "
-27,4,ON,"2,0",Contour,"[11] "
-28,4,ON,"2,0",Contour,"[8] "
-29,4,ON,"2,0",Contour,"[15] "
-30,4,ON,"2,0",Contour,"[17] "
-31,4,ON,"2,0",Contour,"[8] "
-32,4,ON,"2,0",Contour,"[11] "
-33,4,ON,"2,0",Contour,"[4] "
-34,4,ON,"2,0",Contour,"[29] "
-35,4,ON,"2,0",Contour,"[15] "
-36,4,ON,"2,0",Contour,"[7] "
-37,4,ON,"2,0",Contour,"[7] "
-#PathEnables
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-#Comment
-Your Job Description
-
-If Job Settings are empty, 
-please open file "default.job" 
-supplied with GRBLize.
-#End
+[File1]
+Name=TestDaten\Linie100mm.svg
+Replace=-1
+Rotate=0°
+Mirror=OFF
+ScaleX=100
+ScaleY=100
+Xofs=0
+Yofs=0
+Remark=SVG
+GbrName=
+GbrMirror=0
+GbrInflate=0
+[Pen0]
+Color=0
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen1]
+Color=16512
+Enable=ON
+Diameter=2,00
+Z=2,00
+Feed=2000
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=3,0
+ATC=1
+Tip=4
+Blades=2
+[Pen2]
+Color=255
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen3]
+Color=33023
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen4]
+Color=65535
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen5]
+Color=65280
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen6]
+Color=16744448
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen7]
+Color=16711935
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen8]
+Color=10673314
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen9]
+Color=14459554
+Enable=OFF
+Diameter=2,00
+Z=2,00
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=0
+Zcycle=1,0
+ATC=0
+Tip=0
+Blades=2
+[Pen10]
+Color=12632256
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen11]
+Color=11254230
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen12]
+Color=11579647
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen13]
+Color=10801663
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen14]
+Color=9367540
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen15]
+Color=10485663
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen16]
+Color=15913395
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen17]
+Color=16755455
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen18]
+Color=12632256
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen19]
+Color=15987699
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen20]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen21]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen22]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen23]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen24]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen25]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen26]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen27]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen28]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen29]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Pen30]
+Color=8421504
+Enable=OFF
+Diameter=1,00
+Z=2,50
+Feed=400
+Scale=100,0
+Xofs=00,0
+Yofs=00,0
+Shape=4
+Zcycle=3,0
+ATC=0
+Tip=6
+Blades=2
+[Defaults]
+PartSizeX=110
+PartSizeY=0
+PartSizeZ=5
+Material=Weichholz
+ZFeedMilling=100
+ZLiftPart=10
+ZUpPart=5
+ZGauge=10
+OptDrillPath=ON
+UseExcellon=ON
+[Blocks]
+Block1=1,1,ON,"2,0",Contour,"-2- "
+[PathEnable]
+Path1=1

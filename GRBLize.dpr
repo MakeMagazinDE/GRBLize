@@ -17,7 +17,6 @@ uses
   deviceselect in 'deviceselect.pas' {deviceselectbox},
   clipper in 'clipper.pas',
   drawing_window in 'drawing_window.pas' {Form2},
-  cam_view in 'cam_view.pas' {Form3},
   glscene_view in 'glscene_view.pas' {Form4},
   DirectDraw in 'DirectX\DirectDraw.pas',
   DirectShow9 in 'DirectX\DirectShow9.pas',
@@ -28,7 +27,11 @@ uses
   VFrames in 'VFrames.pas',
   gerber_import in 'gerber_import.pas' {FormGerber},
   import_files in 'import_files.pas',
-  app_Defaults in 'app_Defaults.pas';
+  app_Defaults in 'app_Defaults.pas',
+  Vcl.Themes,
+  Vcl.Styles,
+  ParamAssist in 'ParamAssist.pas' {FormParamAssist},
+  TouchButton in 'TouchButton.pas';
 
 {$R *.res}
 
@@ -38,6 +41,10 @@ begin
   Application.CreateForm(TForm1, Form1);
   Application.CreateForm(TAboutBox, AboutBox);
   Application.CreateForm(TFormGerber, FormGerber);
+  Application.CreateForm(TFormParamAssist, FormParamAssist);
   Application.Run;
   Application.Terminate;
 end.
+
+// Abschalten des Überschreibens der visuellen Effekte durch das Windows-Theme
+// https://stackoverflow.com/questions/4393723/how-to-switch-an-application-between-themed-and-not-themed-at-run-time

@@ -22,7 +22,8 @@ uses
   //GLS
   GLVectorGeometry, GLVectorTypes,  GLKeyboard,
 
-  GLTexture, GLCgShader,
+  GLTexture,
+  GLCgShader,
   GLVectorFileObjects, GLFile3DS, GLMaterial,
   GLUtils,
   GLColor,
@@ -172,7 +173,7 @@ var
   LEDbusy3d: TLed;
   sim_z_abovezero: Boolean;
   ena_solid, ena_finite: Boolean;
-  draw_tool_sema, render_sema: Boolean;
+  draw_tool_sema: Boolean;
   mill_array: Array of Array of Double; // XY-Array mit Höhenwerten
   mill_array_sizeX, mill_array_sizeY: Integer;
   tool_array: Array of Array of Double; // XY-Array mit Höhenwerten
@@ -522,7 +523,7 @@ begin
 end;
 
 procedure TForm4.FormReset;
-
+var a1: TGLContours;
 begin
   GLsceneViewer1.Invalidate;
   GLSmoothNavigator1.VirtualUp.AsAffineVector:= YVector;
@@ -581,7 +582,7 @@ begin
   GLCubeWP.Position.Z:= job.partsize_z / (c_GLscale*2);
   GLDummyCubeTarget.Position.Z:= job.partsize_z / c_GLscale; // Stecknadel
 
-  with GLExtrusionSolid1, Contours do begin
+{  with GLExtrusionSolid1, Contours do begin
     DeleteChildren;
     Height:= job.partsize_z / c_GLscale;
     Position.X:= -job.partsize_x / (c_GLscale*2);
@@ -596,7 +597,27 @@ begin
       AddNode(0, job.partsize_y / c_GLscale, 0);
     end;
     Add;
-  end;
+  end;}
+
+//  with GLExtrusionSolid1, Contours do begin
+    a1:= GLExtrusionSolid1.Contours;
+
+    GLExtrusionSolid1.DeleteChildren;
+    GLExtrusionSolid1.Height:= job.partsize_z / c_GLscale;
+    GLExtrusionSolid1.Position.X:= -job.partsize_x / (c_GLscale*2);
+    GLExtrusionSolid1.Position.Y:= -job.partsize_y / (c_GLscale*2);
+    GLExtrusionSolid1.Contours.Clear;
+
+    // Werkstück erstellen
+    with GLExtrusionSolid1.Contours.Add.Nodes do begin
+      AddNode(0, 0, 0);
+      AddNode(job.partsize_x / c_GLscale, 0, 0);
+      AddNode(job.partsize_x / c_GLscale, job.partsize_y / c_GLscale, 0);
+      AddNode(0, job.partsize_y / c_GLscale, 0);
+    end;
+    GLExtrusionSolid1.Contours.Add;
+//  end;
+
   gl_mult_scale:= c_GLscale * gl_arr_scale;
   GLHeightFieldWP.XSamplingScale.Step:= 1/gl_mult_scale;
   GLHeightFieldWP.YSamplingScale.Step:= 1/gl_mult_scale;
@@ -726,6 +747,8 @@ begin
       if z >= 0 then
         continue;
       my_offset:= job.pens[my_entry.pen].offset;
+      my_offset.x:= my_offset.x + job.global_offset.x;
+      my_offset.y:= my_offset.y + job.global_offset.y;
       my_dia:= job.pens[my_entry.pen].diameter;
 
       if my_entry.shape = drillhole then begin
@@ -810,7 +833,7 @@ begin
                 AddNode(x, y, 0);
                 if m = 0 then
                   // Polygon für Werkstück in Frästiefe erstellen, außen
-                  my_Polygon.AddNode(x, y, 0);
+//auskommentiert//                  my_Polygon.AddNode(x, y, 0);
               end;
             end;
 
@@ -826,7 +849,7 @@ begin
                 end;
               end;
           end;
-        end;
+    end;
   end; // ena_solid
   GLHeightFieldWP.Position.Z:= 0;
   GLHeightFieldWP.XSamplingScale.Max:= job.partsize_x / c_GLscale;
@@ -919,14 +942,16 @@ begin
   if not Form1.Show3DPreview1.Checked then
     exit;
   with Form4 do begin
-    GLDummyCubeZprobe.Visible:= Form1.CheckTLCprobe.Checked;
+    GLDummyCubeZprobe.Visible:= job.toolchange_pause and job.use_fixed_probe;
     if GLDummyCubeZprobe.Visible then begin
       GLDummyCubeZprobe.Position.X:= (job.probe_x - WorkZero.X) / c_GLscale;
       GLDummyCubeZprobe.Position.Y:= (job.probe_y - WorkZero.y) / c_GLscale;
       GLDummyCubeZprobe.Position.Z:= (job.probe_z - WorkZero.z) / c_GLscale;
     end;
 
-    GLDummyCubeATC.Visible:= Form1.CheckUseATC2.Checked;
+    GLDummyCubeATC.Visible:= job.toolchange_pause and
+                             job.use_fixed_probe  and
+                             job.atc_enabled;
     if GLDummyCubeATC.Visible then begin
       GLDummyCubeATC.Position.X:= (job.atc_zero_x - WorkZero.x) / c_GLscale;
       GLDummyCubeATC.Position.Y:= (job.atc_zero_y - WorkZero.y) / c_GLscale;

@@ -2,7 +2,7 @@ object deviceselectbox: Tdeviceselectbox
   Left = 243
   Top = 108
   BorderStyle = bsDialog
-  Caption = 'Select USB Device'
+  Caption = 'Select Device'
   ClientHeight = 249
   ClientWidth = 505
   Color = clBtnFace
@@ -14,7 +14,7 @@ object deviceselectbox: Tdeviceselectbox
   OldCreateOrder = False
   Position = poScreenCenter
   PixelsPerInch = 96
-  TextHeight = 13
+  TextHeight = 16
   object Panel1: TPanel
     Left = 0
     Top = 0
@@ -22,77 +22,57 @@ object deviceselectbox: Tdeviceselectbox
     Height = 249
     Caption = 'Panel1'
     TabOrder = 0
-    object Label1: TLabel
-      Left = 18
-      Top = 18
-      Width = 231
-      Height = 16
-      Caption = 'Select FTDI Cable or FT232R device:'
-      Font.Charset = ANSI_CHARSET
-      Font.Color = clBlack
-      Font.Height = -13
-      Font.Name = 'Arial'
-      Font.Style = [fsBold]
-      ParentFont = False
-    end
-    object Label2: TLabel
-      Left = 18
-      Top = 183
-      Width = 107
-      Height = 16
-      Caption = 'or use serial port'
-      Font.Charset = ANSI_CHARSET
-      Font.Color = clBlack
-      Font.Height = -13
-      Font.Name = 'Arial'
-      Font.Style = [fsBold]
-      ParentFont = False
-    end
     object Label3: TLabel
-      Left = 18
-      Top = 215
-      Width = 128
-      Height = 16
-      Caption = 'FTDI/COM baud rate'
+      Left = 10
+      Top = 218
+      Width = 72
+      Height = 19
+      Caption = 'baud rate'
       Font.Charset = ANSI_CHARSET
       Font.Color = clBlack
-      Font.Height = -13
+      Font.Height = -16
       Font.Name = 'Arial'
       Font.Style = [fsBold]
       ParentFont = False
     end
     object OKButton: TButton
-      Left = 416
-      Top = 198
-      Width = 65
-      Height = 23
+      Left = 415
+      Top = 214
+      Width = 80
+      Height = 28
       Caption = 'OK'
       Default = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clBlack
+      Font.Height = -16
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
       TabOrder = 0
       OnClick = OKButtonClick
       IsControl = True
     end
     object ListView1: TListView
-      Left = 18
-      Top = 40
-      Width = 463
-      Height = 129
+      Left = 10
+      Top = 8
+      Width = 485
+      Height = 196
       Columns = <
         item
-          Caption = 'USB Device'
+          Caption = 'Device'
           Width = 100
         end
         item
           Caption = 'FTDI Serial'
-          Width = 100
+          Width = 120
         end
         item
           Caption = 'Description'
-          Width = 250
+          Width = 260
         end>
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
-      Font.Height = -11
+      Font.Height = -16
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ReadOnly = True
@@ -104,49 +84,40 @@ object deviceselectbox: Tdeviceselectbox
       OnDblClick = ListView1DblClick
     end
     object CancelButton: TButton
-      Left = 345
-      Top = 197
-      Width = 65
-      Height = 25
+      Left = 326
+      Top = 214
+      Width = 80
+      Height = 28
       Caption = 'Cancel'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clBlack
+      Font.Height = -16
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
       TabOrder = 2
       OnClick = CancelButtonClick
       IsControl = True
     end
-    object ComboBoxComPort: TComboBox
-      Left = 139
-      Top = 182
-      Width = 139
-      Height = 21
-      Style = csDropDownList
+    object EditBaudrate: TComboBox
+      Left = 108
+      Top = 214
+      Width = 145
+      Height = 28
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlack
-      Font.Height = -11
+      Font.Height = -16
       Font.Name = 'MS Sans Serif'
-      Font.Style = [fsBold]
-      ItemIndex = 0
+      Font.Style = []
       ParentFont = False
       TabOrder = 3
-      Text = 'none (FTDI direct)'
+      Text = 'EditBaudrate'
       Items.Strings = (
-        'none (FTDI direct)')
-    end
-    object EditBaudrate: TEdit
-      Left = 152
-      Top = 214
-      Width = 57
-      Height = 21
-      BevelInner = bvNone
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clBlack
-      Font.Height = -11
-      Font.Name = 'MS Sans Serif'
-      Font.Style = [fsBold]
-      MaxLength = 6
-      NumbersOnly = True
-      ParentFont = False
-      TabOrder = 4
-      Text = '115200'
+        '9600'
+        '19200'
+        '38400'
+        '57600'
+        '115200')
     end
   end
 end
